@@ -46,6 +46,8 @@ What do you need
 
 Versions History
 ----------------
+* Version 1.1
+	- Fixed: unixtime with more than 10 digits freezed the tool
 * Version 1.0
 	- First release.
 
