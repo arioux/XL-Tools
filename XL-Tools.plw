@@ -8,8 +8,8 @@
 #               for list of strings like sorting, converting, replacing, date
 #               and time utilities, etc.
 # Creation    : 2015-12-21
-# Modified    : 2016-04-08
-my $VERSION   = "1.0";
+# Modified    : 2016-05-14
+my $VERSION   = "1.1";
 # Author      : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
@@ -145,7 +145,7 @@ $win->SetIcon($winICO);
 
 # Fonts
 sub LOGPIXELSX() {88}
-sub getDPI       { return(Win32::GUI::DC->new()->GetDeviceCaps(LOGPIXELSX)); }
+sub getDPI { return(Win32::GUI::DC->new()->GetDeviceCaps(LOGPIXELSX)); }
 my $DPI = &getDPI();
 my $fontGB;
 my $fontGB2;
@@ -2464,7 +2464,7 @@ sub btnProcess_Click
       &writeResults($refList3);
       
     });
-  }  
+  }
 
 }  #--- End btnProcess_Click
 
@@ -3857,7 +3857,7 @@ sub timeTabFunc
       $item =~ s/[\r\n]//g;  # Remove any line break
       if ($item) {
         if ($item =~ /([0-9]{1,10})[0-9]*$/) {
-          my $dt = DateTime->from_epoch(epoch => $item);
+          my $dt = DateTime->from_epoch(epoch => $1);
           $dt->set_time_zone($outputTZ);
           push(@items, $dt->strftime('%Y-%m-%d %H:%M:%S %z'));
         } else {
