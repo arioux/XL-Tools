@@ -130,6 +130,10 @@ sub loadDefaultStr
   $$refSTR{'selectedCF'}      = 'Selected custom function';
   $$refSTR{'unknownError'}    = 'Unknown error';
   $$refSTR{'errorOUI_TXT'}    = 'Error with oui.txt file';
+  $$refSTR{'errRegex'}        = 'You must enter a valid regex.';
+  $$refSTR{'errBy'}           = 'You must enter a valid replacement expression.';
+  $$refSTR{'errRegexReplace'}   = 'Current error in * Replace *';
+  $$refSTR{'errRegexReplaceBy'} = 'Current error in * By *';
 
   # Main Window
   $$refSTR{'Tab1'}          = 'Lists';
@@ -142,6 +146,7 @@ sub loadDefaultStr
   $$refSTR{'btnGuessTip'}   = 'Use this function only if date and time format is the same for each item in the list.';
   $$refSTR{'MatchCase'}     = 'Match case';
   $$refSTR{'Regex'}         = 'Regex';
+  $$refSTR{'Eval'}          = 'Eval';
   $$refSTR{'ResetContent'}  = 'Reset content';
   $$refSTR{'Results'}       = 'Results';
   $$refSTR{'ViewReport'}    = 'View the report';

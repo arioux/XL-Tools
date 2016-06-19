@@ -54,7 +54,7 @@ td.middle {
 <tr>
 <td width="80px" align="center" rowspan=2><img src="XL-Tools48.png" alt="Logo" width="48" height="48" border="0"></td>
 <td align="left" valign="center" style="color:#000066; font-size: 100%; font-weight: bold;">XL-Tools<br>Copyright (c) 2015-2016 Alain Rioux<br></td></tr>
-<tr><td align="left" style="color:#000066; font-size: 90%;">See <a href="./XL-Whois.html#Credits">Credits</a> about the logo</td></tr>
+<tr><td align="left" style="color:#000066; font-size: 90%;">See <a href="./XL-Tools.html#Credits">Credits</a> about the logo</td></tr>
 </table><br>
 
 <hr>
@@ -624,42 +624,38 @@ City: Seattle&#9;State: Washington&#9;Country: United States
 <h4 style="margin-top:1.5em;">Replace</h3>
 </a>
 <p>This function replaces a sequence of characters in a string with another set of 
-characters. You can find that kind of function in many text editors. With XL-Tools, 
-you can use a regular expression with support of capture groups. It can be 
-used to extract data, shift data, put a string in uppercase or lowercase, etc. 
-Examples :</p>
-
+characters. You can find that kind of function in many text editors. By default, the 
+expression is interpreted as a string which means that you can use capture groups 
+(equivalent to <strong style="color:#CC0033;">sprintf()</strong> with <strong>Eval</strong> 
+option, see examples below).</p>
+<p>The <strong>Eval</strong> option tells XL-Tools to evaluate the expression so you 
+can also use some Perl functions (see 
+<a href="http://perldoc.perl.org/index-functions-by-cat.html#Functions-for-SCALARs-or-strings" 
+target="_blank">here</a> for list of functions). Please note that this can be 
+dangerous if you don't know what you're doing. Some examples:</p>
 
 <table class="exemples">
 <tr bgcolor="#E0E0E0">
 <th>Operation</th>
 <th>List 1</th>
 <th>Replace:</th>
+<th>Regex:</th>
 <th>By:</th>
+<th>Eval:</th>
 <th>Results</th>
 </tr>
 <tr>
-<td style="vertical-align: text-top;">
-<pre>
-Extract data
-</pre>
-</td>
+<td style="vertical-align: text-top;"><pre>Extract data</pre></td>
 <td class="middle">
 <pre>
 Dalvik/1.6.0 (Linux; U; Android 4.4.2; SGH-I747M Build/KOT49H)
 Dalvik/1.6.0 (Linux; U; Android 4.4.2; SGH-T999V Build/KOT49H)
 </pre>
 </td>
-<td class="middle" style="vertical-align: text-top;">
-<pre>
-.+ ([^ ]+) Build.+
-</pre>
-</td>
-<td class="middle" style="vertical-align: text-top;">
-<pre>
-$1
-</pre>
-</td>
+<td class="middle" style="vertical-align: text-top;"><pre>.+ ([^ ]+) Build.+</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>Yes</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>$1</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>No</pre></td>
 <td>
 <pre>
 SGH-I747M
@@ -668,27 +664,17 @@ SGH-T999V
 </td>
 </tr>
 <tr style="border-top: 1px solid black;">
-<td style="vertical-align: text-top;">
-<pre>
-Shift data
-</pre>
-</td>
+<td style="vertical-align: text-top;"><pre>Shift data</pre></td>
 <td class="middle">
 <pre>
 FTP (File Transfer Protocol)
 HTTP (Hypertext Transfer Protocol)
 </pre>
 </td>
-<td class="middle" style="vertical-align: text-top;">
-<pre>
-(\w+) \(([^\)]+)\)
-</pre>
-</td>
-<td class="middle" style="vertical-align: text-top;">
-<pre>
-$2 ($1)
-</pre>
-</td>
+<td class="middle" style="vertical-align: text-top;"><pre>(\w+) \(([^\)]+)\)</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>Yes</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>$2 ($1)</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>No</pre></td>
 <td>
 <pre>
 File Transfer Protocol (FTP)
@@ -697,56 +683,17 @@ Hypertext Transfer Protocol (HTTP)
 </td>
 </tr>
 <tr style="border-top: 1px solid black;">
-<td style="vertical-align: text-top;">
-<pre>
-To UPPERCASE
-</pre>
-</td>
-<td class="middle">
-<pre>
-new york
-los angeles
-</pre>
-</td>
-<td class="middle" style="vertical-align: text-top;">
-<pre>
-(.+)
-</pre>
-</td>
-<td class="middle" style="vertical-align: text-top;">
-<pre>
-\U$1\E
-</pre>
-</td>
-<td>
-<pre>
-NEW YORK
-LOS ANGELES
-</pre>
-</td>
-</tr>
-<tr style="border-top: 1px solid black;">
-<td style="vertical-align: text-top;">
-<pre>
-To lowercase
-</pre>
-</td>
+<td style="vertical-align: text-top;"><pre>To lowercase</pre></td>
 <td class="middle">
 <pre>
 NEW YORK
 LOS ANGELES
 </pre>
 </td>
-<td class="middle" style="vertical-align: text-top;">
-<pre>
-(.+)
-</pre>
-</td>
-<td class="middle" style="vertical-align: text-top;">
-<pre>
-\L$1\E
-</pre>
-</td>
+<td class="middle" style="vertical-align: text-top;"><pre>(.+)</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>Yes</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>\L$1</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>No</pre></td>
 <td>
 <pre>
 new york
@@ -755,33 +702,94 @@ los angeles
 </td>
 </tr>
 <tr style="border-top: 1px solid black;">
-<td style="vertical-align: text-top;">
-<pre>
-Various
-</pre>
-</td>
+<td style="vertical-align: text-top;"><pre>To UPPERCASE with \U</pre></td>
 <td class="middle">
 <pre>
 new york
 los angeles
 </pre>
 </td>
-<td class="middle" style="vertical-align: text-top;">
+<td class="middle" style="vertical-align: text-top;"><pre>(.+)</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>Yes</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>\U$1</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>No</pre></td>
+<td>
 <pre>
-(\w+)\s+(\w+)
+NEW YORK
+LOS ANGELES
 </pre>
 </td>
-<td class="middle" style="vertical-align: text-top;">
+</tr>
+<tr style="border-top: 1px solid black;">
+<td style="vertical-align: text-top;"><pre>To UPPERCASE with sprintf</pre></td>
+<td class="middle">
 <pre>
-City\: \u$1 \u$2
+new york
+los angeles
 </pre>
 </td>
+<td class="middle" style="vertical-align: text-top;"><pre>(.+)</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>Yes</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>sprintf("\U$1")</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>Yes</pre></td>
+<td>
+<pre>
+NEW YORK
+LOS ANGELES
+</pre>
+</td>
+</tr>
+<tr style="border-top: 1px solid black;">
+<td style="vertical-align: text-top;"><pre>To UPPERCASE with uc</pre></td>
+<td class="middle">
+<pre>
+new york
+los angeles
+</pre>
+</td>
+<td class="middle" style="vertical-align: text-top;"><pre>(.+)</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>Yes</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>uc($1)</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>Yes</pre></td>
+<td>
+<pre>
+NEW YORK
+LOS ANGELES
+</pre>
+</td>
+</tr>
+<tr style="border-top: 1px solid black;">
+<td style="vertical-align: text-top;"><pre>Various</pre></td>
+<td class="middle">
+<pre>
+new york
+los angeles
+</pre>
+</td>
+<td class="middle" style="vertical-align: text-top;"><pre>(\w+)\s+(\w+)</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>Yes</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>City\: \u$1 \u$2</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>No</pre></td>
 <td>
 <pre>
 City: New York
 City: Los Angeles
 </pre>
 </td>
+</tr>
+<tr style="border-top: 1px solid black;">
+<td style="vertical-align: text-top;"><pre>Why dangerous? Try this...</pre></td>
+<td class="middle">
+<pre>
+new york
+los angeles
+</pre>
+</td>
+<td class="middle" style="vertical-align: text-top;"><pre>.+</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>Yes</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>exit(0)</pre></td>
+<td class="middle" style="vertical-align: text-top;"><pre>Yes</pre></td>
+<td style="vertical-align: text-top;"><pre>Program exits.</pre></td>
 </tr>
 </table>
 

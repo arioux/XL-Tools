@@ -8,8 +8,8 @@
 #               for list of strings like sorting, converting, replacing, date
 #               and time utilities, etc.
 # Creation    : 2015-12-21
-# Modified    : 2016-05-14
-my $VERSION   = "1.1";
+# Modified    : 2016-06-18
+my $VERSION   = "1.2";
 # Author      : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
@@ -149,6 +149,7 @@ sub getDPI { return(Win32::GUI::DC->new()->GetDeviceCaps(LOGPIXELSX)); }
 my $DPI = &getDPI();
 my $fontGB;
 my $fontGB2;
+my $fontGB3;
 my $font10;
 my $font10b;
 my $font10u;
@@ -160,6 +161,10 @@ if ($DPI >= 120) {
                                   -bold      => 1      , );
   $fontGB2 = new Win32::GUI::Font(-name      => 'Arial',
                                   -size      => 10     ,
+                                  -bold      => 1      ,
+                                  -underline => 1      , );
+  $fontGB3 = new Win32::GUI::Font(-name      => 'Open Sans',
+                                  -size      => 12     ,
                                   -bold      => 1      ,
                                   -underline => 1      , );
   $font10  = new Win32::GUI::Font(-name      => 'Arial',
@@ -180,6 +185,10 @@ if ($DPI >= 120) {
                                   -bold      => 1      , );
   $fontGB2 = new Win32::GUI::Font(-name      => 'Arial',
                                   -size      => 12     ,
+                                  -bold      => 1      ,
+                                  -underline => 1      , );
+  $fontGB3 = new Win32::GUI::Font(-name      => 'Open Sans',
+                                  -size      => 14     ,
                                   -bold      => 1      ,
                                   -underline => 1      , );
   $font10  = new Win32::GUI::Font(-name      => 'Arial',
@@ -250,6 +259,14 @@ $win->AddCheckbox(    -name        => 'chRegex'              ,
                       -font        => $font10                ,
                       -background  => [255, 255, 255]        ,
                       -checked     => 0                      , );
+$win->AddCheckbox(    -name        => 'chEval'               ,
+                      -size        => [ 80, 20]              ,
+                      -pos         => [760, 32]              ,
+                      -text        => $STR{'Eval'}           ,
+                      -font        => $font10                ,
+                      -background  => [255, 255, 255]        ,
+                      -checked     => 0                      ,
+                      -disabled    => 1                      , );
 $win->AddLabel(       -name        => 'lblWith'              ,
                       -size        => [ 40, 22]              ,
                       -pos         => [315, 67]              ,
@@ -274,6 +291,21 @@ $win->AddLabel(       -name        => 'lblReplace'           ,
                       -background  => [255, 255, 255]        ,
                       -text        => $STR{'Replace'}.':'    ,
                       -font        => $font10                , );
+$win->AddLabel(       -name        => 'lblReplaceREOk'       ,
+                      -size        => [ 87, 24]              ,
+                      -pos         => [399, 64]              ,
+                      -background  => [  0, 255,   0]        ,
+                      -visible     => 0                      , );
+$win->AddLabel(       -name        => 'lblReplaceREErr'      ,
+                      -size        => [ 87, 24]              ,
+                      -pos         => [399, 64]              ,
+                      -background  => [255,   0,   0]        ,
+                      -visible     => 0                      , );
+$win->AddLabel(       -name        => 'lblReplaceREWarn'     ,
+                      -size        => [ 87, 24]              ,
+                      -pos         => [399, 64]              ,
+                      -background  => [255, 255,   0]        ,
+                      -visible     => 0                      , );
 $win->AddTextfield(   -name        => 'tfReplace'            ,
                       -size        => [ 85, 22]              ,
                       -pos         => [400, 65]              , );
@@ -283,9 +315,25 @@ $win->AddLabel(       -name        => 'lblReplBy'            ,
                       -background  => [255, 255, 255]        ,
                       -text        => $STR{'By'}.':'         ,
                       -font        => $font10                , );
+$win->AddLabel(       -name        => 'lblReplaceByREOk'     ,
+                      -size        => [ 87, 24]              ,
+                      -pos         => [694, 64]              ,
+                      -background  => [  0, 255,   0]        ,
+                      -visible     => 0                      , );
+$win->AddLabel(       -name        => 'lblReplaceByREErr'    ,
+                      -size        => [ 87, 24]              ,
+                      -pos         => [694, 64]              ,
+                      -background  => [255,   0,   0]        ,
+                      -visible     => 0                      , );
+$win->AddLabel(       -name        => 'lblReplaceByREWarn'   ,
+                      -size        => [ 87, 24]              ,
+                      -pos         => [694, 64]              ,
+                      -background  => [255, 255,   0]        ,
+                      -visible     => 0                      , );
 $win->AddTextfield(   -name        => 'tfReplBy'             ,
                       -size        => [ 85, 22]              ,
-                      -pos         => [695, 65]              , );
+                      -pos         => [695, 65]              ,
+                      -disabled    => 1                      , );
 $win->AddRadioButton( -name        => 'rbAll'                ,
                       -size        => [140, 22]              ,
                       -pos         => [550, 30]              ,
@@ -854,13 +902,20 @@ $winConfig->configTab->InsertItem(  -text         => $STR{'database'} , );
 # General tab
 
 # Tool Section
-$winConfig->AddLabel(       -name        => 'lblTool'               ,
+$winConfig->AddLabel(       -name        => 'lblToolShadowT'        ,
                             -size        => [ 80, 22]               ,
-                            -pos         => [150, 38]               ,
+                            -pos         => [151, 36]               ,
+                            -foreground  => [180, 180, 180]         ,
                             -background  => [255, 255, 255]         ,
-                            -foreground  => [  0, 102, 204]         ,
                             -text        => $STR{'Tool'}.':'        ,
-                            -font        => $fontGB2                , );
+                            -font        => $fontGB3                , );
+$winConfig->AddLabel(       -name        => 'lblToolT'              ,
+                            -size        => [ 80, 22]               ,
+                            -pos         => [150, 35]               ,
+                            -addstyle    => 11                      , # Transparent
+                            -foreground  => [204,   0,  51]         ,
+                            -text        => $STR{'Tool'}.':'        ,
+                            -font        => $fontGB3                , );
 $winConfig->AddButton(      -name        => 'btnExportLang'         ,
                             -size        => [125, 24]               ,
                             -pos         => [150, 68]               ,
@@ -873,7 +928,7 @@ $winConfig->AddButton(      -name        => 'btnCheckUpdate'        ,
                             -font        => $font10                 , );
 $winConfig->AddCheckbox(    -name        => 'chAutoUpdate'          ,
                             -size        => [200, 20]               ,
-                            -pos         => [285,100]               ,
+                            -pos         => [285,101]               ,
                             -text        => $STR{'AutoUpdateTip'}   ,
                             -background  => [255, 255, 255]         ,
                             -font        => $font10                 ,
@@ -881,22 +936,29 @@ $winConfig->AddCheckbox(    -name        => 'chAutoUpdate'          ,
                             -checked     => 1                       , );
 
 # Functions section
-$winConfig->AddLabel(       -name        => 'lblOptFunctions'       ,
+$winConfig->AddLabel(       -name        => 'lblOptFunctionsShadowT',
+                            -size        => [120, 22]               ,
+                            -pos         => [151,141]               ,
+                            -foreground  => [180, 180, 180]         ,
+                            -background  => [255, 255, 255]         ,
+                            -text        => $STR{'OptFunctions'}.':',
+                            -font        => $fontGB3                , );
+$winConfig->AddLabel(       -name        => 'lblOptFunctionsT'      ,
                             -size        => [120, 22]               ,
                             -pos         => [150,140]               ,
-                            -background  => [255, 255, 255]         ,
-                            -foreground  => [  0, 102, 204]         ,
+                            -addstyle    => 11                      , # Transparent
+                            -foreground  => [204,   0,  51]         ,
                             -text        => $STR{'OptFunctions'}.':',
-                            -font        => $fontGB2                , );
+                            -font        => $fontGB3                , );
 $winConfig->AddCheckbox(    -name        => 'chFullScreen'          ,
                             -size        => [150, 20]               ,
-                            -pos         => [270,141]               ,
+                            -pos         => [285,142]               ,
                             -text        => $STR{'chFullScreen'}    ,
                             -background  => [255, 255, 255]         ,
                             -font        => $font10                 , );
 $winConfig->AddCheckbox(    -name        => 'chRememberPos'         ,
-                            -size        => [150, 20]               ,
-                            -pos         => [425,141]               ,
+                            -size        => [195, 20]               ,
+                            -pos         => [440,142]               ,
                             -text        => $STR{'chRememberPos'}   ,
                             -background  => [255, 255, 255]         ,
                             -font        => $font10                 , );
@@ -908,10 +970,10 @@ $winConfig->AddLabel(       -name        => 'lblMaxSize1'           ,
                             -font        => $font10                 , );
 $winConfig->AddTextfield(   -name        => 'tfMaxSize'             ,
                             -size        => [ 60, 22]               ,
-                            -pos         => [270,170]               , );
+                            -pos         => [285,170]               , );
 $winConfig->AddLabel(       -name        => 'lblMaxSize2'           ,
                             -size        => [100, 22]               ,
-                            -pos         => [335,173]               ,
+                            -pos         => [350,173]               ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'chars'}           ,
                             -font        => $font10                 , );
@@ -923,10 +985,10 @@ $winConfig->AddLabel(       -name        => 'lblNsLookupTO1'        ,
                             -font        => $font10                 , );
 $winConfig->AddTextfield(   -name        => 'tfLookupTO'            ,
                             -size        => [ 30, 22]               ,
-                            -pos         => [270,200]               , );
+                            -pos         => [285,200]               , );
 $winConfig->AddLabel(       -name        => 'lblNsLookupTO2'        ,
                             -size        => [ 70, 22]               ,
-                            -pos         => [305,203]               ,
+                            -pos         => [320,203]               ,
                             -background  => [255, 255, 255]         ,
                             -text        => lc($STR{'seconds'})     ,
                             -font        => $font10                 , );
@@ -938,7 +1000,7 @@ $winConfig->AddLabel(       -name        => 'lblUserAgent'          ,
                             -font        => $font10                 , );
 $winConfig->AddTextfield(   -name        => 'tfUserAgent'           ,
                             -size        => [350, 22]               ,
-                            -pos         => [270,230]               , );
+                            -pos         => [285,230]               , );
 $winConfig->AddLabel(       -name        => 'lblNoResultOpt'        ,
                             -size        => [115, 22]               ,
                             -pos         => [150,263]               ,
@@ -946,8 +1008,8 @@ $winConfig->AddLabel(       -name        => 'lblNoResultOpt'        ,
                             -text        => $STR{'NoResultOpt'}.':' ,
                             -font        => $font10                 , );
 $winConfig->AddRadioButton( -name        => 'rbNoResultOpt1'        ,
-                            -size        => [120, 22]               ,
-                            -pos         => [270,260]               ,
+                            -size        => [150, 22]               ,
+                            -pos         => [285,260]               ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'NoResultOpt1'}    ,
                             -tip         => $STR{'NoResultOpt1Tip'} ,
@@ -955,8 +1017,8 @@ $winConfig->AddRadioButton( -name        => 'rbNoResultOpt1'        ,
                             -checked     => 1                       ,
                             -group       => 1                       , );
 $winConfig->AddRadioButton( -name        => 'rbNoResultOpt2'        ,
-                            -size        => [120, 22]               ,
-                            -pos         => [395,260]               ,
+                            -size        => [195, 22]               ,
+                            -pos         => [440,260]               ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'NoResultOpt2'}    ,
                             -tip         => $STR{'NoResultOpt2Tip'} ,
@@ -966,13 +1028,21 @@ $winConfig->AddRadioButton( -name        => 'rbNoResultOpt2'        ,
 # Database tab
 
 # MAC OUI Database section
-$winConfig->AddLabel(       -name        => 'lblMACOUIDB'           ,
+$winConfig->AddLabel(       -name        => 'lblMACOUIDBShadowT'    ,
                             -size        => [250, 22]               ,
-                            -pos         => [150, 38]               ,
+                            -pos         => [151, 36]               ,
+                            -foreground  => [180, 180, 180]         ,
                             -background  => [255, 255, 255]         ,
-                            -foreground  => [  0, 102, 204]         ,
                             -text        => $STR{'OUIDB'}.':'       ,
-                            -font        => $fontGB2                ,
+                            -font        => $fontGB3                ,
+                            -visible     => 0                       , );
+$winConfig->AddLabel(       -name        => 'lblMACOUIDBT'          ,
+                            -size        => [250, 22]               ,
+                            -pos         => [150, 35]               ,
+                            -addstyle    => 11                      , # Transparent
+                            -foreground  => [204,   0,  51]         ,
+                            -text        => $STR{'OUIDB'}.':'       ,
+                            -font        => $fontGB3                ,
                             -visible     => 0                       , );
 $winConfig->AddCheckbox(    -name        => 'chMACOUIDBAutoUpt'     ,
                             -size        => [220, 20]               ,
@@ -1004,13 +1074,21 @@ $winConfig->AddButton(      -name        => 'btnMACOUIDBImport'     ,
                             -tip         => $STR{'importOUIDB'}     ,
                             -visible     => 0                       , );
 # GeoIP Database section
-$winConfig->AddLabel(       -name        => 'lblGeoIPDB'            ,
+$winConfig->AddLabel(       -name        => 'lblGeoIPDBShadowT'     ,
+                            -size        => [250, 22]               ,
+                            -pos         => [151,104]               ,
+                            -foreground  => [180, 180, 180]         ,
+                            -background  => [255, 255, 255]         ,
+                            -text        => $STR{'GeoIPDB'}.':'     ,
+                            -font        => $fontGB3                ,
+                            -visible     => 0                       , );
+$winConfig->AddLabel(       -name        => 'lblGeoIPDBT'           ,
                             -size        => [250, 22]               ,
                             -pos         => [150,103]               ,
-                            -background  => [255, 255, 255]         ,
-                            -foreground  => [  0, 102, 204]         ,
+                            -addstyle    => 11                      , # Transparent
+                            -foreground  => [204,   0,  51]         ,
                             -text        => $STR{'GeoIPDB'}.':'     ,
-                            -font        => $fontGB2                ,
+                            -font        => $fontGB3                ,
                             -visible     => 0                       , );
 $winConfig->AddCheckbox(    -name        => 'chGeoIPDBAutoUpt'      ,
                             -size        => [220, 20]               ,
@@ -1035,14 +1113,23 @@ $winConfig->AddButton(      -name        => 'btnGeoIPDBUpt'         ,
                             -bitmap      => $downloadBmp            ,
                             -tip         => $STR{'downloadDB'}      ,
                             -visible     => 0                       , );
+
 # XL-Tools Database section
-$winConfig->AddLabel(       -name        => 'lblXLWHOISDB'          ,
+$winConfig->AddLabel(       -name        => 'lblXLWHOISDBShadowT'   ,
+                            -size        => [250, 22]               ,
+                            -pos         => [151,169]               ,
+                            -foreground  => [180, 180, 180]         ,
+                            -background  => [255, 255, 255]         ,
+                            -text        => $STR{'XLWhoisDB'}.':'   ,
+                            -font        => $fontGB3                ,
+                            -visible     => 0                       , );
+$winConfig->AddLabel(       -name        => 'lblXLWHOISDBT'         ,
                             -size        => [250, 22]               ,
                             -pos         => [150,168]               ,
-                            -background  => [255, 255, 255]         ,
-                            -foreground  => [  0, 102, 204]         ,
+                            -addstyle    => 11                      , # Transparent
+                            -foreground  => [204,   0,  51]         ,
                             -text        => $STR{'XLWhoisDB'}.':'   ,
-                            -font        => $fontGB2                ,
+                            -font        => $fontGB3                ,
                             -visible     => 0                       , );
 $winConfig->AddTextfield(   -name        => 'tfXLWHOISDB'           ,
                             -size        => [412, 22]               ,
@@ -1055,13 +1142,21 @@ $winConfig->AddButton(      -name        => 'btnXLWHOISDB'          ,
                             -tip         => $STR{'selectDBFile'}    ,
                             -visible     => 0                       , );
 # Issuer Identification Number (IIN) Database section
-$winConfig->AddLabel(       -name        => 'lblIINDB'              ,
+$winConfig->AddLabel(       -name        => 'lblIINDBShadowT'       ,
+                            -size        => [250, 22]               ,
+                            -pos         => [151,234]               ,
+                            -foreground  => [180, 180, 180]         ,
+                            -background  => [255, 255, 255]         ,
+                            -text        => $STR{'IINLocalDB'}.':'  ,
+                            -font        => $fontGB3                ,
+                            -visible     => 0                       , );
+$winConfig->AddLabel(       -name        => 'lblIINDBT'             ,
                             -size        => [250, 22]               ,
                             -pos         => [150,233]               ,
-                            -background  => [255, 255, 255]         ,
-                            -foreground  => [  0, 102, 233]         ,
+                            -addstyle    => 11                      , # Transparent
+                            -foreground  => [204,   0,  51]         ,
                             -text        => $STR{'IINLocalDB'}.':'  ,
-                            -font        => $fontGB2                ,
+                            -font        => $fontGB3                ,
                             -visible     => 0                       , );
 $winConfig->AddTextfield(   -name        => 'tfIINDB'               ,
                             -size        => [412, 22]               ,
@@ -1179,10 +1274,20 @@ sub winMain_Resize
   $win->lblColumnsNo->Left($win->tfWith->Left()+$win->ScaleWidth()/9.3+20);
   $win->tfColumnsNo->Left($win->lblColumnsNo->Left()+70);
   $win->tfColumnsNo->Width($win->ScaleWidth()/9.3);
+  $win->lblReplaceREOk->Width($win->ScaleWidth()/5+2);
+  $win->lblReplaceREErr->Width($win->ScaleWidth()/5+2);
+  $win->lblReplaceREWarn->Width($win->ScaleWidth()/5+2);
   $win->tfReplace->Width($win->ScaleWidth()/5);
   $win->lblReplBy->Left($win->tfReplace->Left()+$win->ScaleWidth()/5+10);
+  $win->lblReplaceByREOk->Left($win->tfReplace->Left()+$win->ScaleWidth()/5+44);
+  $win->lblReplaceByREOk->Width($win->ScaleWidth()/5+2);
+  $win->lblReplaceByREErr->Left($win->tfReplace->Left()+$win->ScaleWidth()/5+44);
+  $win->lblReplaceByREErr->Width($win->ScaleWidth()/5+2);
+  $win->lblReplaceByREWarn->Left($win->tfReplace->Left()+$win->ScaleWidth()/5+44);
+  $win->lblReplaceByREWarn->Width($win->ScaleWidth()/5+2);
   $win->tfReplBy->Left($win->tfReplace->Left()+$win->ScaleWidth()/5+45);
   $win->tfReplBy->Width($win->ScaleWidth()/5);
+  
   $win->lblAddDT->Left($win->btnGuess()->Left()+65);
   $win->tfValAddDT->Left($win->btnGuess()->Left()+100);
   $win->cbTypeValAddDT->Left($win->btnGuess()->Left()+145);
@@ -1462,13 +1567,20 @@ sub Tab_Click
     $win->cbLists->Hide();
     $win->chMatchCase->Hide();
     $win->chRegex->Hide();
+    $win->chEval->Hide();
     $win->lblWith->Hide();
     $win->tfWith->Hide();
     $win->lblColumnsNo->Hide();
     $win->tfColumnsNo->Hide();
     $win->lblReplace->Hide();
+    $win->lblReplaceREOk->Hide();
+    $win->lblReplaceREErr->Hide();
+    $win->lblReplaceREWarn->Hide();
     $win->tfReplace->Hide();
     $win->lblReplBy->Hide();
+    $win->lblReplaceByREOk->Hide();
+    $win->lblReplaceByREErr->Hide();
+    $win->lblReplaceByREWarn->Hide();
     $win->tfReplBy->Hide();
     $win->rbAll->Hide();
     $win->rbFirstOnly->Hide();
@@ -1515,13 +1627,20 @@ sub Tab_Click
     $win->cbLists->Hide();
     $win->chMatchCase->Hide();
     $win->chRegex->Hide();
+    $win->chEval->Hide();
     $win->lblWith->Hide();
     $win->tfWith->Hide();
     $win->lblColumnsNo->Hide();
     $win->tfColumnsNo->Hide();
     $win->lblReplace->Hide();
+    $win->lblReplaceREOk->Hide();
+    $win->lblReplaceREErr->Hide();
+    $win->lblReplaceREWarn->Hide();
     $win->tfReplace->Hide();
     $win->lblReplBy->Hide();
+    $win->lblReplaceByREOk->Hide();
+    $win->lblReplaceByREErr->Hide();
+    $win->lblReplaceByREWarn->Hide();
     $win->tfReplBy->Hide();
     $win->rbAll->Hide();
     $win->rbFirstOnly->Hide();
@@ -1573,13 +1692,20 @@ sub Tab_Click
     $win->cbLists->Hide();
     $win->chMatchCase->Hide();
     $win->chRegex->Hide();
+    $win->chEval->Hide();
     $win->lblWith->Hide();
     $win->tfWith->Hide();
     $win->lblColumnsNo->Hide();
     $win->tfColumnsNo->Hide();
     $win->lblReplace->Hide();
+    $win->lblReplaceREOk->Hide();
+    $win->lblReplaceREErr->Hide();
+    $win->lblReplaceREWarn->Hide();
     $win->tfReplace->Hide();
     $win->lblReplBy->Hide();
+    $win->lblReplaceByREOk->Hide();
+    $win->lblReplaceByREErr->Hide();
+    $win->lblReplaceByREWarn->Hide();
     $win->tfReplBy->Hide();
     $win->rbAll->Hide();
     $win->rbFirstOnly->Hide();
@@ -1618,13 +1744,20 @@ sub Tab_Click
     $win->cbLists->Hide();
     $win->chMatchCase->Hide();
     $win->chRegex->Hide();
+    $win->chEval->Hide();
     $win->lblWith->Hide();
     $win->tfWith->Hide();
     $win->lblColumnsNo->Hide();
     $win->tfColumnsNo->Hide();
     $win->lblReplace->Hide();
+    $win->lblReplaceREOk->Hide();
+    $win->lblReplaceREErr->Hide();
+    $win->lblReplaceREWarn->Hide();
     $win->tfReplace->Hide();
     $win->lblReplBy->Hide();
+    $win->lblReplaceByREOk->Hide();
+    $win->lblReplaceByREErr->Hide();
+    $win->lblReplaceByREWarn->Hide();
     $win->tfReplBy->Hide();
     $win->rbAll->Hide();
     $win->rbFirstOnly->Hide();
@@ -1690,6 +1823,14 @@ sub cbLists_Change
     $win->chRegex->Hide();
   }
   
+  # Show Eval option
+  if ($selFunc == 12) {
+    $win->chEval->Show();
+  } else {
+    $win->chEval->Checked(0);
+    $win->chEval->Hide();
+  }
+  
   # Show With textfield ?
   if ($selFunc == 5 or $selFunc == 6 or $selFunc == 8 or $selFunc == 9 or $selFunc == 10 or $selFunc == 11) {
     $win->lblWith->Show();
@@ -1716,9 +1857,15 @@ sub cbLists_Change
     $win->tfReplBy->Show();
   } else {
     $win->lblReplace->Hide();
+    $win->lblReplaceREOk->Hide();
+    $win->lblReplaceREErr->Hide();
+    $win->lblReplaceREWarn->Hide();
     $win->tfReplace->Hide();
     $win->tfReplace->Text('');
     $win->lblReplBy->Hide();
+    $win->lblReplaceByREOk->Hide();
+    $win->lblReplaceByREErr->Hide();
+    $win->lblReplaceByREWarn->Hide();
     $win->tfReplBy->Hide();
     $win->tfReplBy->Text('');
   }
@@ -1758,17 +1905,191 @@ sub tfColumnsNo_Change
 sub tfReplace_Change
 #--------------------------#
 {
+  # Test Regex if necessary
+  if ($win->chRegex->Checked()) {
+    &showReplaceREStatus;
+  }
+  
+  # Enable By textfield
+  if ($win->tfReplace->Text) {
+    $win->tfReplBy->Enable();
+    if ($win->chRegex->Checked()) { $win->chEval->Enable(); }
+  } else {
+    $win->tfReplBy->Text('');
+    $win->tfReplBy->Disable();
+    $win->chEval->Checked(0);
+    $win->chEval->Disable();
+    $win->lblReplaceByREOk->Hide();
+    $win->lblReplaceByREErr->Hide();
+    $win->lblReplaceByREWarn->Hide();
+  }
+  
   &isProcessReady(0);
 
 }  #--- End tfReplace_Change
 
 #--------------------------#
+sub chRegex_Click
+#--------------------------#
+{
+  # Test Regex if necessary
+  if ($win->chRegex->Checked()) {
+    &showReplaceREStatus;
+    $win->chEval->Enable();
+  } else {
+    $win->lblReplaceREOk->Hide();
+    $win->lblReplaceREErr->Hide();
+    $win->lblReplaceREWarn->Hide();
+    $win->chEval->Checked(0);
+    $win->chEval->Disable();
+    $win->lblReplaceByREOk->Hide();
+    $win->lblReplaceByREErr->Hide();
+    $win->lblReplaceByREWarn->Hide();
+  }
+  
+  # Revaluate Replacement expression
+  if ($win->tfReplBy->Text()) { &showReplaceByREStatus; }
+  
+  &isProcessReady(0);
+
+}  #--- End chRegex_Click
+
+#--------------------------#
+sub showReplaceREStatus
+#--------------------------#
+{
+  # Local variables
+  my $regex = $win->tfReplace->Text();
+  if ($regex) {
+    my ($statusRegex, $msg) = &validRegex($regex);
+    
+    # Warning
+    if      ($statusRegex == 2) {
+      $win->lblReplaceREWarn->Show();
+      $win->lblReplaceREOk->Hide();
+      $win->lblReplaceREErr->Hide();
+    # Error
+    } elsif ($statusRegex == 1) {
+      $win->lblReplaceREErr->Show();
+      $win->lblReplaceREOk->Hide();
+      $win->lblReplaceREWarn->Hide();
+    # Ok
+    } else {
+      $win->lblReplaceREOk->Show();
+      $win->lblReplaceREErr->Hide();
+      $win->lblReplaceREWarn->Hide();
+    }
+  } else {
+    $win->lblReplaceREOk->Hide();
+    $win->lblReplaceREErr->Hide();
+    $win->lblReplaceREWarn->Hide();
+  }
+
+}  #--- End showReplaceREStatus
+
+#--------------------------#
+sub validRegex
+#--------------------------#
+{
+  # Local variables
+  my $regex = shift;
+  
+  if ($regex) {
+    eval { if ('test' =~ /$regex/) { } };
+    if ($@) {
+      my $errRegex = (split(/ at /,$@))[0];
+      return(1, $errRegex);
+    } else {
+      # Valid but senseless regex
+      if ($regex =~ /^\||\|\||(?:[^\\]\|$)/ or $regex =~ /^\(\.\*\)$/) { return(2, undef); }
+      else { return(0, undef); }
+    }
+  }
+  
+}  #--- End validRegex
+
+#--------------------------#
 sub tfReplBy_Change
 #--------------------------#
 {
+  &showReplaceByREStatus;
+  
   &isProcessReady(0);
 
 }  #--- End tfReplBy_Change
+
+#--------------------------#
+sub chEval_Click
+#--------------------------#
+{
+  if ($win->chRegex->Checked()) {
+    &showReplaceByREStatus;
+  } else {
+    $win->lblReplaceByREOk->Hide();
+    $win->lblReplaceByREErr->Hide();
+    $win->lblReplaceByREWarn->Hide();
+  }
+  &isProcessReady(0);
+
+}  #--- End chEval_Click
+
+#--------------------------#
+sub showReplaceByREStatus
+#--------------------------#
+{
+  # Local variables
+  my $expr = $win->tfReplBy->Text();
+  if ($win->chRegex->Checked() and $expr) {
+    my ($status, $msg) = &validReplacement;
+    
+    # Warning
+    if      ($status and $status == 2) {
+      $win->lblReplaceByREWarn->Show();
+      $win->lblReplaceByREOk->Hide();
+      $win->lblReplaceByREErr->Hide();
+    # Error
+    } elsif ($status) {
+      $win->lblReplaceByREErr->Show();
+      $win->lblReplaceByREOk->Hide();
+      $win->lblReplaceByREWarn->Hide();
+    # Ok
+    } else {
+      $win->lblReplaceByREOk->Show();
+      $win->lblReplaceByREErr->Hide();
+      $win->lblReplaceByREWarn->Hide();
+    }
+  } else {
+    $win->lblReplaceByREOk->Hide();
+    $win->lblReplaceByREErr->Hide();
+    $win->lblReplaceByREWarn->Hide();
+  }
+
+}  #--- End showReplaceByREStatus
+
+#--------------------------#
+sub validReplacement
+#--------------------------#
+{
+  # Local variables
+  my $expr = $win->tfReplBy->Text();
+  my $test = 'test';
+  
+  if ($expr =~ /\$1/ and !$win->chEval->Checked()) { $expr = '"' . $expr . '"';  } # Capture with Eval not checked
+  if ($win->chEval->Checked() or $expr =~ /\$1/)   { $test =~ s/(.+)/$expr/eegi; } # Regex
+  else                                             { $test =~ s/(.+)/$expr/gi;   } # Keyword
+  if ($@) {
+    # Error
+    my $err = (split(/ at /,$@))[0];
+    return(1, $err);
+  } else {
+    # Warning for illegal characters
+    if ($expr =~ /[\<\>\:\"\/\\\|\?\*]/) { return(2, undef); }
+    
+    # Replacement ok
+    return(0, undef);
+  }  
+  
+}  #--- End validReplacement
 
 #--------------------------#
 sub cbSorts_Change
@@ -2262,6 +2583,25 @@ sub isProcessReady
       # Replace function require value in Replace textfield
       if ($selFunc == 12 and !$win->tfReplace->Text()) {
         $nextStep = $STR{'insertReplace'};
+      } elsif ($selFunc == 12 and ($win->chRegex->Checked() or $win->chEval->Checked())) { # Valid regex
+        # Regex is valid ?
+        if ($win->chRegex->Checked()) {
+          if ($win->tfReplace->Text()) {
+            my ($status, $msg) = &validRegex($win->tfReplace->Text());
+            if ($status and $status == 1) {
+              $nextStep = $STR{'errRegex'} . ' ' . $STR{'errRegexReplace'} . ":\n\n";
+              if ($msg) { $nextStep .= $msg; }
+            }
+          }
+          # Replacement expression is valid ?
+          if ($win->tfReplBy->Text()) {
+            my ($status, $msg) = &validReplacement;
+            if ($status and $status == 1) {
+              $nextStep = $STR{'errBy'} . ' ' . $STR{'errRegexReplaceBy'} . ":\n\n";
+              if ($msg) { $nextStep .= $msg; }
+            }
+          }
+        }
       }
     
     # Sorting tab selected
@@ -2467,6 +2807,16 @@ sub btnProcess_Click
   }
 
 }  #--- End btnProcess_Click
+
+#--------------------------#
+sub btnStop_Click
+#--------------------------#
+{
+  # Stop requests
+  if ($THR_PROCESS and $THR_PROCESS->is_running()) { $THR_PROCESS->kill('KILL')->detach(); }
+  return(1);
+
+}  #--- End btnStop_Click
 
 #--------------------------#
 sub btnHelp_Click
@@ -3175,8 +3525,12 @@ sub replace
   # Local variables
   my ($refList1, $refList2) = @_;
   push(@{$refList1}, @{$refList2}); # Merge lists
-  my $repl     = $win->tfReplace->Text();
-  my $replBy   = $win->tfReplBy->Text();
+  my $srcExpr       = $win->tfReplace->Text();
+  my $srcExprCase   = $win->chMatchCase->Checked();
+  my $srcExprRegex  = $win->chRegex->Checked();
+  my $dstExpr       = $win->tfReplBy->Text();
+  my $dstExprEval   = $win->chEval->Checked();
+  
   my $nbrItems = scalar(@{$refList1});
   my $curr     = 0;
   my @items;
@@ -3188,18 +3542,22 @@ sub replace
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
   
+  # Escape replace expresion if not regex
+  if    (!$srcExprRegex)                      { $srcExpr = quotemeta($srcExpr);  }
+  elsif ($dstExpr =~ /\$1/ and !$dstExprEval) { $dstExpr = '"' . $dstExpr . '"'; }
+  
   # Loop on each item of merged list
-  if    ($win->chRegex->Checked() == 0) { $repl   = quotemeta($repl);    }
-  elsif ($replBy =~ /\$1/)              { $replBy = '"' . $replBy . '"'; }
   foreach my $item (@{$refList1}) {
     $item =~ s/[\r\n]//g;  # Remove any line break
-    if ($item =~ /$repl/i) {
-      if ($replBy =~ /\$1/) {
-        if ($win->chMatchCase->Checked())  { $item =~ s/$repl/$replBy/eeg;  }
-        else                               { $item =~ s/$repl/$replBy/eegi; }
+    if (($srcExprCase and $item =~ /$srcExpr/) or (!$srcExprCase and $item =~ /$srcExpr/i)) {
+      if ($srcExprCase) {
+        if ($srcExprRegex and ($dstExprEval or $dstExpr =~ /\$1/)) { # Expression must be evaluated
+          $item =~ s/$srcExpr/$dstExpr/eeg;
+        } else { $item =~ s/$srcExpr/$dstExpr/g; } # Keyword
       } else {
-        if ($win->chMatchCase->Checked())  { $item =~ s/$repl/$replBy/g;  }
-        else                               { $item =~ s/$repl/$replBy/gi; }
+        if ($srcExprRegex and ($dstExprEval or $dstExpr =~ /\$1/)) { # Expression must be evaluated
+          $item =~ s/$srcExpr/$dstExpr/eegi;
+        } else { $item =~ s/$srcExpr/$dstExpr/gi; } # Keyword
       }
     }
     push(@items, $item);
@@ -5595,6 +5953,7 @@ sub updateAll
   };
   
   # Update Tool ?
+  sleep(1);
   if ($CONFIG{'TOOL_AUTO_UPDATE'})      { &updateTool(0);     }
   # Update GeoIP DB ?
   if ($CONFIG{'GEOIP_DB_AUTO_UPDATE'})  { &updateGeoIPDB(0);  }
@@ -5892,11 +6251,13 @@ sub configTab_Click
   # Show General tab
   if ($winConfig->configTab->SelectedItem() == 0) {
     # General tab
-    $winConfig->lblTool->Show();
+    $winConfig->lblToolShadowT->Show();
+    $winConfig->lblToolT->Show();
     $winConfig->btnCheckUpdate->Show();
     $winConfig->chAutoUpdate->Show();
     $winConfig->btnExportLang->Show();
-    $winConfig->lblOptFunctions->Show();
+    $winConfig->lblOptFunctionsShadowT->Show();
+    $winConfig->lblOptFunctionsT->Show();
     $winConfig->chFullScreen->Show();
     $winConfig->chRememberPos->Show();
     $winConfig->lblMaxSize1->Show();
@@ -5912,51 +6273,61 @@ sub configTab_Click
     $winConfig->rbNoResultOpt2->Show();
     
     # Databases tab
-    $winConfig->lblMACOUIDB->Hide();
+    $winConfig->lblMACOUIDBShadowT->Hide();
+    $winConfig->lblMACOUIDBT->Hide();
     $winConfig->chMACOUIDBAutoUpt->Hide();
     $winConfig->tfMACOUIDB->Hide();
     $winConfig->btnMACOUIDB->Hide();
     $winConfig->btnMACOUIDBUpt->Hide();
     $winConfig->btnMACOUIDBImport->Hide();
-    $winConfig->lblGeoIPDB->Hide();
+    $winConfig->lblGeoIPDBShadowT->Hide();
+    $winConfig->lblGeoIPDBT->Hide();
     $winConfig->chGeoIPDBAutoUpt->Hide();
     $winConfig->tfGeoIPDB->Hide();
     $winConfig->btnGeoIPDB->Hide();
     $winConfig->btnGeoIPDBUpt->Hide();
-    $winConfig->lblXLWHOISDB->Hide();
+    $winConfig->lblXLWHOISDBShadowT->Hide();
+    $winConfig->lblXLWHOISDBT->Hide();
     $winConfig->tfXLWHOISDB->Hide();
     $winConfig->btnXLWHOISDB->Hide();
-    $winConfig->lblIINDB->Hide();
+    $winConfig->lblIINDBShadowT->Hide();
+    $winConfig->lblIINDBT->Hide();
     $winConfig->tfIINDB->Hide();
     $winConfig->btnIINDB->Hide();
   
   # Show Databases tab
   } elsif ($winConfig->configTab->SelectedItem() == 1) {
     # Databases tab
-    $winConfig->lblMACOUIDB->Show();
+    $winConfig->lblMACOUIDBShadowT->Show();
+    $winConfig->lblMACOUIDBT->Show();
     $winConfig->chMACOUIDBAutoUpt->Show();
     $winConfig->tfMACOUIDB->Show();
     $winConfig->btnMACOUIDB->Show();
     $winConfig->btnMACOUIDBUpt->Show();
     $winConfig->btnMACOUIDBImport->Show();
-    $winConfig->lblGeoIPDB->Show();
+    $winConfig->lblGeoIPDBShadowT->Show();
+    $winConfig->lblGeoIPDBT->Show();
     $winConfig->chGeoIPDBAutoUpt->Show();
     $winConfig->tfGeoIPDB->Show();
     $winConfig->btnGeoIPDB->Show();
     $winConfig->btnGeoIPDBUpt->Show();
-    $winConfig->lblXLWHOISDB->Show();
+    $winConfig->lblXLWHOISDBShadowT->Show();
+    $winConfig->lblXLWHOISDBT->Show();
     $winConfig->tfXLWHOISDB->Show();
     $winConfig->btnXLWHOISDB->Show();
-    $winConfig->lblIINDB->Show();
+    $winConfig->lblIINDBShadowT->Show();
+    $winConfig->lblIINDBT->Show();
     $winConfig->tfIINDB->Show();
     $winConfig->btnIINDB->Show();
     
     # General tab
-    $winConfig->lblTool->Hide();
+    $winConfig->lblToolShadowT->Hide();
+    $winConfig->lblToolT->Hide();
     $winConfig->btnCheckUpdate->Hide();
     $winConfig->chAutoUpdate->Hide();
     $winConfig->btnExportLang->Hide();
-    $winConfig->lblOptFunctions->Hide();
+    $winConfig->lblOptFunctionsShadowT->Hide();
+    $winConfig->lblOptFunctionsT->Hide();
     $winConfig->chFullScreen->Hide();
     $winConfig->chRememberPos->Hide();
     $winConfig->lblMaxSize1->Hide();
@@ -5991,7 +6362,7 @@ sub updateTool
   
   # Download the version file  
   my $ua = new LWP::UserAgent;
-  $ua->agent('XL-Whois Update $VERSION');
+  $ua->agent('XL-Tools Update $VERSION');
   $ua->default_header('Accept-Language' => 'en');
   my $req = new HTTP::Request GET => $URL_VER;
   my $res = $ua->request($req);

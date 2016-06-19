@@ -46,6 +46,11 @@ What do you need
 
 Versions History
 ----------------
+* Version 1.2
+	- Added: Eval option in function Replace-By [List], see documentation
+	- Added: Regex validation in function Replace-By [List]
+	- Fixed: Stop button didn't work
+	- Fixed: Auto-update of the tools didn't work sometimes
 * Version 1.1
 	- Fixed: unixtime with more than 10 digits freezed the tool
 * Version 1.0
@@ -120,7 +125,8 @@ Link for the database is http://standards-oui.ieee.org/oui.txt.
 For icons:
 
 The main logo of XL-Tools have been created by Saki (Alexandre Moore, 
-http://sa-ki.deviantart.com/).
+http://sa-ki.deviantart.com/) and distributed on term of the GNU 
+General Public License.
 
 The icon used for Process button come from Danish Royalty Free Icons 
 by Jonas Rask Design (http://jonasraskdesign.com). This icon is free 
@@ -141,7 +147,7 @@ Icons for buttons in Utils - Custom Functions come from Farm Fresh Icons by
 Fatcow Web Hosting (http://www.fatcow.com/free-icons) and are distributed on 
 term of the CC Attribution 4.0 license.
 
-The check icon used in Congiuration Wizard has been created by Cheezen (Anders 
+The check icon used in Configuration Wizard has been created by Cheezen (Anders 
 Bjarnle, http://cheezen.deviantart.com/) and distributed as freeware.
 
 
