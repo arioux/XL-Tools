@@ -8,8 +8,8 @@
 #               for list of strings like sorting, converting, replacing, date
 #               and time utilities, etc.
 # Creation    : 2015-12-21
-# Modified    : 2016-06-18
-my $VERSION   = "1.2";
+# Modified    : 2016-07-10
+my $VERSION   = "2.0";
 # Author      : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
@@ -37,6 +37,7 @@ use warnings;
 use String::HexConvert qw(hex_to_ascii ascii_to_hex);
 use URI::Escape;
 use URI::Escape::JavaScript qw(unescape);
+use Encode qw(encode decode);
 use HTML::Entities;
 use MIME::Base64 ();
 use Convert::Base32;
@@ -59,6 +60,7 @@ use LWP::UserAgent;
 use DBI;
 use Geo::IP;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
+use IO::Uncompress::Unzip qw(unzip $UnzipError);
 use File::Copy;
 use Woothee;
 use Parse::HTTP::UserAgent;
@@ -81,13 +83,17 @@ require "XL-ToolsLang.pl";
 
 my $PROGDIR = $0;                                                              # Program path
 while (chop($PROGDIR) ne "\\") { }                                             # Dir only
-my $LANG_FILE    = "$PROGDIR\\Lang.ini";                                       # Langage file
-my $CONFIG_FILE  = "$PROGDIR\\XL-Tools.ini";                                   # Configuration file
-my $HELP_FILE    = "$PROGDIR\\Documentation.chm";                              # Help file
-my $URL_TOOL     = 'http://www.le-tools.com/download/XL-Tools.zip';            # Url of the tool
+my $USERDIR;                                                                   # User path
+if (-d "$ENV{'APPDATA'}\\XL-Toolkit\\XL-Tools") { $USERDIR = "$ENV{'APPDATA'}\\XL-Toolkit\\XL-Tools"; }
+else                                            { $USERDIR = $PROGDIR;                                }
+my $LANG_FILE    = "$USERDIR\\Lang.ini";                                       # Langage file
+my $CONFIG_FILE  = "$USERDIR\\XL-Tools.ini";                                   # Configuration file
+my $URL_DOC      = "http://le-tools.com/XL-ToolsDoc.html";                     # Online documentation
+my $URL_TOOL     = 'http://le-tools.com/XL-Tools.html#Download';               # Url of the tool
 my $URL_VER      = 'http://www.le-tools.com/download/XL-ToolsVer.txt';         # Url of the version file
 my $MACOUIDB_URL = 'http://standards-oui.ieee.org/oui.txt';                    # URL of the MAC OUI DB
 my $GEOIPDB_URL  = 'http://geolite.maxmind.com/download/geoip/database/GeoLiteCity.dat.gz'; # URL of the GeoIP DB
+my $IINDB_URL    = 'http://le-tools.com/download/XL-Tools/IIN.zip';            # URL of the IINDB
 my %CONFIG       :shared;                                                      # Configuration
 my %STR;                                                                       # Strings for GUI
 my $ARROW        :shared;                                                      # Arrow pointer
@@ -149,7 +155,6 @@ sub getDPI { return(Win32::GUI::DC->new()->GetDeviceCaps(LOGPIXELSX)); }
 my $DPI = &getDPI();
 my $fontGB;
 my $fontGB2;
-my $fontGB3;
 my $font10;
 my $font10b;
 my $font10u;
@@ -161,10 +166,6 @@ if ($DPI >= 120) {
                                   -bold      => 1      , );
   $fontGB2 = new Win32::GUI::Font(-name      => 'Arial',
                                   -size      => 10     ,
-                                  -bold      => 1      ,
-                                  -underline => 1      , );
-  $fontGB3 = new Win32::GUI::Font(-name      => 'Open Sans',
-                                  -size      => 12     ,
                                   -bold      => 1      ,
                                   -underline => 1      , );
   $font10  = new Win32::GUI::Font(-name      => 'Arial',
@@ -185,10 +186,6 @@ if ($DPI >= 120) {
                                   -bold      => 1      , );
   $fontGB2 = new Win32::GUI::Font(-name      => 'Arial',
                                   -size      => 12     ,
-                                  -bold      => 1      ,
-                                  -underline => 1      , );
-  $fontGB3 = new Win32::GUI::Font(-name      => 'Open Sans',
-                                  -size      => 14     ,
                                   -bold      => 1      ,
                                   -underline => 1      , );
   $font10  = new Win32::GUI::Font(-name      => 'Arial',
@@ -243,8 +240,8 @@ $win->cbLists->Add(   $STR{'cbLists1'}  , $STR{'cbLists2'}   ,
                       $STR{'cbLists9'}  , $STR{'cbLists10'}  ,
                       $STR{'cbLists11'} , $STR{'cbLists12'}  ,
                       $STR{'cbLists13'} , $STR{'cbLists14'}  ,
-                      $STR{'cbLists15'} , $STR{'cbLists16'}  ,
-                      $STR{'cbLists17'} ,                      );
+                      $STR{'cbLists18'} , $STR{'cbLists15'}  ,
+                      $STR{'cbLists16'} , $STR{'cbLists17'}  , );
 $win->AddCheckbox(    -name        => 'chMatchCase'          ,
                       -size        => [ 90, 20]              ,
                       -pos         => [560, 32]              ,
@@ -908,14 +905,14 @@ $winConfig->AddLabel(       -name        => 'lblToolShadowT'        ,
                             -foreground  => [180, 180, 180]         ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'Tool'}.':'        ,
-                            -font        => $fontGB3                , );
+                            -font        => $fontGB2                , );
 $winConfig->AddLabel(       -name        => 'lblToolT'              ,
                             -size        => [ 80, 22]               ,
                             -pos         => [150, 35]               ,
                             -addstyle    => 11                      , # Transparent
                             -foreground  => [204,   0,  51]         ,
                             -text        => $STR{'Tool'}.':'        ,
-                            -font        => $fontGB3                , );
+                            -font        => $fontGB2                , );
 $winConfig->AddButton(      -name        => 'btnExportLang'         ,
                             -size        => [125, 24]               ,
                             -pos         => [150, 68]               ,
@@ -942,14 +939,14 @@ $winConfig->AddLabel(       -name        => 'lblOptFunctionsShadowT',
                             -foreground  => [180, 180, 180]         ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'OptFunctions'}.':',
-                            -font        => $fontGB3                , );
+                            -font        => $fontGB2                , );
 $winConfig->AddLabel(       -name        => 'lblOptFunctionsT'      ,
                             -size        => [120, 22]               ,
                             -pos         => [150,140]               ,
                             -addstyle    => 11                      , # Transparent
                             -foreground  => [204,   0,  51]         ,
                             -text        => $STR{'OptFunctions'}.':',
-                            -font        => $fontGB3                , );
+                            -font        => $fontGB2                , );
 $winConfig->AddCheckbox(    -name        => 'chFullScreen'          ,
                             -size        => [150, 20]               ,
                             -pos         => [285,142]               ,
@@ -1034,7 +1031,7 @@ $winConfig->AddLabel(       -name        => 'lblMACOUIDBShadowT'    ,
                             -foreground  => [180, 180, 180]         ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'OUIDB'}.':'       ,
-                            -font        => $fontGB3                ,
+                            -font        => $fontGB2                ,
                             -visible     => 0                       , );
 $winConfig->AddLabel(       -name        => 'lblMACOUIDBT'          ,
                             -size        => [250, 22]               ,
@@ -1042,7 +1039,7 @@ $winConfig->AddLabel(       -name        => 'lblMACOUIDBT'          ,
                             -addstyle    => 11                      , # Transparent
                             -foreground  => [204,   0,  51]         ,
                             -text        => $STR{'OUIDB'}.':'       ,
-                            -font        => $fontGB3                ,
+                            -font        => $fontGB2                ,
                             -visible     => 0                       , );
 $winConfig->AddCheckbox(    -name        => 'chMACOUIDBAutoUpt'     ,
                             -size        => [220, 20]               ,
@@ -1080,7 +1077,7 @@ $winConfig->AddLabel(       -name        => 'lblGeoIPDBShadowT'     ,
                             -foreground  => [180, 180, 180]         ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'GeoIPDB'}.':'     ,
-                            -font        => $fontGB3                ,
+                            -font        => $fontGB2                ,
                             -visible     => 0                       , );
 $winConfig->AddLabel(       -name        => 'lblGeoIPDBT'           ,
                             -size        => [250, 22]               ,
@@ -1088,7 +1085,7 @@ $winConfig->AddLabel(       -name        => 'lblGeoIPDBT'           ,
                             -addstyle    => 11                      , # Transparent
                             -foreground  => [204,   0,  51]         ,
                             -text        => $STR{'GeoIPDB'}.':'     ,
-                            -font        => $fontGB3                ,
+                            -font        => $fontGB2                ,
                             -visible     => 0                       , );
 $winConfig->AddCheckbox(    -name        => 'chGeoIPDBAutoUpt'      ,
                             -size        => [220, 20]               ,
@@ -1121,7 +1118,7 @@ $winConfig->AddLabel(       -name        => 'lblXLWHOISDBShadowT'   ,
                             -foreground  => [180, 180, 180]         ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'XLWhoisDB'}.':'   ,
-                            -font        => $fontGB3                ,
+                            -font        => $fontGB2                ,
                             -visible     => 0                       , );
 $winConfig->AddLabel(       -name        => 'lblXLWHOISDBT'         ,
                             -size        => [250, 22]               ,
@@ -1129,7 +1126,7 @@ $winConfig->AddLabel(       -name        => 'lblXLWHOISDBT'         ,
                             -addstyle    => 11                      , # Transparent
                             -foreground  => [204,   0,  51]         ,
                             -text        => $STR{'XLWhoisDB'}.':'   ,
-                            -font        => $fontGB3                ,
+                            -font        => $fontGB2                ,
                             -visible     => 0                       , );
 $winConfig->AddTextfield(   -name        => 'tfXLWHOISDB'           ,
                             -size        => [412, 22]               ,
@@ -1148,7 +1145,7 @@ $winConfig->AddLabel(       -name        => 'lblIINDBShadowT'       ,
                             -foreground  => [180, 180, 180]         ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'IINLocalDB'}.':'  ,
-                            -font        => $fontGB3                ,
+                            -font        => $fontGB2                ,
                             -visible     => 0                       , );
 $winConfig->AddLabel(       -name        => 'lblIINDBT'             ,
                             -size        => [250, 22]               ,
@@ -1156,7 +1153,7 @@ $winConfig->AddLabel(       -name        => 'lblIINDBT'             ,
                             -addstyle    => 11                      , # Transparent
                             -foreground  => [204,   0,  51]         ,
                             -text        => $STR{'IINLocalDB'}.':'  ,
-                            -font        => $fontGB3                ,
+                            -font        => $fontGB2                ,
                             -visible     => 0                       , );
 $winConfig->AddTextfield(   -name        => 'tfIINDB'               ,
                             -size        => [412, 22]               ,
@@ -1167,6 +1164,12 @@ $winConfig->AddButton(      -name        => 'btnIINDB'              ,
                             -pos         => [565,263]               ,
                             -bitmap      => $fileOpenBmp            ,
                             -tip         => $STR{'selectDBFile'}    ,
+                            -visible     => 0                       , );
+$winConfig->AddButton(      -name        => 'btnIINDBUpt'           ,
+                            -size        => [ 22, 22]               ,
+                            -pos         => [588,263]               ,
+                            -bitmap      => $downloadBmp            ,
+                            -tip         => $STR{'downloadDB'}      ,
                             -visible     => 0                       , );
 
 #------------------------------------------------------------------------------#
@@ -1797,8 +1800,8 @@ sub cbLists_Change
   my $selFunc = $win->cbLists->GetCurSel();
   # Possibles value are 0 = 'No duplicate', 1 = 'Only duplicates', 2 = 'Count items', 3 = 'Count characters',
   # 4 = 'L1-L2', 5 = 'Column to row', 6 = 'Row to column', 7 = 'List to regex', 8 = 'Concat', 9 = 'Split strings',
-  # 10 = 'Split and extract', 11 = 'Merge lines', 12 = 'Replace', 13 = 'Reverse string', 14 = 'Lowercase',
-  # 15 = 'Uppercase', 16 = 'Add line number'
+  # 10 = 'Split and extract', 11 = 'Merge lines', 12 = 'Replace', 13 = 'Reverse string', 14 = 'Transliterate',
+  # 15 = 'Lowercase', 16 = 'Uppercase', 17 = 'Add line number'
   
   # Show available options
   
@@ -1850,7 +1853,7 @@ sub cbLists_Change
   }
   
   # Show Replace-By textfields ?
-  if ($selFunc == 12) {
+  if ($selFunc == 12 or $selFunc == 14) {
     $win->lblReplace->Show();
     $win->tfReplace->Show();
     $win->lblReplBy->Show();
@@ -1871,7 +1874,7 @@ sub cbLists_Change
   }
   
   # Show lowercase-uppercase Options
-  if ($selFunc == 14 or $selFunc == 15) {
+  if ($selFunc == 15 or $selFunc == 16) {
     $win->rbAll->Show();
     $win->rbFirstOnly->Show();
     $win->rbFirstEachWord->Show();
@@ -2566,8 +2569,8 @@ sub isProcessReady
       my $selFunc = $win->cbLists->GetCurSel();
       # Possibles value are 0 = 'No duplicate', 1 = 'Only duplicates', 2 = 'Count items', 3 = 'Count characters',
       # 4 = 'L1-L2', 5 = 'Column to row', 6 = 'Row to column', 7 = 'List to regex', 8 = 'Concat', 9 = 'Split strings',
-      # 10 = 'Split and extract', 11 = 'Merge lines', 12 = 'Replace', 13 = 'Reverse string', 14 = 'Lowercase',
-      # 15 = 'Uppercase', 16 = 'Add line number'
+      # 10 = 'Split and extract', 11 = 'Merge lines', 12 = 'Replace', 13 = 'Reverse string', 14 = 'Transliterate',
+      # 15 = 'Lowercase', 16 = 'Uppercase', 17 = 'Add line number'
       
       # Some functions require items in List 1 or in List 2
       if ($selFunc == 1 or $selFunc == 4 or $selFunc == 8) {
@@ -2581,7 +2584,7 @@ sub isProcessReady
       }
       
       # Replace function require value in Replace textfield
-      if ($selFunc == 12 and !$win->tfReplace->Text()) {
+      if (($selFunc == 12 or $selFunc == 14) and !$win->tfReplace->Text()) {
         $nextStep = $STR{'insertReplace'};
       } elsif ($selFunc == 12 and ($win->chRegex->Checked() or $win->chEval->Checked())) { # Valid regex
         # Regex is valid ?
@@ -2751,8 +2754,8 @@ sub btnProcess_Click
         my $selFunc = $win->cbLists->GetCurSel();
         # Possibles value are 0 = 'No duplicate', 1 = 'Only duplicates', 2 = 'Count items', 3 = 'Count characters',
         # 4 = 'L1-L2', 5 = 'Column to row', 6 = 'Row to column', 7 = 'List to regex', 8 = 'Concat', 9 = 'Split strings',
-        # 10 = 'Split and extract', 11 = 'Merge lines', 12 = 'Replace', 13 = 'Reverse string', 14 = 'Lowercase',
-        # 15 = 'Uppercase', 16 = 'Add line number'
+        # 10 = 'Split and extract', 11 = 'Merge lines', 12 = 'Replace', 13 = 'Reverse string', 14 = 'Transliterate',
+        # 15 = 'Lowercase', 16 = 'Uppercase', 17 = 'Add line number'
         if    ($selFunc ==  0) { $refList3 = &noDuplicates($refList1, $refList2);    }
         elsif ($selFunc ==  1) { $refList3 = &onlyDuplicates($refList1, $refList2);  }
         elsif ($selFunc ==  2) { $refList3 = &countDuplicates($refList1, $refList2); }
@@ -2767,9 +2770,10 @@ sub btnProcess_Click
         elsif ($selFunc == 11) { $refList3 = &mergeLines($refList1, $refList2);      }
         elsif ($selFunc == 12) { $refList3 = &replace($refList1, $refList2);         }
         elsif ($selFunc == 13) { $refList3 = &reverseStr($refList1, $refList2);      }
-        elsif ($selFunc == 14) { $refList3 = &lowercase($refList1, $refList2);       }
-        elsif ($selFunc == 15) { $refList3 = &uppercase($refList1, $refList2);       }
-        elsif ($selFunc == 16) { $refList3 = &addLineNumber($refList1, $refList2);   }
+        elsif ($selFunc == 14) { $refList3 = &transliterate($refList1, $refList2);   }
+        elsif ($selFunc == 15) { $refList3 = &lowercase($refList1, $refList2);       }
+        elsif ($selFunc == 16) { $refList3 = &uppercase($refList1, $refList2);       }
+        elsif ($selFunc == 17) { $refList3 = &addLineNumber($refList1, $refList2);   }
 
       # Sorting tab selected
       } elsif ($win->Tab->SelectedItem() == 1) {
@@ -2822,12 +2826,8 @@ sub btnStop_Click
 sub btnHelp_Click
 #--------------------------#
 {
-  if (-e $HELP_FILE) {
-    # Open the page
-    $win->ShellExecute('open', $HELP_FILE,'','',1);
-  } else {
-    Win32::GUI::MessageBox($win, $STR{'errDoc'}, $STR{'error'}, 0x40010);
-  }  
+  # Open Firefox to XL-Tools page
+  $win->ShellExecute('open', $URL_DOC,'','',1) or Win32::GUI::MessageBox($win, Win32::FormatMessage(Win32::GetLastError()), "$STR{'update3'} XL-Tools",0x40010);
 
 }  #--- End btnHelp_Click
 
@@ -3614,6 +3614,48 @@ sub reverseStr
 }  #--- End reverseStr
 
 #--------------------------#
+sub transliterate
+#--------------------------#
+{
+  # Local variables
+  my ($refList1, $refList2) = @_;
+  push(@{$refList1}, @{$refList2}); # Merge lists
+  my $srcExpr  = $win->tfReplace->Text();
+  my $dstExpr  = $win->tfReplBy->Text();
+  my $nbrItems = scalar(@{$refList1});
+  my $curr     = 0;
+  my @items;
+  
+  # Progress
+  $win->pb->SetRange(0, $nbrItems);
+  $win->pb->SetPos(0);
+  $win->pb->SetStep(1);
+  $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
+  $win->lblPbCount->Text("0 / $nbrItems");
+  
+  # Loop on each item of merged list
+  foreach my $item (@{$refList1}) {
+    $item =~ s/[\r\n]//g;  # Remove any line break
+    $_ = $item;
+    eval "tr/\Q$srcExpr\E/\Q$dstExpr\E/";
+    $item = $_;
+    push(@items, $item);
+
+    # Progress
+    $curr++;
+    $win->lblPbCount->Text("$curr / $nbrItems");
+    $win->pb->StepIt();
+  }
+
+  # Format results
+  my $itemsRes;
+  foreach (@items) { $itemsRes .= "$_\r\n"; }
+  
+  return(\$itemsRes);
+  
+}  #--- End transliterate
+
+#--------------------------#
 sub lowercase
 #--------------------------#
 {
@@ -3974,8 +4016,13 @@ sub conversionTabFunc
       $item =~ s/[\r\n]//g;  # Remove any line break
       if ($item) {
         $item =~ s/ /\%20/g;
-        $item =~ s/\\u([0-9a-fA-F]{4})/%u$1/g;
-        my $newItem = unescape($item);
+        # UTF-8
+        my $newItem = uri_unescape($item);
+        $newItem = decode('utf8'  , $newItem);
+        $newItem = encode('cp1252', $newItem);
+        # Unicode
+        $newItem =~ s/\\u([0-9a-fA-F]{4})/%u$1/g;
+        $newItem = unescape($newItem);
         push(@items, $newItem);
       } else {
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
@@ -5388,14 +5435,14 @@ sub btnCFAdd_Click
           $dbh->disconnect();
           
           # Copy to the Customs folder
-          my $pathQuoted = quotemeta($PROGDIR);
+          my $pathQuoted = quotemeta($USERDIR);
           if ($CFDBFile !~ /$pathQuoted\\Customs/) {
-            if (!-d "$PROGDIR\\Customs") { mkdir("$PROGDIR\\Customs"); }
+            if (!-d "$USERDIR\\Customs") { mkdir("$USERDIR\\Customs"); }
             my $funcFileName = pop @{[split m|\\|, $CFDBFile]};
             # Do not overwrite if already exists
-            if (!-e "$PROGDIR\\Customs\\$funcFileName") {
-              if (copy($CFDBFile, "$PROGDIR\\Customs\\$funcFileName")) {
-                $CFDBFile = "$PROGDIR\\Customs\\$funcFileName";
+            if (!-e "$USERDIR\\Customs\\$funcFileName") {
+              if (copy($CFDBFile, "$USERDIR\\Customs\\$funcFileName")) {
+                $CFDBFile = "$USERDIR\\Customs\\$funcFileName";
               }
             }
           }
@@ -5819,7 +5866,7 @@ sub newCF
   my ($title, $refList1, $refList2, $nbrItems1, $nbrItems2) = @_;
   
   # Create default directory
-  my $defCFDir = "$PROGDIR\\Customs";
+  my $defCFDir = "$USERDIR\\Customs";
   if (!-d $defCFDir) { mkdir($defCFDir); }  
   
   # Show SaveFileWindow for database path
@@ -6018,21 +6065,21 @@ sub createCW
                         -bitmap      => $errorBmp             ,
                         -background  => [255, 255, 255]       ,
                         -visible     => 0                     , );
-  $winCW->AddLabel(     -name        => 'lblLocIINLocalDB'    ,
+  $winCW->AddLabel(     -name        => 'lblDLIINDB'          ,
                         -size        => [220, 22]             ,
                         -pos         => [140, 50]             ,
                         -font        => $font10               ,
-                        -text        => $STR{'locIINLocalDB'}.'...',
+                        -text        => $STR{'downloadIINDB'}.'...',
                         -background  => [255, 255, 255]       ,
                         -foreground  => [  0, 102, 204]       ,
                         -visible     => 0                     , );
-  $winCW->AddLabel(     -name        => 'lblLocIINLocalDBDone',
+  $winCW->AddLabel(     -name        => 'lblDLIINDBDone'      ,
                         -size        => [ 20, 20]             ,
                         -pos         => [365, 50]             ,
                         -bitmap      => $checkBmp             ,
                         -background  => [255, 255, 255]       ,
                         -visible     => 0                     , );
-  $winCW->AddLabel(     -name        => 'lblLocIINLocalDBError',
+  $winCW->AddLabel(     -name        => 'lblDLIINDBError'     ,
                         -size        => [ 20, 20]             ,
                         -pos         => [365, 50]             ,
                         -bitmap      => $errorBmp             ,
@@ -6137,7 +6184,7 @@ sub firstStart
     my $dir;
     
     # Use default directory ? (program directory)
-    $answer = Win32::GUI::MessageBox($win, $STR{'defaultDir'}.'('.$PROGDIR.') ?', $STR{'winConfig'}, 0x1024);
+    $answer = Win32::GUI::MessageBox($win, $STR{'defaultDir'}.'('.$USERDIR.') ?', $STR{'winConfig'}, 0x1024);
     
     # Answer is no, open popup to let user choose a different location
     if ($answer == 7) {
@@ -6146,9 +6193,9 @@ sub firstStart
                                           -title      => $STR{'selectFolder'}.':' ,
                                           -folderonly => 1                        ,
                                           -newui      => 1                        ,
-                                          -directory  => $PROGDIR                 , );
+                                          -directory  => $USERDIR                 , );
     # Answer is yes, use default dir
-    } else { $dir = $PROGDIR; }
+    } else { $dir = $USERDIR; }
     
     # Selected folder
     if ($dir and -d $dir) {
@@ -6178,31 +6225,34 @@ sub firstStart
       $$refWinCW->lblSetGenOptDone->Show();
       
       # Select the XL-Whois DB
+      my $defaultPath = "$ENV{'APPDATA'}\\XL-Toolkit\\XL-Whois\\Whois.db";
+      my $XLWHOISDBFile;
       $$refWinCW->lblLocXLWhoisDB->Show();
-      my $XLWHOISDBFile = Win32::GUI::GetOpenFileName(-title         => $STR{'locXLWhoisDB'}.':',
+      if (-f $defaultPath) { $XLWHOISDBFile = $defaultPath; }
+      else {
+        $XLWHOISDBFile = Win32::GUI::GetOpenFileName( -title         => $STR{'locXLWhoisDB'}.':',
                                                       -defaultfilter => 0                       ,
                                                       -filemustexist => 1                       ,
                                                       -file          => 'Whois.db'              ,
                                                       -explorer      => 1                       , );
+      }
       if ($XLWHOISDBFile and -f $XLWHOISDBFile) {
         $winConfig->tfXLWHOISDB->Text($XLWHOISDBFile);
+        $CONFIG{'XLWHOIS_DB_FILE'} = $XLWHOISDBFile;
         $$refWinCW->lblLocXLWhoisDBDone->Show();
       } else { $$refWinCW->lblLocXLWhoisDBError->Show(); }
       
-      # Select the IINDB
-      $$refWinCW->lblLocIINLocalDB->Show();
-      my $IINDBFile = Win32::GUI::GetOpenFileName(-title         => $STR{'locIINLocalDB'}.':',
-                                                  -defaultfilter => 0                        ,
-                                                  -filemustexist => 1                        ,
-                                                  -file          => 'IIN.db'                 ,
-                                                  -explorer      => 1                        , );
-      if ($IINDBFile and -f $IINDBFile) {
-        $winConfig->tfIINDB->Text($IINDBFile);
-        $$refWinCW->lblLocIINLocalDBDone->Show();
-      } else { $$refWinCW->lblLocIINLocalDBError->Show(); }
-      
       # Download or select Database files
       my $return = 0;
+      
+      # Download IINDB Database
+      $$refWinCW->lblDLIINDB->Show();
+      $return = &downloadIINDB("$dir\\IIN.db"); # $return contains error msg if any
+      if ($return) { 
+        $$refWinCW->lblDLIINDBError->Show();
+        Win32::GUI::MessageBox($win, $return, $STR{'error'}, 0x40010);
+      } else { $$refWinCW->lblDLIINDBDone->Show(); }
+      &saveConfig(\%CONFIG);
       
       # Download GeoIP Database
       $$refWinCW->lblDLGeoIPDB->Show();
@@ -6294,6 +6344,7 @@ sub configTab_Click
     $winConfig->lblIINDBT->Hide();
     $winConfig->tfIINDB->Hide();
     $winConfig->btnIINDB->Hide();
+    $winConfig->btnIINDBUpt->Hide();
   
   # Show Databases tab
   } elsif ($winConfig->configTab->SelectedItem() == 1) {
@@ -6319,6 +6370,7 @@ sub configTab_Click
     $winConfig->lblIINDBT->Show();
     $winConfig->tfIINDB->Show();
     $winConfig->btnIINDB->Show();
+    $winConfig->btnIINDBUpt->Show();
     
     # General tab
     $winConfig->lblToolShadowT->Hide();
@@ -6376,8 +6428,8 @@ sub updateTool
     if ($currVer le $VERSION) {
       if ($confirm) { Win32::GUI::MessageBox($winConfig, $STR{'update1'}, $STR{'update2'}, 0x40040); } # Up to date
     } else {
-      my $answer = Win32::GUI::MessageBox($winConfig, "$STR{'update4'} $currVer $STR{'update5'} ?", $STR{'update3'}, 0x40024); # Download available
-      # Download the update
+      # Download with browser
+      my $answer = Win32::GUI::MessageBox($winConfig, "$STR{'update4'} $currVer $STR{'update5'} ?", $STR{'update3'}, 0x40024);
       if ($answer == 6) {
         # Open Firefox to XL-Tools page
         $win->ShellExecute('open', $URL_TOOL,'','',1) or
@@ -6870,7 +6922,7 @@ sub downloadMACOUIDB
 {
   # Local variables
   my $localMACOUIDB = shift; # Local filepath
-  if (!$localMACOUIDB) { $localMACOUIDB = "$PROGDIR\\oui.db"; } # Default location
+  if (!$localMACOUIDB) { $localMACOUIDB = "$USERDIR\\oui.db"; } # Default location
   
   # Start an agent
   my $ua = new LWP::UserAgent;
@@ -7015,7 +7067,7 @@ sub importMACOUIDatabase
         $winPb->pbWinPb->SetStep(1);
         my $sth = $dbh->prepare("insert into MACOUI (prefix,org) values(?,?)");
         foreach my $prefix (keys %oui) {
-          $winPb->lblPbCurr->Text("Insert $prefix...");
+          $winPb->lblPbCurr->Text("$STR{'inserting'} $prefix...");
           
           my $rv = $sth->execute($prefix, $oui{$prefix});
           #if ($rv < 0) { Win32::GUI::MessageBox($win, "Error adding $1 in the database: $DBI::errstr", $STR{'error'}, 0x40010); }
@@ -7038,6 +7090,7 @@ sub importMACOUIDatabase
       
       # Final message
       if (&validMACOUIDB($localMACOUIDB)) {
+        unlink($ouiFileTemp);
         $winConfig->tfMACOUIDB->Text($localMACOUIDB);
         $CONFIG{'MACOUI_DB_FILE'} = $localMACOUIDB;
         &saveConfig(\%CONFIG);
@@ -7300,7 +7353,7 @@ sub downloadGeoIPDB
 {
   # Local variables
   my $localGeoIPDB = shift; # Local filepath
-  if (!$localGeoIPDB) { $localGeoIPDB = "$PROGDIR\\GeoLiteCity.dat"; } # Default location
+  if (!$localGeoIPDB) { $localGeoIPDB = "$USERDIR\\GeoLiteCity.dat"; } # Default location
   
   # Start an agent
   my $ua = new LWP::UserAgent;
@@ -7350,7 +7403,7 @@ sub downloadGeoIPDB
       
       $winPb->pbWinPb->SetPos($completed);    # Set the progress bar
       $winPb->lblCount->Text("$completed %"); # Indicate purcentage
-    }, ':read_size_hint' => 32768);
+    });
     
     # Save data in a temp file
     my $GeoIPGZIP = $localGeoIPDB . '.gz';
@@ -7367,11 +7420,14 @@ sub downloadGeoIPDB
     if (-e $GeoIPGZIP) {
       $TOTAL_SIZE = 0;
       if (gunzip $GeoIPGZIP => $localGeoIPDB, BinModeOut => 1) {
-        unlink $GeoIPGZIP;
-        $winConfig->tfGeoIPDB->Text($localGeoIPDB);
-        # ToAdd: Valid GeoIP Database
+        if (&validGeoIPDB($localGeoIPDB)) {
+          unlink $GeoIPGZIP;
+          $winConfig->tfGeoIPDB->Text($localGeoIPDB);
+          $CONFIG{'GEOIP_DB_FILE'} = $localGeoIPDB;
+          &saveConfig(\%CONFIG);
+        } else { $error = 1; $msg = "$STR{'errorMsg'}: $STR{'invalidFile'}"; }
       } else { $error = 1; $msg = "$STR{'errorMsg'}: $GunzipError"; }
-    } else { $error = 1; $msg = $STR{'errorDownload'}.'...'; }
+    } else { $error = 1; $msg = "$STR{'errorMsg'}: $STR{'errorDownload'}..."; }
     
     # Turn off progress bar
     $win->ChangeCursor($ARROW);
@@ -7382,13 +7438,7 @@ sub downloadGeoIPDB
     
     # Final message
     if ($error) { return($msg); } # Error
-    else {
-      # Update Config
-      $winConfig->tfGeoIPDB->Text($localGeoIPDB);
-      $CONFIG{'GEOIP_DB_FILE'} = $localGeoIPDB;
-      &saveConfig(\%CONFIG);
-      return(0);
-    }
+    else        { return(0);    }
 
   } else {
     # Turn off progress bar
@@ -7616,9 +7666,164 @@ sub btnIINDB_Click
   }
 
   # Selected file
-  if ($IINDBFile and -f $IINDBFile) { $winConfig->tfIINDB->Text($IINDBFile); }
+  if ($IINDBFile and -f $IINDBFile) {
+    $winConfig->tfIINDB->Text($IINDBFile);
+    $CONFIG{'IIN_DB_FILE'} = $IINDBFile;
+  }
 
 }  #--- End btnIINDB_Click
+
+#--------------------------#
+sub btnIINDBUpt_Click
+#--------------------------#
+{
+  if ($THR_UPDATE and $THR_UPDATE->is_running()) {
+    Win32::GUI::MessageBox($win, $STR{'processRunning'}, $STR{'error'}, 0x40010);
+  } else {
+    $THR_UPDATE = threads->create(sub {
+      # Thread 'cancellation' signal handler
+      $SIG{'KILL'} = sub {
+        $win->ChangeCursor($ARROW);
+        # Turn off progress bar
+        $winPb->lblPbCurr->Text('');
+        $winPb->lblCount->Text('');
+        $winPb->pbWinPb->SetPos(0);
+        $winPb->Hide();
+        threads->exit();
+      };
+      
+      # Thread 'die' signal handler
+      $SIG{__DIE__} = sub {
+        my $errMsg = (split(/ at /,$_[0]))[0];
+        chomp($errMsg);
+        $errMsg =~ s/[\t\r\n]/ /g;
+        $win->ChangeCursor($ARROW);
+        # Turn off progress bar
+        $winPb->lblPbCurr->Text('');
+        $winPb->lblCount->Text('');
+        $winPb->pbWinPb->SetPos(0);
+        $winPb->Hide();
+        Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $errMsg", $STR{'error'}, 0x40010);
+      };
+
+      my $errMsg = &downloadIINDB("$USERDIR\\IIN.db");
+
+      if ($errMsg) { Win32::GUI::MessageBox($win, "$errMsg"           , $STR{'error'}      , 0x40010); }
+      else         { Win32::GUI::MessageBox($win, $STR{'updatedIINDB'}, "XL-Tools $VERSION", 0x40040); }
+    });
+  }
+  return(1);
+  
+}  #--- End btnIINDBUpt_Click
+
+#--------------------------#
+sub downloadIINDB
+#--------------------------#
+{
+  # Local variables
+  my $localIINDB = shift; # Default location
+  
+  # Show progress window
+  $win->ChangeCursor($HOURGLASS);
+  $winPb->Text($STR{'downloadIINDB'});
+  $winPb->lblPbCurr->Text($STR{'connecting'}.' le-tools.com...');
+  $winPb->lblCount->Text("0 %");
+  $winPb->pbWinPb->SetRange(0, 100);
+  $winPb->pbWinPb->SetPos(0);
+  $winPb->pbWinPb->SetStep(1);
+  $winPb->Center($win);
+  $winPb->Show();
+  
+  # Start an agent
+  my $ua = new LWP::UserAgent;
+  $ua->agent($CONFIG{'USERAGENT'});
+  $ua->default_header('Accept-Language' => 'en');
+  
+  # Check size of the remote file
+  my $req    = new HTTP::Request HEAD => $IINDB_URL;
+  my $res    = $ua->request($req);
+  my $return = $res->status_line;
+  if ($res->code == 200) { $TOTAL_SIZE = $res->header('content_length'); }
+  else {
+    # Hide progress window
+    $win->ChangeCursor($ARROW);
+    $winPb->lblPbCurr->Text('');
+    $winPb->lblCount->Text('');
+    $winPb->pbWinPb->SetPos(0);
+    $winPb->Hide();
+    return("$STR{'errorMsg'}: $STR{'errorConRemote'}...");
+  }
+  
+  # Download the file
+  if ($TOTAL_SIZE) {
+    my $downloadData;
+    # Download the file
+    $winPb->lblPbCurr->Text($STR{'downloadIINDB'}.'...');
+    my $response = $ua->get($IINDB_URL, ':content_cb' => sub {
+      # Local variables
+      my ($data, $response, $protocol) = @_;
+      
+      $downloadData       .= $data;                                     # Downloaded data
+      my $totalDownloaded  = length($downloadData);                     # Size of downloaded data
+      my $completed        = int($totalDownloaded / $TOTAL_SIZE * 100); # Pourcentage of download completed
+      
+      $winPb->pbWinPb->SetPos($completed);    # Set the progress bar
+      $winPb->lblCount->Text("$completed %"); # Indicate purcentage
+    });
+    
+    # Save data in a temp file
+    my $IINDB_ZIP = $localIINDB."\.zip";
+    if ($response and $response->is_success) {
+      open(ZIP,">$IINDB_ZIP");
+      binmode(ZIP);
+      print ZIP $downloadData;
+      close(ZIP);
+    } else {
+      # Hide progress window
+      $win->ChangeCursor($ARROW);
+      $winPb->lblPbCurr->Text('');
+      $winPb->lblCount->Text('');
+      $winPb->pbWinPb->SetPos(0);
+      $winPb->Hide();
+      return("$STR{'errorMsg'}: $STR{'errorConRemote'}...");
+    }
+    
+    # Uncompress IINDB ZIP
+    my ($error, $msg);
+    if (-e $IINDB_ZIP) {
+      $TOTAL_SIZE = 0;
+      if (unzip $IINDB_ZIP => $localIINDB, BinModeOut => 1) {
+        if (&validIINDB($localIINDB)) {
+          unlink $IINDB_ZIP;
+          $winConfig->tfIINDB->Text($localIINDB);
+          $CONFIG{'IIN_DB_FILE'} = $localIINDB;
+          &saveConfig(\%CONFIG);
+        } else { $error = 1; $msg = "$STR{'errorMsg'}: $STR{'invalidFile'}"; }
+      } else { $error = 1; $msg = "$STR{'errorMsg'}: $UnzipError"; }
+    } else { $error = 1; $msg = "$STR{'errorMsg'}: $STR{'errorDownload'}..."; }
+    
+    # Turn off progress bar
+    $win->ChangeCursor($ARROW);
+    $winPb->lblPbCurr->Text('');
+    $winPb->lblCount->Text('');
+    $winPb->pbWinPb->SetPos(0);
+    $winPb->Hide();
+    
+    # Final message
+    if ($error) { return($msg); } # Error
+    else        { return(0);    }
+    
+  } else {
+    # Hide progress window
+    $win->ChangeCursor($ARROW);
+    $winPb->lblPbCurr->Text('');
+    $winPb->lblCount->Text('');
+    $winPb->pbWinPb->SetPos(0);
+    $winPb->Hide();
+    return("$STR{'errorMsg'}: $STR{'errorDownload'}...");
+  }
+
+}  #--- End downloadIINDB
 
 #--------------------------#
 sub date

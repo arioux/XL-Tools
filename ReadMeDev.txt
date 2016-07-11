@@ -1,16 +1,18 @@
 XL-Tools
-Description : Part of the XL-Toolkit, XL-Tools provides a bunch of functions
-              for list of strings like sorting, converting, replacing, date
-              and time utilities, etc.
-Author 		: Alain Rioux (admin@le-tools.com)
-WebSite		: http://le-tools.com/XL-Tools.html
-GitHub		: https://github.com/arioux/XL-Tools
+Description 	: Part of the XL-Toolkit, XL-Tools provides a bunch of functions
+                for list of strings like sorting, converting, replacing, date
+                and time utilities, etc.
+Author 				: Alain Rioux (admin@le-tools.com)
+WebSite				: http://le-tools.com/XL-Tools.html
+GitHub				: https://github.com/arioux/XL-Tools
+Documentation	: http://le-tools.com/XL-ToolsDoc.html
+FossHub      	: http://code.fosshub.com/XL-Tools
 
 
 Development
 -----------
 
-ExtractFace has been developped using ActivePerl 5.16.3 with the 
+XL-Tools has been developped using ActivePerl 5.16.3 with the 
 following modules installed:
 
 - Win32-API (v0.75)
@@ -27,6 +29,7 @@ following modules installed:
 - String-HexConvert (v0.01)
 - URI (v1.60)
 - URI-Escape-JavaScript (v0.04)
+- Encode (v2.56)
 - HTML-Parser (v3.71)
 - HTML::ParseBrowser (v1.10)
 - MIME-Base64 (v3.14)
@@ -48,8 +51,7 @@ following modules installed:
 To do
 -----
 
-- Add some IPv6 functions (related to GeoIP and XL-Whois)
-
+- Add IPv6 support for GeoIP
 
 
 Packaging

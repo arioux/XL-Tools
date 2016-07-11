@@ -75,6 +75,7 @@ sub loadDefaultStr
   $$refSTR{'startingProcess'} = 'Starting process';
   $$refSTR{'runningProcess'}  = 'Running process';
   $$refSTR{'connecting'}      = 'Connecting to';
+  $$refSTR{'inserting'}       = 'Inserting';
   $$refSTR{'saveToFile'}      = 'Save to a file';
   $$refSTR{'saveToFileMsg'}   = 'Not enough space to write results in textfield. Do you wish to save the results in a file ?';
   $$refSTR{'monday'}          = 'Monday';
@@ -127,6 +128,7 @@ sub loadDefaultStr
   $$refSTR{'errorConRemote'}  = 'Error connecting to remote site';
   $$refSTR{'errorDownload'}   = 'Error downloading the database';
   $$refSTR{'errorCreatingDB'} = 'Error creating the database';
+  $$refSTR{'errorUnzip'}      = 'Error uncompressing file';
   $$refSTR{'selectedCF'}      = 'Selected custom function';
   $$refSTR{'unknownError'}    = 'Unknown error';
   $$refSTR{'errorOUI_TXT'}    = 'Error with oui.txt file';
@@ -186,6 +188,7 @@ sub loadDefaultStr
   $$refSTR{'cbLists15'}     = 'Lowercase';
   $$refSTR{'cbLists16'}     = 'Uppercase';
   $$refSTR{'cbLists17'}     = 'Add line number';
+  $$refSTR{'cbLists18'}     = 'Transliterate';
   $$refSTR{'MatchSpace'}    = 'Ignore space';
   $$refSTR{'With'}          = 'With';
   $$refSTR{'Columns'}       = 'Columns';
@@ -312,11 +315,6 @@ sub loadDefaultStr
   $$refSTR{'Tool'}            = 'Tool';
   $$refSTR{'Export'}          = 'Export';
   $$refSTR{'checkUpdate'}     = 'Check Update';
-  $$refSTR{'update1'}         = 'You have the latest version installed.';
-  $$refSTR{'update2'}         = 'Check for update';
-  $$refSTR{'update3'}         = 'Update';
-  $$refSTR{'update4'}         = 'Version';
-  $$refSTR{'update5'}         = 'is available. Download it';
   $$refSTR{'OptFunctions'}    = 'Functions';
   $$refSTR{'chFullScreen'}    = 'Start Full Screen';
   $$refSTR{'chRememberPos'}   = 'Remember position';
@@ -337,7 +335,6 @@ sub loadDefaultStr
   $$refSTR{'XLWhoisDB'}       = 'XL-Whois DB';
   $$refSTR{'IINLocalDB'}      = 'IIN Local DB';
   $$refSTR{'locXLWhoisDB'}    = 'Locate the XL-Whois DB';
-  $$refSTR{'locIINLocalDB'}   = 'Locate the IIN Local DB';
   $$refSTR{'selMACOUIFile'}   = 'Select the MAC OUI Database file';
   $$refSTR{'selPathDB'}       = 'Select the path for the database';
   $$refSTR{'selGeoIPFile'}    = 'Select the GeoIP Database file';
@@ -358,6 +355,19 @@ sub loadDefaultStr
   $$refSTR{'GeoIPNotExist'}   = 'The GeoIP database (GeoLiteCity.dat) does not exist, download';
   $$refSTR{'downloadGeoIP'}   = 'Downloading GeoIP Database';
   $$refSTR{'downloadWarning'} = 'It may take a few minutes';
+  $$refSTR{'downloadIINDB'}   = 'Downloading IIN Database';
+  $$refSTR{'updatedIINDB'}    = 'The IIN database has been updated';
+  
+  # Update Window
+  $$refSTR{'winUpdate'}       = 'Update';
+  $$refSTR{'update1'}         = 'You have the latest version installed.';
+  $$refSTR{'update2'}         = 'Check for update';
+  $$refSTR{'update3'}         = 'Update';
+  $$refSTR{'update4'}         = 'Version';
+  $$refSTR{'update5'}         = 'is available. Download it';
+  $$refSTR{'update6'}         = 'is available. Update';
+  $$refSTR{'update7'}         = 'Note: Program must be restarted.';
+  $$refSTR{'NotNow'}          = 'Not now';
   
   # About Window
   $$refSTR{'version'}         = 'Version';

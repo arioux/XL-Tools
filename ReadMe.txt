@@ -1,87 +1,12 @@
 XL-Tools
-Description : Part of the XL-Toolkit, XL-Tools provides a bunch of functions
-              for list of strings like sorting, converting, replacing, date
-              and time utilities, etc.
-Author 		: Alain Rioux (admin@le-tools.com)
-WebSite		: http://le-tools.com/XL-Tools.html
-GitHub		: https://github.com/arioux/XL-Tools
-
-
-What is it
-----------
-
-XL-Tools provides a bunch of functions for list of strings, grouped in five 
-categories :
-- Lists: 	  No duplicate, Only duplicates, Count items, Count characters, 
-			  L1-L2, Column to row, Row to column, List to regex, Concat, Split 
-			  strings, Split and extract, Merge lines, Replace, Reverse string, 
-			  Lowercase, Uppercase, Add line number
-- Sorting: 	  Alphabetical order, Numerical order, String length, IPv4 Address, 
-			  Date and time
-- Conversion: Hex to ASCII, ASCII to Hex, Hex to Base10, Base10 to ASCII, URI 
-			  Decode, URI Encode, HTML Decode, HTML Encode, Base64 to ASCII, 
-			  ASCII to Base64, SHA1 - Base32 to Base16
-- Time:		  Anytime to Anytime, Unixtime to Anytime, ChromeTime to Anytime, 
-			  LDAPTime to Anytime, Anytime to Unixtime, Date to Weekday, Time 
-			  difference, Add time, Substract time
-- Utils:      NSLookup, CIDR to IP Range, IP to Arpa, Arpa to IP, Resolve MAC 
-			  Address, Resolve IPv4 GeoIP, Resolve IPv4 ISP, Resolve User-agent, 
-			  Credit Card to issuing company, Custom functions
-
-See documentation for more details.
-
-
-How it works
-------------
-
-XL-Tools doesn't require any installation. In order to start using it, just 
-run the executable file. 
-
-
-What do you need
-----------------
-
-- Windows XP or newer
-
-
-Versions History
-----------------
-* Version 1.2
-	- Added: Eval option in function Replace-By [List], see documentation
-	- Added: Regex validation in function Replace-By [List]
-	- Fixed: Stop button didn't work
-	- Fixed: Auto-update of the tools didn't work sometimes
-* Version 1.1
-	- Fixed: unixtime with more than 10 digits freezed the tool
-* Version 1.0
-	- First release.
-
-
-Translation
------------
-
-To translate XL-Tools to other languages:
-1. 	In "Config" tab, use the "Export Lang.ini" function. The file will be 
-	saved in the same directory of the tool;
-2. 	Open the file in any text editor like Notepad;
-3. 	Translate each expression at the right of the "=" symbol;
-	-	The expression on the left side is used by the tool to identify the 
-		expression 	so don't change it. Also, be sure to have a space between 
-		the "=" symbol and your expression (ex. Key = Value);
-	- 	Authorized characters are alphanumerics, spaces and these symbols: ",", 
-		".", "-", "!", "'", "(" and ")". Any other character will be deleted;
-	-	For some controls, String length must be the same as original. A longer 
-		string could be truncated if it doesn't match the length of the field;
-	- 	The value associated with the "translatorName" will be used in the 
-		"About" window to identify you as translator (if you want). You can 
-		also add your email or a short 	url (ex. YourName (youraddress@email.com));
-4. 	Restart the tool so the strings in "Lang.ini" will be used instead of the 
-	default language.
-
-* If you translate the tool and you want to share, contact the author.
-
-Available translations:
-See Website for available translations.
+Description 	: Part of the XL-Toolkit, XL-Tools provides a bunch of functions
+                for list of strings like sorting, converting, replacing, date
+                and time utilities, etc.
+Author 				: Alain Rioux (admin@le-tools.com)
+WebSite				: http://le-tools.com/XL-Tools.html
+GitHub				: https://github.com/arioux/XL-Tools
+Documentation	: http://le-tools.com/XL-ToolsDoc.html
+FossHub      	: http://code.fosshub.com/XL-Tools
 
 
 Licence
@@ -101,13 +26,6 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
-Feedback
---------
-
-If you have any problem, suggestion, comment, or you found a bug in my
-utility, you can send a message at http://le-tools.com/about.php.
 
 
 Credits
