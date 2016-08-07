@@ -7359,10 +7359,190 @@ wMDqrKzkrKzjra3kr6/kwsLrurrnmZnd+Pj9////////////////////////3t70r6/kqqrira3j
 ra3jqqrisLDk39/0////////////////
 ) );
   
+    
+  my $left16Bmp = Win32::GUI::BitmapInline->new( q(
+Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA////
+////////////////8vLy7+/v6enp7+/v////////////////////////////////////////5ubm
+3d3dysrKmbSnNJ5vzMzM09PT3d3d5ubm////////////////////////////////////0OzhM59x
+MqBx////////////////////////////////////////////////0OzhMaJyPNenMKFy////////
+////////////////////////////////////0OzhLqR1PNenHs+cLaR0////////////////////
+////////////////////0OzhKqd2PNenEL6OHtKeKqd3K6h3K6d3K6h3K6d3K6d3K6d2K6d2////
+////0OzhJ6p5PNenD8KREL6OPNenPNenPNenPNenPNenPNenPNenKtqpKKt6////0OzhJK58PNen
+Ds6aDtSfD8yYD8eVD8eUD8eUD8eUD8eUD8eVD8eUKtyrJK59////ILF/MOCvD86bDtehDteiDtei
+DteiDtehDteiDteiD9eiDteiDteiPeS2IbF/////zPDlHbSCSOi8D9qkD9qlDtqlDtqlDtqlDtml
+D9qlDtmlD9qkDtqlTOi9HbSC////////zPDlGreFYe/ID92oD92oTOq+9fn3kPnZkPnZkPnZkPnZ
+kPnZ9fn3GreF////////////zPDlFruHePTREN+rTOvADsSPDsSPDsSPDsSPDsSPDsSPDsSPDsSP
+////////////////zPDlFL6KifjXkPnZFL2K////////////////////////////////////////
+////////zPDlEsCM9fn3EsCM////////////////////////////////////////////////////
+zPDlD8KOEMKO////////////////////////////////////////////////////////zPDlDsSP
+////////////////////////////////
+) );
+  
+  my $help16Bmp = Win32::GUI::BitmapInline->new( q(
+Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA/Pz8
+7u7ukpKSd3d3hn55oIt8n4p6noh4nol5oIt7oo1+pJGBqZaHtq6o7u7u/Pz8/////v7+Li4uGRkZ
+aUs03IlL3IpM3YtN3otN3oxO341P345Q4I5R4KZ6////////////9PT0MjIyJCQkdFZA4Y9S4ZBT
+4pBU6ap86q2A5JNX5ZRY5pVZ7K2A////////////9PT0MTExJSUlc1ZB5ZRY5pRZ5pVa+OLR+ebX
+6Jhd6Zlf6ppg76+B////////////8/PzLS0tIyMjcFQ/6Jdc6Zhe6plf7ah27qp57Jti7Z1k7Z5l
+8a+B////////////8/PzKioqIiIibVA86Zhe6Zle6plf7KNv7qp565xj7J1l7J1k8Kx8////////
+////8/PzJiYmICAgaEw455Zb55Zb6Jdc6p1m8b+a6Ztj6pph6ppg7qd2////////////8vLyIyMj
+Hh4eY0cz5ZNX5ZRY5pVZ5pVa88+16aFs6Jdc6Jhe66Nv////////////8vLyHh4eGxsbXUIu45FU
+45JV5JJW5JZc56Nx9tzK6aFs5pZb6Z5o////////////8fHxGBgYFxcXVz0p4Y9R6rCF7bqU4ppj
+45JW7LSK9dvG5JNY55lh////////////8fHxExMTExMTUTck3oxO89W+89vI4JBV4Y5R5qNw+Ofa
+4pBT5JVa////////////8PDwDg4ODw8PSjIf3IpL5ap99N3K459r4pli8tK66bKI4I5Q4I9T////
+////////8PDwCQkJCwsLRC0a24pM3p5t3ZBU5ah55ap84Jtm3YtM3otN3oxO/fz8////////8PDw
+BAQEBgYGPykX3Jll25Ja2YZG2odH245S24xQ24hJ3IlK3IpL+vn3////////8PDwVVVVfn5+kY2K
+wLGlwrChw7GjxbKkxrWnx7SmyLWnybaotY1t/////////////v7+mpqampqatq+o0MG10cG10cG0
+0sK01MS30MG2z8C0zr+z18q/////////
+) );
+  
+  my $datetime16Bmp = Win32::GUI::BitmapInline->new( q(
+Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA////
+3NzczMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz8/P////////l5WTendzdnNw
+dnNvdnNvdnNvdnNwdnNvlJGPpqSipKKgo6Geo6GfqKak////////fHl3////////////////////
+////////xsTDwb++1NPR397e////p6Wj////////fXl2/////////f39/v7+/v7+////////////
+n52a5+fmz87N6ejnq6mn////////fnx5////+vr6+fn5+/v7////////2tra0tLSwL697+/v7ezs
+1tbTsrCu////////gn99////9fb29fX2/Pz8WFhY2tnZampqcXFxRkVFn5yaoJ2bwcC+ube1////
+////hYJ/////8vLx8/Py/Pz7XFxc////////////WFhYzs3O5+blsrCuqKak////////iIaC////
+7+7u8fDw+/r6XV1e////YmJiV1VVYGBg7e3s9fT19vX2h4WC////////i4iG/v7+6+vq7+/u39/e
+YWBg////Ojs7/////f378vLx7e3s////jIiG////////jouI/v796Ofm7uzrWVlZKior+/n4Xl5d
+Xl5eWFhZx8bF6ejn/v79jouI////////lI+L///+5ubi6enm8PDszMrG7+7r8O/r8PDs7u7q6unm
+5+bj///+lI+L////////o5yJ///98u3e9PDh9vLj9/Lh9vDf9vDe9vHg9fHi9PDh8u7e///9o5yJ
+////////ACDnUm/vABblAAqxAAyzABnpABjjABjiABjmAAuxAAuyABbnUm/vACDn////////ATjx
+nbP7lq//wLqkgHFOk6LWm7L9nLL6l7D/wbukgXFMmLH/nbT8ATjx////////UXPSBkj+AEL/vLel
+k4hzIVTkBEf/B0j8AEP/vbekl4tuAEX/B0j+UXPS////////////////////u7WkqKGV8vDr////
+////////vbaisqaP////////////////
+) );
+  
+  my $guess16Bmp = Win32::GUI::BitmapInline->new( q(
+Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA////
+////////////////////////////////////////////////zMzMzMzM////3NzczMzMzMzMzMzM
+zMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMOW6gO2ybzMzMl5WTendzdnNwdnNvdnNvdnNweHVy
+fHl2gH16gX99g4B9iIB5MGymKbL/RMj/OoLKfXp3////////////////////////4uPkfX6AZmdr
+aGhrbmtrgXRsOcb/Vdv/N4DKfHt3////////////////////yszNcG1t5ceP/+2m//Ww6dejfHZy
+npCITYbC////gHx6////+/v7////JCQktre4aWlr5sKI/+al/+em/++y//i76dekgn198/Hw////
+g4B+////+Pf3////Kysr////fX2A/+Cc/+/K/+ez/+mr/++y//KtgH+C////////hoOB////9fX0
+////LS0t7O3thoeK/9yX//fj/+3I/+ey/+al/+qjiImN////////iYeD////8/Py5eXkLy8v////
+hYWH78GD//Ta//fj/+7J/+Sj78+Xl5ia////////jIqH////8PDvQUFBLS0t+/z7VlZXoZ2a7sKD
+/9qU/9yZ78uPo6Cf5ubm////////ko+J////7Orn8/HuwL+98vDs8fDt19fUrKyro6Kjo6KjsrGx
+mpiV////////////o5uI///99O/f9/Pk+fTl9/Li9/Lh+PPj+fXn+fbo+PTl////pJyJ////////
+////ACDnUm/vABXlAAqxAAyyABnnABjjABjmAAyxAAyzABfoUm/wACDn////////////ATjxnbP7
+lq//wLqkgXFMmbL/m7L8l7D/wbukgXFMmLH/nbT8ATjx////////////UXPSBkj+AEL/vbekl4tu
+AEX/Bkj9AEP/vbekl4tuAEX/B0j+UXPS////////////////////////vbaisqaP////////////
+vbaisqaP////////////////////////
+) );
+  
+  my $datetimeAdd = Win32::GUI::BitmapInline->new( q(
+Qk32BgAAAAAAADYAAAAoAAAAGAAAABgAAAABABgAAAAAAMAGAADEDgAAxA4AAAAAAAAAAAAA////
+/////////////////////////////////////////////////////f398vX04+Pj39/f39/f4+Pj
+8fTz/P39/////////f39+fn5+Pj49/f39/f39/f39/f39/f39/f39/f39/f39vf39vf39Pb15ufn
+q7mybpOCX4p2X4p2bpOCq7my5+no+/z8////8fHx09PTycnJyMjIyMjIyMjIyMjIyMjIyMjIyMjI
+yMjIyMjIyMjIxsbGgqGSH5ZlBrN3Ab6AAL6ABrN3H5ZkiKaY6Ono/f79w8PDmpiWoZ6doJ6coJ6c
+oJ6coJ6coJ6coJ6coJ6coJ6cpqSjqqWlapR9DJ1gAMuNAMmKL9GcL9GcAMmKAMuOD59mhqiZ7/Ty
+ubm5wsC//v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/f39+Pj42OPeOqh4Ab5/AMeIAcKAv+/ev+/e
+AcKAAcaIAL+BNp5yzdLQubm5wsC//f39+/v7+/v6+/v6+/v7+/v6+/v6/Pz7+vr58O3uvNDDCKNj
+AcKCAL99Abt2v+3bv+3bAbt2Ab9+AMOEB6Zps724urm5xMLB+/v7+Pj4+Pj4+Pj4+vr6+/v8+/v7
++fn5+vr68/Dwuc3AD6doB8CA////////////////////////CMGBEatwr7q1urq5xcTD+fj49vb2
+9vX19vb27+/vrq6u4uLi+fn52NjYm5mZc4h7Ka51FMGEf9u5gNm13/Xs3/XsgNm1gNu5FMKFKrB7
+sry3urq6x8XE9/f39PTz9PTz9fX05eTkZGRkysrK+Pj3xsbFmJeXiJyRQK+ALsWSALl2AbVyv+za
+v+zaAbVyAbl3McaTRLGC0OTcurq6ycfG9fX18vHx8fHx8/Pz5OPjZmZmy8vL9PT09fX1+Pf37Ozs
+a7aTUsCTMciUDLl5kN2/kN6/Dbl5MsiUWcGYf8Cj9/v5u7q6ysjH9PLy8O/v7+7u8fDw4uHhZmZm
+y8vL8vHx8vHx9/b28/Hyj6GZHX9TTL2OUsufTcubTcucVcyhU7+TYbeQ5PPt////u7u6y8rJ8vHx
+7e3s7e3s7+7t4eDgZWVlysrJ8PDv4eHgfX19YWBhUE1OmKCbesCgMZ9oJZdZJphaLZljd7GV7vfz
+////////u7u7zMvK8O/v6+rp7Ovq6ejn0M/OZ2dnycjH7+7t4uHgW1tby8rJ9PLx9/T09vDx+fDz
++vD0+/X31s3PvLu8////////////u7u7zs3M7u7t6ejo6unpz8/OZ2dnTU1NxsbF6+vq8fDwZ2dn
+nJybrq2uqKen7u3s6unp6ujo7+7uz83MvLu7////////////vLu7z83M7Ozr5+bl6Ofm5OLhr66u
+gH9/0tLR6efm7OvqpaWkhYWEhoaGgYGA7Ovq5+bl5+bl7Ozrz83MvLu7////////////vLy70c/O
+6uno5OPi5OPi5eTj6Ofm6ejn5+bl5OPi5eTj6Ofm6+no6+rp6ejn5uTj5OPi5OPi6unp0c/OvLy7
+////////////vLy80tHP6Ofm4uHe4uDe4uHe4+Hf4uHe4uHe4+Hf4uHe4+Hf4+Hf4+Hf4+Hf4+Hf
+4uHe4uDe6efm0tHPvLy8////////////vb282tfQ+fn49/f29/f29/f2+Pf29/f29/f2+Pf29/f2
++Pf29/f29/f29/f2+Pf29/f29/f2+fn42dfPvby8////////////sLPBHkDiEzbfDDHfCi/ZCCzT
+Ci7WDDHfDDHeDTHeDTHeDTHeDDHeDDHfCS3VCCzTCi/ZDDHeEzbfHkDisLPB////////////sbTB
+QGPrK1PpGUTqK0vETFmTKkOmG0bsHUbnHEbnHUbnHEbnHUbnGkXrNU6vR1WPJUW+G0bqKlLpP2Pr
+sbTB////////////srbDVXrzMl7wE0fyVG3CrqicVV+GFEn2F0nvF0nvF0nvF0nvF0nvE0j0d4Cn
+op2RP1itFUnzMV3wVXrzsrbC////////////w8jWVH/5gaL8fqH+jJvDx8O7cXWBf6L+gqP8gqP8
+gqP8gqP8gqL8faD+lZmmu7avdYSrf6L+gaL8VH/5w8jV////////////8PL6rb/wnbPvlarke4ah
+3dnRaWt1jqPanrX2n7X1oLb0oLX0nrT1jaLaiYyV0MzFaXSOlarlnbPwrb/x8fP6////////////
+/////////////v7/xMfTpaGdo6Ss/f3+/////////////////////f3+t7e+m5eTu77L/v7/////
+////////////////////
+) );
+
+  my $datetimeEdit = Win32::GUI::BitmapInline->new( q(
+Qk32BgAAAAAAADYAAAAoAAAAGAAAABgAAAABABgAAAAAAMAGAADEDgAAxA4AAAAAAAAAAAAA////
+/////////////////////v7+9fX17+/v/Pz8/v7+////////////////////////////////////
+/////////////////f39+fn5+Pj49/f39/f39/f39PX1ubm6qK2v2tra7u7v9vf39vf39vf39vf3
+9vf39vf39vf39/f3+fn5/f39////////////8fHx09PTycnJyMjIyMjIyMjIx8fHoKWobG9zZXaD
+rbO3x8fHyMjIyMjIyMjIyMjIyMjIyMjIycnJ1NTU8PDw////////////w8PDmpiWoZ6doJ6coJ6c
+oJ6coZ6dpaCdcoaTZpWvYKbSW4OhjJCUpZ+bn5qZoqCenpuZoZ+dqKWko6GfxMTE////////////
+ubm5wsC//v7+/v7+/v7+/v7+/v7+/v7+4+71gb7gruL9XrDrOIbHr7a9vri0ysjGzczKy8rI5eTk
+xsTDu7q6////////////ubm5wsC//f39+/v7+/v6+/v6+/v7/Pz7/v78mL7Vtd3vesj+E5P4O4bG
+p6mruLSx4uLgzczKz87Mvr27u7u7////////////urm5xMLB+/v7+Pj4+Pj4+Pj4+vr6+/v8/fz7
+0+LxWKjgq+T7asD/HZz/IXvFqaut9PLw4+LhzcvJt7WzvLy7////////////urq5xcTD+fj49vb2
+9vX19vb27+/vrq6u4+Li/fv6pLbJTJrQqeX+bsH+HZz+OojJxtPf9PHv3tzbuLWzvLy8////////
+////urq6x8XE9/f39PTz9PTz9fX05eTkZGRkysrK+fn3ycfEmqOsTKDdqOT+a8D+E5P4OofItrq9
+2dbTx8TDvLy8////////////urq6ycfG9fX18vHx8fHx8/Pz5OPjZmZmy8vL9PT09fX1+vj209vl
+W6ngreT7asD/HJz/IHrEsbO1xsK9vb29////////////u7q6ysjH9PLy8O/v7+7u8fDw4uHhZmZm
+y8vL8vHx8vHx+Pb29PLviJmpSpfMqeX/bsH+HZz+OITEo6qxu7q5/v7+////////u7u6y8rJ8vHx
+7e3s7e3s7+7t4eDgZWVlysrJ8PDv4eHgfX19YWBgUE1KmqKsS6DeqOT/asD/E5T4NIXGn6So8vLz
+/v7+////u7u7zMvK8O/v6+rp7Ovq6ejn0M/OZ2dnycjH7+7t4uHgW1tby8rJ9PPx+fbz0tvkWqfd
+q+P7asD4YY+vf3lzq6yr7e3u/f3+u7u7zs3M7u7t6ejo6unpz8/OZ2dnTU1NxsbF6+vq8fDwZ2dn
+nJybrq2uqKen9PDtwM/fV6ffx83LvbezkZCNe3l6q6aw8fHxvLu7z83M7Ozr5+bl6Ofm5OLhr66u
+gH9/0tLR6efm7OvqpaWkhYWEhoaGgYGA7ezq7ernydbis62p29vYn6Kbtoa2n3azx8XJvLy70c/O
+6uno5OPi5OPi5eTj6Ofm6ejn5+bl5OPi5eTj6Ofm6+no6+rp6ejn5uTj5eTi5uXj3NvZqqOpzqDN
+zpjNtZDM5eXwvLy80tHP6Ofm4uHe4uDe4uHe4+Hf4uHe4uHe4+Hf4uHe4+Hf4+Hf4+Hf4+Hf4+Hf
+4uHe4uHe6enn18nbyZnSxJ/V39/v////vb282tfQ+fn49/f29/f29/f2+Pf29/f29/f2+Pf29/f2
++Pf29/f29/f29/f2+Pf29/f29/f2+fn42NjOq6aq6enz////////sLPBHkDiEzbfDDHfCi/ZCCzT
+Ci7WDDHfDDHeDTHeDTHeDTHeDDHeDDHfCS3VCCzTCi/ZDDHeEzbfHUDisLPB////////////sbTB
+QGPrK1PpGUTqK0vETFmTKkOmG0bsHUbnHEbnHUbnHEbnHUbnGkXrNU6vR1WPJUW+G0bqKlLpP2Pr
+sbTB////////////srbDVXrzMl7wE0fyVG3CrqicVV+GFEn2F0nvF0nvF0nvF0nvF0nvE0j0d4Cn
+op2RP1itFUnzMV3wVXrzsrbC////////////w8jWVH/5gaL8fqH+jJvDx8O7cXWBf6L+gqP8gqP8
+gqP8gqP8gqL8faD+lZmmu7avdYSrf6L+gaL8VH/5w8jW////////////8PL6rb/wnbPvlarke4ah
+3dnRaWt1jqPanrX2n7X1oLb0oLX0nrT1jaLaiYyV0MzFaXSOlavlnrPxrr/x8fP6////////////
+/////////////v7/xMfTpaGdo6Ss/f3+/////////////////////f3+t7e+m5eTu77L/v7/////
+////////////////////
+) );
+
+  my $datetimeDel = Win32::GUI::BitmapInline->new( q(
+Qk32BgAAAAAAADYAAAAoAAAAGAAAABgAAAABABgAAAAAAMAGAADEDgAAxA4AAAAAAAAAAAAA////
+/////////////////////////////////////////////////////f3+8/P14+Pj39/f39/f4+Pj
+8vL2/f3+/////////f39+fn5+Pj49/f39/f39/f39/f39/f39/f39/f39/f39/f39/f49fX25ubn
+r7G9eX6hbHGbbHGbeX6hr7G96Ojp+/v9////8fHx09PTycnJyMjIyMjIyMjIyMjIyMjIyMjIyMjI
+yMjIyMjIyMjIxsbGi46uSljBUmTmWWzuWGvuUmTmS1nBkpWy6Ojp/f3+w8PDmpiWoZ6doJ6coJ6c
+oJ6coJ6coJ6coJ6coJ6coJ6cpqSiqaeid3qlPk/OXnH9XnL8XXH7XXH7XnL8XnH9RVXPkZW18PH1
+ubm5wsC//v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/f39+Pj33N3nXWrRTmLyVmr5VWr4VWr3VWn4
+VWr4V2z5UWXyW2bCz8/Uubm5wsC//f39+/v7+/v6+/v6+/v7+/v6+/v6/Pz7+vr58O/tv8LaOEvY
+TGL0RFv0QlnzQlnzQVjzQlnzRVzzTWP1QVPXtrfBurm5xMLB+/v7+Pj4+Pj4+Pj4+vr6+/v8+/v7
++fn5+vr68/HvvL7YPVDbQlrz////////////////////////Q1vzR1nbsrO+urq5xcTD+fj49vb2
+9vX19vb27+/vrq6u4uLi+fn52NjYmpqYdnmTTl/dRl/wlqT1laL0lKL0laP1laL0lqT1Rl/wVmfb
+tbbAurq6x8XE9/f39PTz9PTz9fX05eTkZGRkysrK+Pj3xsbFl5eVjpCkY3HWXHLtMUzrM0/qNE/q
+M07rM0/qMk3rXnPuZ3TW1Nfrurq6ycfG9fX18vHx8fHx8/Pz5OPjZmZmy8vL9PT09fX1+Pf37ezt
+govUcoHiWm/vOlPqMEvoMEvoOlPqW3DueYfikprZ9/j9u7q6ysjH9PLy8O/v7+7u8fDw4uHhZmZm
+y8vL8vHx8vHx9/b28/LwlpeoPkmha3rhdITra3/uan7udobsc4Dhe4XX5+n4////u7u6y8rJ8vHx
+7e3s7e3s7+7t4eDgZWVlysrJ8PDv4eHgfX19YGBgT09Lm5ujkZjbS1rNN0jKOUnLR1XFiI/I7/H6
+////////u7u7zMvK8O/v6+rp7Ovq6ejn0M/OZ2dnycjH7+7t4uHgW1tby8rJ9PPx9/Xz9PLs9/Xs
++fbs+/nw09HJvLy6////////////u7u7zs3M7u7t6ejo6unpz8/OZ2dnTU1NxsbF6+vq8fDwZ2dn
+nJybrq2uqKen7u3s6uno6uno7+/tz87Lu7u7////////////vLu7z83M7Ozr5+bl6Ofm5OLhr66u
+gH9/0tLR6efm7OvqpaWkhYWEhoaGgYGA7Ovq5+bl5+bl7Ozrz83MvLu7////////////vLy70c/O
+6uno5OPi5OPi5eTj6Ofm6ejn5+bl5OPi5eTj6Ofm6+no6+rp6ejn5uTj5OPi5OPi6unp0c/OvLy7
+////////////vLy80tHP6Ofm4uHe4uDe4uHe4+Hf4uHe4uHe4+Hf4uHe4+Hf4+Hf4+Hf4+Hf4+Hf
+4uHe4uDe6efm0tHPvLy8////////////vb282tfQ+fn49/f29/f29/f2+Pf29/f29/f2+Pf29/f2
++Pf29/f29/f29/f2+Pf29/f29/f2+fn42dfPvby8////////////sLPBHkDiEzbfDDHfCi/ZCCzT
+Ci7WDDHfDDHeDTHeDTHeDTHeDDHeDDHfCS3VCCzTCi/ZDDHeEzbfHkDisLPB////////////sbTB
+QGPrK1PpGUTqK0vETFmTKkOmG0bsHUbnHEbnHUbnHEbnHUbnGkXrNU6vR1WPJUW+G0bqKlLpP2Pr
+sbTB////////////srbDVXrzMl7wE0fyVG3CrqicVV+GFEn2F0nvF0nvF0nvF0nvF0nvE0j0d4Cn
+op2RP1itFUnzMV3wVXrzsrbC////////////w8jWVH/5gaL8fqH+jJvDx8O7cXWBf6L+gqP8gqP8
+gqP8gqP8gqL8faD+lZmmu7avdYSrf6L+gaL8VH/5w8jV////////////8PL6rb/wnbPvlarke4ah
+3dnRaWt1jqPanrX2n7X1oLb0oLX0nrT1jaLaiYyV0MzFaXSOlarlnbPwrb/x8fP6////////////
+/////////////v7/xMfTpaGdo6Ss/f3+/////////////////////f3+t7e+m5eTu77L/v7/////
+////////////////////
+) );
+  
   return( $winICO, $logoBmp, $logo128Bmp, $fileOpenBmp, $deleteBmp, $viewReportBmp,
           $downloadBmp, $processBmp, $stopBmp, $config32Bmp, $helpBmp, $aboutBmp,
           $config128Bmp, $fileNewBmp, $database16, $import16Bmp, $addCFBmp, $remCFBmp,
-          $editCFBmp, $newCFBmp, $saveCFBmp, $cancelCFBmp, $checkBmp, $errorBmp);
+          $editCFBmp, $newCFBmp, $saveCFBmp, $cancelCFBmp, $checkBmp, $errorBmp,
+          $left16Bmp, $help16Bmp, $datetime16Bmp, $guess16Bmp, $datetimeAdd, $datetimeEdit,
+          $datetimeDel);
 }
 
 #------------------------------------------------------------------------------#

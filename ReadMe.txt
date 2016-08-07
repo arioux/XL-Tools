@@ -1,12 +1,12 @@
 XL-Tools
-Description 	: Part of the XL-Toolkit, XL-Tools provides a bunch of functions
+Description		: Part of the XL-Toolkit, XL-Tools provides a bunch of functions
                 for list of strings like sorting, converting, replacing, date
                 and time utilities, etc.
-Author 				: Alain Rioux (admin@le-tools.com)
+Author				: Alain Rioux (admin@le-tools.com)
 WebSite				: http://le-tools.com/XL-Tools.html
+CodePlex			: https://xltools2.codeplex.com/
 GitHub				: https://github.com/arioux/XL-Tools
 Documentation	: http://le-tools.com/XL-ToolsDoc.html
-FossHub      	: http://code.fosshub.com/XL-Tools
 
 
 Licence
@@ -61,9 +61,9 @@ about, open file, delete, check update, import database, etc.
 Stop icon has been created by emey87 (Manuel Lopez, emey87.deviantart.com) 
 and distributed on term of the CC Attribution-No Derivative 4.0 license.
 
-Icons for buttons in Utils - Custom Functions come from Farm Fresh Icons by 
-Fatcow Web Hosting (http://www.fatcow.com/free-icons) and are distributed on 
-term of the CC Attribution 4.0 license.
+Icons for buttons in Utils - Custom Functions and for Datetime database 
+come from Farm Fresh Icons by Fatcow Web Hosting (http://www.fatcow.com/free-icons) 
+and are distributed on term of the CC Attribution 4.0 license.
 
 The check icon used in Configuration Wizard has been created by Cheezen (Anders 
 Bjarnle, http://cheezen.deviantart.com/) and distributed as freeware.

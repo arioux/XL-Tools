@@ -1,12 +1,12 @@
 XL-Tools
-Description 	: Part of the XL-Toolkit, XL-Tools provides a bunch of functions
+Description		: Part of the XL-Toolkit, XL-Tools provides a bunch of functions
                 for list of strings like sorting, converting, replacing, date
                 and time utilities, etc.
-Author 				: Alain Rioux (admin@le-tools.com)
+Author				: Alain Rioux (admin@le-tools.com)
 WebSite				: http://le-tools.com/XL-Tools.html
+CodePlex			: https://xltools2.codeplex.com/
 GitHub				: https://github.com/arioux/XL-Tools
 Documentation	: http://le-tools.com/XL-ToolsDoc.html
-FossHub      	: http://code.fosshub.com/XL-Tools
 
 
 Development
@@ -21,7 +21,6 @@ following modules installed:
 - threads (v1.96)
 - threads-shared (v1.46)
 - LWP (v6.05)
-- HTTP-Date (v6.02)
 - DBI (v1.631)
 - Net-DNS (v1.02)
 - base (v2.15)
@@ -34,8 +33,11 @@ following modules installed:
 - HTML::ParseBrowser (v1.10)
 - MIME-Base64 (v3.14)
 - Convert-Base32 (v0.06)
-- DateTime (v1.12)
-- DateTime-TimeZone (v1.75)
+- DateTime (v1.28)
+- DateTime-TimeZone (v1.97)
+- DateTime-Format-Duration (v1.04)
+- DateTime-Format-Strptime (v1.68)
+- Math-Int64 (v0.54)
 - Net-CIDR (v0.17)
 - NetAddr-IP (v4.078)
 - Net-IPv6Addr (v0.2)

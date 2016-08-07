@@ -85,6 +85,7 @@ sub loadDefaultStr
   $$refSTR{'friday'}          = 'Friday';
   $$refSTR{'saturday'}        = 'Saturday';
   $$refSTR{'sunday'}          = 'Sunday';
+  $$refSTR{'type'}            = 'Type';
   $$refSTR{'country'}         = 'Country';
   $$refSTR{'countryCode'}     = 'Country code';
   $$refSTR{'region'}          = 'Region';
@@ -94,7 +95,6 @@ sub loadDefaultStr
   $$refSTR{'GPScoord'}        = 'GPS coordinates';
   $$refSTR{'tzName'}          = 'Timezone name';
   $$refSTR{'tzOffset'}        = 'Timezone offset';
-  $$refSTR{'uaType'}          = 'Type';
   $$refSTR{'uaOS'}            = 'OS';
   $$refSTR{'uaBrowser'}       = 'Browser';
   $$refSTR{'uaDevice'}        = 'Device';
@@ -118,7 +118,6 @@ sub loadDefaultStr
   $$refSTR{'maxSizeReached'}  = 'Maximum number of characters has been reached. Your text may have been truncated.';
   $$refSTR{'processRunning'}  = 'A process is already running. Wait until it stops or restart the program.';
   $$refSTR{'errorMsg'}        = 'Error messsage';
-  $$refSTR{'errDoc'}          = 'Documentation.chm have not been found in the program folder.';
   $$refSTR{'noInput'}         = 'No input';
   $$refSTR{'errorConversion'} = 'Conversion error';
   $$refSTR{'errorConnection'} = 'Connection error';
@@ -136,6 +135,7 @@ sub loadDefaultStr
   $$refSTR{'errBy'}           = 'You must enter a valid replacement expression.';
   $$refSTR{'errRegexReplace'}   = 'Current error in * Replace *';
   $$refSTR{'errRegexReplaceBy'} = 'Current error in * By *';
+  $$refSTR{'errNewLine'}        = 'Error creating new line in grid.';
 
   # Main Window
   $$refSTR{'Tab1'}          = 'Lists';
@@ -143,9 +143,6 @@ sub loadDefaultStr
   $$refSTR{'Tab3'}          = 'Conversion';
   $$refSTR{'Tab4'}          = 'Time';
   $$refSTR{'Tab5'}          = 'Utils';
-  $$refSTR{'InputFormat'}   = 'Input format';
-  $$refSTR{'btnGuess'}      = 'Guess';
-  $$refSTR{'btnGuessTip'}   = 'Use this function only if date and time format is the same for each item in the list.';
   $$refSTR{'MatchCase'}     = 'Match case';
   $$refSTR{'Regex'}         = 'Regex';
   $$refSTR{'Eval'}          = 'Eval';
@@ -160,6 +157,7 @@ sub loadDefaultStr
   $$refSTR{'insertWith'}    = 'Insert a value in With textfield. See documentation about this function.';
   $$refSTR{'insertReplace'} = 'Insert value in Replace textfield. See documentation about this function.';
   $$refSTR{'insertSameNbr'} = 'You must insert the same number of items in both List 1 and List 2.';
+  $$refSTR{'setOutputFormat'} = 'You must select a different output format for this input type.';
   $$refSTR{'insertMACOUI'}  = 'You must have a valid MACOUI database to use this function. See documentation.';
   $$refSTR{'insertGeoIP'}   = 'You must have a valid GeoIP database to use this function. See documentation.';
   $$refSTR{'insertXLWhois'} = 'You must have a valid XL-Whois database to use this function. See documentation.';
@@ -183,6 +181,7 @@ sub loadDefaultStr
   $$refSTR{'cbLists10'}     = 'Split strings';
   $$refSTR{'cbLists11'}     = 'Split and extract';
   $$refSTR{'cbLists12'}     = 'Merge lines';
+  $$refSTR{'cbLists19'}     = 'Split and merge';
   $$refSTR{'cbLists13'}     = 'Replace';
   $$refSTR{'cbLists14'}     = 'Reverse string';
   $$refSTR{'cbLists15'}     = 'Lowercase';
@@ -222,16 +221,26 @@ sub loadDefaultStr
   
   # Time Tab
   $$refSTR{'cbTime1'}       = 'Anytime to Anytime';
-  $$refSTR{'cbTime2'}       = 'Unixtime to Anytime';
-  $$refSTR{'cbTime3'}       = 'ChromeTime to Anytime';
-  $$refSTR{'cbTime4'}       = 'LDAPTime to Anytime';
-  $$refSTR{'cbTime5'}       = 'Anytime to Unixtime';
-  $$refSTR{'cbTime6'}       = 'Date to Weekday';
-  $$refSTR{'cbTime7'}       = 'Time difference';
-  $$refSTR{'cbTime8'}       = 'Add time';
-  $$refSTR{'cbTime9'}       = 'Substract time';  
+  $$refSTR{'cbTime2'}       = 'Time difference';
+  $$refSTR{'cbTime3'}       = 'Add time';
+  $$refSTR{'cbTime4'}       = 'Substract time';
+  $$refSTR{'lblDTParser'}   = 'Parse context';
+  $$refSTR{'before'}        = 'Before';
+  $$refSTR{'after'}         = 'After';
+  $$refSTR{'input'}         = 'Input';
+  $$refSTR{'openDTDB'}      = 'Open Datetime database';
+  $$refSTR{'datetime'}      = 'Datetime';
+  $$refSTR{'unixtime'}      = 'Unixtime';
+  $$refSTR{'chromeTime'}    = 'ChromeTime';
+  $$refSTR{'LDAPTime'}      = 'LDAPTime';
+  $$refSTR{'Filetime'}      = 'Filetime';
+  $$refSTR{'SystemTime'}    = 'SystemTime';
+  $$refSTR{'btnInputFormatGuessTip'} = 'Use the first item to guess the format';
+  $$refSTR{'unique'}        = 'Unique';
+  $$refSTR{'output'}        = 'Output';
+  $$refSTR{'btnOutputFormatTip'} = 'Set a format for the output';
   $$refSTR{'Local'}         = 'Local';  
-  $$refSTR{'GMT'}           = 'GMT';  
+  $$refSTR{'UTC'}           = 'UTC';  
   $$refSTR{'Other'}         = 'Other';
   $$refSTR{'SingleDate'}    = 'Use a single date';  
   $$refSTR{'Dur'}           = 'Dur';
@@ -267,7 +276,6 @@ sub loadDefaultStr
   $$refSTR{'GeoIPOpt10'}    = 'Timezone offset';
   $$refSTR{'Addheaders'}    = 'Add headers';
   $$refSTR{'UAOpt1'}        = 'All available';
-  $$refSTR{'UAOpt2'}        = 'Type';
   $$refSTR{'UAOpt3'}        = 'OS';
   $$refSTR{'UAOpt4'}        = 'Browser';
   $$refSTR{'UAOpt5'}        = 'Device';
@@ -295,6 +303,64 @@ sub loadDefaultStr
   $$refSTR{'CFErrorDupl'}   = 'List 1 must not contain duplicates.';
   $$refSTR{'funcExists2'}   = 'Function already exists. Replace data';
   $$refSTR{'replConfirmT'}  = 'Confirm replacement';
+  
+  # Datetime database Window
+  $$refSTR{'winDTDB'}         = 'Datetime database';
+  $$refSTR{'sample'}          = 'Sample';
+  $$refSTR{'pattern'}         = 'Pattern';
+  $$refSTR{'useAs'}           = 'Use as';
+  $$refSTR{'comment'}         = 'Comment';  
+  $$refSTR{'timezone'}        = 'Timezone';
+  $$refSTR{'localTimezone'}   = 'Local timezone';
+  $$refSTR{'outputLang'}      = 'Output language';
+  $$refSTR{'outputCharset'}   = 'Output charset';
+  $$refSTR{'defaultOutput'}   = 'Default output';
+  $$refSTR{'guess'}           = 'Guess';
+  $$refSTR{'guessORVar'}      = 'Guess (or variable)';
+  $$refSTR{'default'}         = 'Default';
+  $$refSTR{'same'}            = 'Same as input';
+  $$refSTR{'formatFound'}     = 'Format found';
+  $$refSTR{'formatMatch'}     = 'Format match';
+  $$refSTR{'addedDTObj'}      = 'Datetime object has been added!';
+  $$refSTR{'updatedDTObj'}    = 'Datetime object has been updated!';
+  $$refSTR{'deletedDTObj'}    = 'Datetime object has been deleted!';
+  
+  # Datetime object Window
+  $$refSTR{'winDTObj'}        = 'Datetime object';
+  $$refSTR{'useFirst'}        = 'From List 1';
+  $$refSTR{'useFirstTip'}     = 'Use first item of List 1';
+  # Pattern
+  $$refSTR{'pattern1'}        = '%B - Full month name (ex.: January)';
+  $$refSTR{'pattern2'}        = '%b - Abbreviated month name (ex.: Jan)';
+  $$refSTR{'pattern3'}        = '%D - Equivalent to %m/%d/%y';
+  $$refSTR{'pattern4'}        = '%d - Day of the month (01-31)';
+  $$refSTR{'pattern5'}        = '%e - Day of the month (1-31)';
+  $$refSTR{'pattern6'}        = '%F - Equivalent to %Y-%m-%d';
+  $$refSTR{'pattern7'}        = '%H - Hour 24H (00-23)';
+  $$refSTR{'pattern8'}        = '%I - Hour 12H (01-12)';
+  $$refSTR{'pattern9'}        = '%M - Minute (00-59)';
+  $$refSTR{'pattern10'}       = '%m - Month (01-12)';
+  $$refSTR{'pattern11'}       = '%p - AM or PM';
+  $$refSTR{'pattern12'}       = '%R - Equivalent to %H:%M';
+  $$refSTR{'pattern13'}       = '%r - Equivalent to %I:%M:%S %p';
+  $$refSTR{'pattern14'}       = '%S - Second (00-60)';
+  $$refSTR{'pattern15'}       = '%T - Equivalent to %H:%M:%S';
+  $$refSTR{'pattern16'}       = '%v - Equivalent to %e-%b-%Y';
+  $$refSTR{'pattern17'}       = '%w - Weekday (0-6)';
+  $$refSTR{'pattern18'}       = '%Y - Year 4-digits (Ex.: 2016)';
+  $$refSTR{'pattern19'}       = '%y - Year 2-digits (Ex.: 16)';
+  $$refSTR{'pattern20'}       = '%Z - Time zone name (UTC)';
+  $$refSTR{'pattern21'}       = '%z - Time zone offset (Ex.: -0500)';
+  $$refSTR{'matchPattern'}    = 'Match Pattern';
+  $$refSTR{'both'}            = 'Both';
+  $$refSTR{'none'}            = 'None';
+  $$refSTR{'add'}             = 'Add';
+  $$refSTR{'edit'}            = 'Edit';
+  $$refSTR{'parsed'}          = 'Parsed';
+  $$refSTR{'otherOffset'}     = 'Other, offset';
+  $$refSTR{'otherName'}       = 'Other, name';
+  $$refSTR{'provideSample'}   = 'You must provide a sample';
+  $$refSTR{'providePattern'}  = 'You must provide a pattern';
 
   # Config Window
   $$refSTR{'winConfig'}       = 'Settings';
@@ -328,12 +394,13 @@ sub loadDefaultStr
   $$refSTR{'NoResultOpt2'}    = 'Show status';
   $$refSTR{'NoResultOpt2Tip'} = 'Write the reason why there is no result (error, no match, etc.).';
   # Database tab
-  $$refSTR{'OUIDB'}           = 'OUI DB';
+  $$refSTR{'OUIDB'}           = 'OUI (MAC Addresses)';
   $$refSTR{'importOUIDB'}     = 'Import OUI Database';
   $$refSTR{'importedOUIDB'}   = 'OUI Database successfully imported !';
-  $$refSTR{'GeoIPDB'}         = 'GeoIP DB';
-  $$refSTR{'XLWhoisDB'}       = 'XL-Whois DB';
-  $$refSTR{'IINLocalDB'}      = 'IIN Local DB';
+  $$refSTR{'GeoIPDB'}         = 'GeoIP';
+  $$refSTR{'XLWhoisDB'}       = 'XL-Whois (ISP)';
+  $$refSTR{'IINLocalDB'}      = 'IIN (Credit cards)';
+  $$refSTR{'DTDB'}            = 'Datetime';
   $$refSTR{'locXLWhoisDB'}    = 'Locate the XL-Whois DB';
   $$refSTR{'selMACOUIFile'}   = 'Select the MAC OUI Database file';
   $$refSTR{'selPathDB'}       = 'Select the path for the database';
@@ -355,8 +422,11 @@ sub loadDefaultStr
   $$refSTR{'GeoIPNotExist'}   = 'The GeoIP database (GeoLiteCity.dat) does not exist, download';
   $$refSTR{'downloadGeoIP'}   = 'Downloading GeoIP Database';
   $$refSTR{'downloadWarning'} = 'It may take a few minutes';
-  $$refSTR{'downloadIINDB'}   = 'Downloading IIN Database';
+  $$refSTR{'downloadIINDB'}   = 'Downloading IIN database';
   $$refSTR{'updatedIINDB'}    = 'The IIN database has been updated';
+  $$refSTR{'downloadDTDB'}    = 'Downloading Datetime database';
+  $$refSTR{'DTDBNotExist'}    = 'The Datetime database (DT.db) does not exist, download';
+  $$refSTR{'updatedDTDB'}     = 'The Datetime database has been updated';
   
   # Update Window
   $$refSTR{'winUpdate'}       = 'Update';

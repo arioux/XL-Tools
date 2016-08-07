@@ -8,8 +8,8 @@
 #               for list of strings like sorting, converting, replacing, date
 #               and time utilities, etc.
 # Creation    : 2015-12-21
-# Modified    : 2016-07-10
-my $VERSION   = "2.0";
+# Modified    : 2016-08-07
+my $VERSION   = "3.0";
 # Author      : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
@@ -34,6 +34,7 @@ my $VERSION   = "2.0";
 #------------------------------------------------------------------------------#
 use strict;
 use warnings;
+use Math::Int64 qw(string_to_int64);
 use String::HexConvert qw(hex_to_ascii ascii_to_hex);
 use URI::Escape;
 use URI::Escape::JavaScript qw(unescape);
@@ -42,9 +43,9 @@ use HTML::Entities;
 use MIME::Base64 ();
 use Convert::Base32;
 use DateTime;
+use DateTime::Format::Duration;
+use DateTime::Format::Strptime;
 use DateTime::TimeZone;
-use Date::Calc qw (N_Delta_YMDHMS Add_N_Delta_YMDHMS);
-use HTTP::Date qw(parse_date str2time);
 use Net::DNS;
 use base qw/Net::DNS::Resolver::Base/;
 use Net::CIDR 'cidr2range';
@@ -94,6 +95,7 @@ my $URL_VER      = 'http://www.le-tools.com/download/XL-ToolsVer.txt';         #
 my $MACOUIDB_URL = 'http://standards-oui.ieee.org/oui.txt';                    # URL of the MAC OUI DB
 my $GEOIPDB_URL  = 'http://geolite.maxmind.com/download/geoip/database/GeoLiteCity.dat.gz'; # URL of the GeoIP DB
 my $IINDB_URL    = 'http://le-tools.com/download/XL-Tools/IIN.zip';            # URL of the IINDB
+my $DTDB_URL     = 'http://le-tools.com/download/XL-Tools/Datetime.zip';       # URL of the DTDB
 my %CONFIG       :shared;                                                      # Configuration
 my %STR;                                                                       # Strings for GUI
 my $ARROW        :shared;                                                      # Arrow pointer
@@ -114,7 +116,8 @@ my $TOTAL_SIZE   :shared = 0;                                                  #
 my ($winICO, $logoBmp, $logo128Bmp, $fileOpenBmp, $deleteBmp, $viewReportBmp, $downloadBmp,
     $processBmp, $stopBmp, $config32Bmp, $helpBmp, $aboutBmp, $config128Bmp, $fileNewBmp,
     $database16, $import16Bmp, $addCFBmp, $remCFBmp, $editCFBmp, $newCFBmp, $saveCFBmp,
-    $cancelCFBmp, $checkBmp, $errorBmp) = &loadGraph();
+    $cancelCFBmp, $checkBmp, $errorBmp, $left16Bmp, $help16Bmp, $datetime16Bmp, $guess16Bmp,
+    $datetimeAdd, $datetimeEdit, $datetimeDel) = &loadGraph();
 
 #------------------------------------------------------------------------------#
 # Strings
@@ -130,8 +133,8 @@ if (-e $LANG_FILE and -T $LANG_FILE) { &loadStr(\%STR, $LANG_FILE); } # If langu
 my $screen    = Win32::GUI::GetDesktopWindow(); # Screen resolution
 my $scrnX     = Win32::GUI::Width($screen);
 my $scrnY     = Win32::GUI::Height($screen);
-my $winWidth  = 908;
-my $winHeight = 600;
+my $winWidth  = 1080;
+my $winHeight = 680;
 my $winPosX   = ($scrnX - $winWidth)  / 2;
 my $winPosY   = ($scrnY - $winHeight) / 2;
 
@@ -145,7 +148,7 @@ my $win = Win32::GUI::Window->new( -name        => 'winMain'                    
                                    -size        => [$winWidth, $winHeight]             ,
                                    -pos         => [$winPosX , $winPosY]               ,
                                    -minheight   => $winHeight                          ,
-                                   -minwidth    => $winWidth-100                       ,
+                                   -minwidth    => $winWidth                           ,
                                    -accel       => $accel                              , );
 $win->SetIcon($winICO);
 
@@ -239,9 +242,10 @@ $win->cbLists->Add(   $STR{'cbLists1'}  , $STR{'cbLists2'}   ,
                       $STR{'cbLists7'}  , $STR{'cbLists8'}   ,
                       $STR{'cbLists9'}  , $STR{'cbLists10'}  ,
                       $STR{'cbLists11'} , $STR{'cbLists12'}  ,
-                      $STR{'cbLists13'} , $STR{'cbLists14'}  ,
-                      $STR{'cbLists18'} , $STR{'cbLists15'}  ,
-                      $STR{'cbLists16'} , $STR{'cbLists17'}  , );
+                      $STR{'cbLists19'} , $STR{'cbLists13'}  ,
+                      $STR{'cbLists14'} , $STR{'cbLists18'}  ,
+                      $STR{'cbLists15'} , $STR{'cbLists16'}  ,
+                      $STR{'cbLists17'}  , );
 $win->AddCheckbox(    -name        => 'chMatchCase'          ,
                       -size        => [ 90, 20]              ,
                       -pos         => [560, 32]              ,
@@ -382,52 +386,6 @@ $win->AddRadioButton( -name       => 'rbDsc'                  ,
                       -text       => $STR{'Descending'}       ,
                       -font       => $font10                  ,
                       -visible    => 0                        , );
-$win->AddLabel(       -name       => 'lblDTFormat'            ,
-                      -size       => [ 90, 22]                ,
-                      -pos        => [315, 68]                ,
-                      -background => [255, 255, 255]          ,
-                      -text       => $STR{'InputFormat'}.':'  ,
-                      -font       => $font10                  ,
-                      -visible    => 0                        , );
-$win->AddCombobox(    -name        => 'cbDTFormat'            ,
-                      -size        => [245,100]               ,
-                      -pos         => [410, 65]               ,
-                      -font        => $font10                 ,
-                      -dropdown    => 1                       ,
-                      -vscroll     => 1                       ,
-                      -visible     => 0                       , );
-$win->cbDTFormat->Add('Guess (or variable)...',
-                      'Tuesday, 08-Feb-2015 14:15:29 GMT',
-                      'Thu Feb  3 17:03:55 GMT 2015',
-                      'Tuesday, 08-Feb-99 14:15:29 GMT',
-                      'Wed, 09 Feb 2015 22:23:32 GMT',
-                      '03/Feb/2015:17:03:55 -0700',
-                      '2015-02-03 14:15:29 -0100',
-                      '08-Feb-2015 14:15:29 GMT',
-                      '09 Feb 2015 22:23:32 GMT',
-                      '08-Feb-99 14:15:29 GMT',
-                      'Thu Feb  3 00:00:00 2015',
-                      '2015-02-03 14:15:29',
-                      '03/02/2015 14:15:29',
-                      '2015-02-03T14:15:29',
-                      '11-15-99  03:52PM',
-                      'Feb  3 17:03',
-                      'Feb  3  2015',
-                      '08-Feb-2015',
-                      '03/Feb/2015',
-                      '2015-02-03',
-                      '20150203T141529Z',
-                      '08-Feb-99',
-                      '09 Feb 2015',
-                      '20150203', );
-$win->AddButton(      -name        => 'btnGuess'              ,
-                      -size        => [ 60, 24]               ,
-                      -pos         => [660, 65]               ,
-                      -text        => $STR{'btnGuess'}        ,
-                      -font        => $font10                 ,
-                      -tip         => $STR{'btnGuessTip'}     ,
-                      -disabled    => 0                       ,
-                      -visible     => 0                       , );
 
 # Conversion tab
 $win->AddCombobox(    -name        => 'cbConv'                ,
@@ -451,47 +409,80 @@ $win->AddCombobox(    -name        => 'cbTime'                ,
                       -dropdown    => 1                       ,
                       -vscroll     => 1                       ,
                       -visible     => 0                       , );
-$win->cbTime->Add(    $STR{'cbTime1'}  , $STR{'cbTime2'}      ,
-                      $STR{'cbTime3'}  , $STR{'cbTime4'}      ,
-                      $STR{'cbTime5'}  , $STR{'cbTime6'}      ,
-                      $STR{'cbTime7'}  , $STR{'cbTime8'}      ,
-                      $STR{'cbTime9'}                         , );
-# Output format controls
-$win->AddRadioButton( -name       => 'rbLocaltime'            ,
-                      -size       => [ 60, 22]                ,
-                      -pos        => [550, 30]                ,
-                      -background => [255, 255, 255]          ,
-                      -text       => $STR{'Local'}            ,
-                      -font       => $font10                  ,
-                      -checked    => 1                        ,
-                      -group      => 1                        ,
-                      -visible    => 0                        , );
-$win->AddRadioButton( -name       => 'rbGMTime'               ,
-                      -size       => [ 60, 22]                ,
-                      -pos        => [620, 30]                ,
-                      -background => [255, 255, 255]          ,
-                      -text       => $STR{'GMT'}              ,
-                      -font       => $font10                  ,
-                      -visible    => 0                        , );
-$win->AddRadioButton( -name       => 'rbOtherTZ'              ,
-                      -size       => [ 60, 22]                ,
-                      -pos        => [690, 30]                ,
-                      -background => [255, 255, 255]          ,
-                      -text       => $STR{'Other'}.':'        ,
-                      -font       => $font10                  ,
-                      -visible    => 0                        , );
-$win->AddCombobox(    -name       => 'cbOtherTZ'              ,
-                      -size       => [ 70, 22]                ,
-                      -pos        => [760, 30]                ,
-                      -font       => $font10                  ,
-                      -dropdown   => 1                        ,
-                      -vscroll    => 1                        ,
-                      -disabled   => 1                        ,
-                      -visible    => 0                        , );
-$win->cbOtherTZ->Add( '+1200','+1130','+1100','+1030','+1000','+0900','+0930','+0800','+0700',
-                      '+0630','+0600','+0530','+0500','+0430','+0400','+0330','+0300','+0200',
-                      '+0100','+0000','-0100','-0200','-0300','-0330','-0400','-0500','-0600',
-                      '-0700','-0800','-0830','-0900','-0930','-1000','-1100','-1200', );
+$win->cbTime->Add(    $STR{'cbTime1'}, $STR{'cbTime2'}  ,
+                      $STR{'cbTime3'}, $STR{'cbTime4'}  , );
+# Parser
+$win->AddLabel(       -name        => 'lblDTParser'           ,
+                      -size        => [100, 22]               ,
+                      -pos         => [$winWidth-287, 33]     ,
+                      -background  => [255, 255, 255]         ,
+                      -text        => $STR{'lblDTParser'}.':' ,
+                      -font        => $font10                 ,
+                      -visible     => 0                       , );
+$win->AddCombobox(    -name        => 'cbDTParser'            ,
+                      -size        => [ 80,100]               ,
+                      -pos         => [$winWidth-227, 30]     ,
+                      -font        => $font10                 ,
+                      -dropdown    => 1                       ,
+                      -vscroll     => 1                       ,
+                      -visible     => 0                       , );
+$win->cbDTParser->Add($STR{'none'} , $STR{'before'}  ,
+                      $STR{'after'}, $STR{'both'}    , );
+$win->cbDTParser->SetCurSel(0);
+
+# Input format
+$win->AddLabel(       -name        => 'lblInputType'          ,
+                      -size        => [ 50, 22]               ,
+                      -pos         => [315, 68]               ,
+                      -background  => [255, 255, 255]         ,
+                      -text        => $STR{'input'}.':'       ,
+                      -font        => $font10                 ,
+                      -visible     => 0                       , );
+$win->AddCombobox(    -name        => 'cbInputTimeType'       ,
+                      -size        => [110,100]               ,
+                      -pos         => [370, 65]               ,
+                      -font        => $font10                 ,
+                      -dropdown    => 1                       ,
+                      -vscroll     => 1                       ,
+                      -visible     => 0                       , );
+$win->AddCombobox(    -name        => 'cbInputDTFormat'       ,
+                      -size        => [200,100]               ,
+                      -pos         => [485, 65]               ,
+                      -font        => $font10                 ,
+                      -dropdown    => 1                       ,
+                      -vscroll     => 1                       ,
+                      -visible     => 0                       , );
+$win->AddButton(      -name        => 'btnOpenDTDB'           ,
+                      -size        => [ 24, 24]               ,
+                      -pos         => [687, 65]               ,
+                      -font        => $font10                 ,
+                      -bitmap      => $datetime16Bmp          ,
+                      -tip         => $STR{'openDTDB'}        ,
+                      -disabled    => 0                       ,
+                      -visible     => 0                       , );
+$win->AddButton(      -name        => 'btnInputFormatGuess'   ,
+                      -size        => [ 24, 24]               ,
+                      -pos         => [713, 65]               ,
+                      -bitmap      => $guess16Bmp             ,
+                      -tip         => $STR{'btnInputFormatGuessTip'},
+                      -disabled    => 1                       ,
+                      -visible     => 0                       , );
+# Output format 
+$win->AddLabel(       -name        => 'lblOutputDTFormat'     ,
+                      -size        => [ 60, 22]               ,
+                      -pos         => [$winWidth-287, 68]     ,
+                      -background  => [255, 255, 255]         ,
+                      -text        => $STR{'output'}.':'      ,
+                      -font        => $font10                 ,
+                      -visible     => 0                       , );
+$win->AddCombobox(    -name        => 'cbOutputDTFormat'      ,
+                      -size        => [200,100]               ,
+                      -pos         => [$winWidth-227, 65]     ,
+                      -font        => $font10                 ,
+                      -dropdown    => 1                       ,
+                      -vscroll     => 1                       ,
+                      -visible     => 0                       , );
+
 # Time difference controls
 $win->AddCheckbox(    -name       => 'chSingleDate'           ,
                       -size       => [130, 22]                ,
@@ -515,31 +506,115 @@ $win->AddDateTime(    -name       => 'dtTimeDiffTime'         ,
                       -background => [255, 255, 255]          ,
                       -format     => 'time'                   ,
                       -visible    => 0                        , );
-# Add time controls
-$win->AddLabel(       -name       => 'lblAddDT'               ,
-                      -size       => [ 30, 22]                ,
-                      -pos        => [725, 68]                ,
+# Add-substract time controls
+$win->AddLabel(       -name       => 'lblDeltaYears'          ,
+                      -size       => [ 50, 22]                ,
+                      -pos        => [540, 33]                ,
                       -background => [255, 255, 255]          ,
-                      -text       => $STR{'Dur'}.':'          ,
+                      -text       => ucfirst($STR{'years'}).':',
                       -font       => $font10                  ,
+                      -align      => 'right'                  ,
                       -visible    => 0                        , );
-$win->AddTextfield(   -name       => 'tfValAddDT'             ,
-                      -size       => [ 40, 24]                ,
-                      -pos        => [760, 65]                ,
+$win->AddTextfield(   -name       => 'tfDeltaYears'           ,
+                      -size       => [ 45, 24]                ,
+                      -pos        => [595, 30]                ,
                       -number     => 1                        ,
                       -align      => 'right'                  ,
                       -visible    => 0                        , );
-$win->AddCombobox(    -name       => 'cbTypeValAddDT'         ,
-                      -size       => [ 80, 22]                ,
-                      -pos        => [805, 65]                ,
-                      -font       => $font10                  ,
-                      -dropdown   => 1                        ,
-                      -vscroll    => 1                        ,
+$win->AddUpDown(      -name       => 'upDownDeltaYears'       ,
                       -visible    => 0                        , );
-$win->cbTypeValAddDT->Add( ucfirst($STR{'years'})  , ucfirst($STR{'months'})  ,
-                           ucfirst($STR{'days'})   , ucfirst($STR{'hours'})   ,
-                           ucfirst($STR{'minutes'}), ucfirst($STR{'seconds'}) , );
-$win->cbTypeValAddDT->SetCurSel(0);
+$win->upDownDeltaYears->SetRange(0,100);
+$win->upDownDeltaYears->SetPos(0);
+$win->AddLabel(       -name       => 'lblDeltaMonths'         ,
+                      -size       => [ 50, 22]                ,
+                      -pos        => [645, 33]                ,
+                      -background => [255, 255, 255]          ,
+                      -text       => ucfirst($STR{'months'}).':',
+                      -font       => $font10                  ,
+                      -align      => 'right'                  ,
+                      -visible    => 0                        , );
+$win->AddTextfield(   -name       => 'tfDeltaMonths'          ,
+                      -size       => [ 45, 24]                ,
+                      -pos        => [700, 30]                ,
+                      -number     => 1                        ,
+                      -align      => 'right'                  ,
+                      -visible    => 0                        , );
+$win->AddUpDown(      -name       => 'upDownDeltaMonths'      ,
+                      -visible    => 0                        , );
+$win->upDownDeltaMonths->SetRange(0,12);
+$win->upDownDeltaMonths->SetPos(0);
+$win->AddLabel(       -name       => 'lblDeltaDays'           ,
+                      -size       => [ 50, 22]                ,
+                      -pos        => [745, 33]                ,
+                      -background => [255, 255, 255]          ,
+                      -text       => ucfirst($STR{'days'}).':',
+                      -font       => $font10                  ,
+                      -align      => 'right'                  ,
+                      -visible    => 0                        , );
+$win->AddTextfield(   -name       => 'tfDeltaDays'            ,
+                      -size       => [ 45, 24]                ,
+                      -pos        => [800, 30]                ,
+                      -number     => 1                        ,
+                      -align      => 'right'                  ,
+                      -visible    => 0                        , );
+$win->AddUpDown(      -name       => 'upDownDeltaDays'        ,
+                      -visible    => 0                        , );
+$win->upDownDeltaDays->SetRange(0,365);
+$win->upDownDeltaDays->SetPos(0);
+$win->AddLabel(       -name       => 'lblDeltaTime'           ,
+                      -size       => [ 50, 22]                ,
+                      -pos        => [850, 33]                ,
+                      -background => [255, 255, 255]          ,
+                      -text       => $STR{'Tab4'}.':'         ,
+                      -font       => $font10                  ,
+                      -align      => 'right'                  ,
+                      -visible    => 0                        , );
+$win->AddTextfield(   -name       => 'tfDeltaHours'           ,
+                      -size       => [ 45, 24]                ,
+                      -pos        => [905, 30]                ,
+                      -number     => 1                        ,
+                      -align      => 'right'                  ,
+                      -visible    => 0                        , );
+$win->AddUpDown(      -name       => 'upDownDeltaHours'       ,
+                      -visible    => 0                        , );
+$win->upDownDeltaHours->SetRange(0,24);
+$win->upDownDeltaHours->SetPos(0);
+$win->AddLabel(       -name       => 'lblSeparator1'          ,
+                      -size       => [ 10, 22]                ,
+                      -pos        => [950, 33]                ,
+                      -background => [255, 255, 255]          ,
+                      -text       => ':'                      ,
+                      -font       => $fontGB                  ,
+                      -align      => 'center'                 ,
+                      -visible    => 0                        , );
+$win->AddTextfield(   -name       => 'tfDeltaMinutes'         ,
+                      -size       => [  45, 24]               ,
+                      -pos        => [ 960, 30]               ,
+                      -number     => 1                        ,
+                      -align      => 'right'                  ,
+                      -visible    => 0                        , );
+$win->AddUpDown(      -name       => 'upDownDeltaMinutes'     ,
+                      -visible    => 0                        , );
+$win->upDownDeltaMinutes->SetRange(0,59);
+$win->upDownDeltaMinutes->SetPos(0);
+$win->AddLabel(       -name       => 'lblSeparator2'          ,
+                      -size       => [  10, 22]               ,
+                      -pos        => [1005, 33]               ,
+                      -background => [255, 255, 255]          ,
+                      -text       => ':'                      ,
+                      -font       => $fontGB                  ,
+                      -align      => 'center'                 ,
+                      -visible    => 0                        , );
+$win->AddTextfield(   -name       => 'tfDeltaSecondes'        ,
+                      -size       => [  45, 24]               ,
+                      -pos        => [1015, 30]               ,
+                      -number     => 1                        ,
+                      -align      => 'right'                  ,
+                      -visible    => 0                        , );
+$win->AddUpDown(      -name       => 'upDownDeltaSecondes'    ,
+                      -visible    => 0                        , );
+$win->upDownDeltaSecondes->SetRange(0,59);
+$win->upDownDeltaSecondes->SetPos(0);
 
 # Utils tab
 $win->AddCombobox(    -name        => 'cbUtils'               ,
@@ -585,7 +660,7 @@ $win->AddCombobox(    -name        => 'cbUAOpt'               ,
                       -dropdown    => 1                       ,
                       -vscroll     => 1                       ,
                       -visible     => 0                       , );
-$win->cbUAOpt->Add(   $STR{'UAOpt1'}  , $STR{'UAOpt2'}        ,
+$win->cbUAOpt->Add(   $STR{'UAOpt1'}  , $STR{'type'}          ,
                       $STR{'UAOpt3'}  , $STR{'UAOpt4'}        ,
                       $STR{'UAOpt5'}  , $STR{'UAOpt6'}        , );
 $win->cbUAOpt->SetCurSel(0);
@@ -865,13 +940,323 @@ $win->AddButton(      -name        => 'btnAbout'              ,
                       -tip         => $STR{'about'}           , );
 
 #------------------------------------------------------------------------------#
+# Datetime database window
+#------------------------------------------------------------------------------#
+
+my $winDTDB = Win32::GUI::Window->new(-name        => 'winDTDB'              ,
+                                      -background  => [255, 255, 255]        ,
+                                      -parent      => $win                   ,
+                                      -text        => $STR{'winDTDB'}        ,
+                                      -pos         => [$winPosX, $winPosY]   ,
+                                      -size        => [$winWidth, 450]       ,
+                                      -hasmaximize => 1                      ,
+                                      -hasminimize => 1                      ,
+                                      -resizable   => 1                      ,
+                                      -dialogui    => 1                      , );
+$winDTDB->SetIcon($winICO);
+
+# Datetime grid
+$winDTDB->AddGrid(        -name         => 'gridDT'                ,
+                          -size         => [880,180]               ,
+                          -pos          => [  5,  5]               ,
+                          -background   => [255, 255, 255]         ,
+                          -columns      => 6                       ,
+                          -fixedrows    => 1                       ,
+                          -fixedcolumns => 0                       ,
+                          -editable     => 0                       , );
+$winDTDB->AddButton(      -name         => 'btnDTAdd'              ,
+                          -size         => [ 30, 30]               ,
+                          -pos          => [887,  5]               ,
+                          -bitmap       => $datetimeAdd            ,
+                          -tip          => $STR{'btnDTAdd'}        ,
+                          -tabstop      => 1                       , );
+$winDTDB->AddButton(      -name         => 'btnDTEdit'             ,
+                          -size         => [ 30, 30]               ,
+                          -pos          => [887, 37]               ,
+                          -bitmap       => $datetimeEdit           ,
+                          -tip          => $STR{'btnDTEdit'}       ,
+                          -disabled     => 1                       ,
+                          -tabstop      => 1                       , );
+$winDTDB->AddButton(      -name         => 'btnDTDel'              ,
+                          -size         => [ 30, 30]               ,
+                          -pos          => [887, 69]               ,
+                          -bitmap       => $datetimeDel            ,
+                          -tip          => $STR{'btnDTDel'}        ,
+                          -disabled     => 1                       ,
+                          -tabstop      => 1                       , );
+$winDTDB->AddLabel(       -name         => 'lblLocalTZ'            ,
+                          -size         => [120, 22]               ,
+                          -pos          => [  5,303]               ,
+                          -background   => [255, 255, 255]         ,
+                          -text         => $STR{'localTimezone'}.':',
+                          -font         => $font10                 , );
+$winDTDB->AddCombobox(    -name         => 'cbLocalTZ'             ,
+                          -size         => [230,100]               ,
+                          -pos          => [130,300]               ,
+                          -font         => $font10                 ,
+                          -dropdown     => 1                       ,
+                          -vscroll      => 1                       , );
+$winDTDB->AddLabel(       -name         => 'lblOutputLang'         ,
+                          -size         => [120, 22]               ,
+                          -pos          => [  5,333]               ,
+                          -background   => [255, 255, 255]         ,
+                          -text         => $STR{'outputLang'}.':'  ,
+                          -font         => $font10                 , );
+$winDTDB->AddCombobox(    -name         => 'cbOutputLang'          ,
+                          -size         => [140,100]               ,
+                          -pos          => [130,330]               ,
+                          -font         => $font10                 ,
+                          -dropdown     => 1                       ,
+                          -vscroll      => 1                       , );
+$winDTDB->AddLabel(       -name         => 'lblOutputCharset'      ,
+                          -size         => [120, 22]               ,
+                          -pos          => [300,333]               ,
+                          -background   => [255, 255, 255]         ,
+                          -text         => $STR{'outputCharset'}.':',
+                          -font         => $font10                 , );
+$winDTDB->AddCombobox(    -name         => 'cbOutputCharset'       ,
+                          -size         => [100,100]               ,
+                          -pos          => [425,330]               ,
+                          -font         => $font10                 ,
+                          -dropdown     => 1                       ,
+                          -vscroll      => 1                       , );
+$winDTDB->cbOutputCharset->Add( 'cp1252'     , 'iso-8859-1' , 'iso-8859-2' , 'iso-8859-3' ,
+                                'iso-8859-4' , 'iso-8859-5' , 'iso-8859-6' , 'iso-8859-7' ,
+                                'iso-8859-8' , 'iso-8859-9' , 'iso-8859-10', 'iso-8859-11', 
+                                'iso-8859-13', 'iso-8859-14', 'iso-8859-15', 'iso-8859-16', );
+$winDTDB->AddLabel(       -name         => 'lblDefaultOutput'      ,
+                          -size         => [120, 22]               ,
+                          -pos          => [555,303]               ,
+                          -background   => [255, 255, 255]         ,
+                          -text         => $STR{'defaultOutput'}.':',
+                          -font         => $font10                 , );
+$winDTDB->AddCombobox(    -name         => 'cbDefaultOutput'       ,
+                          -size         => [190,100]               ,
+                          -pos          => [680,300]               ,
+                          -font         => $font10                 ,
+                          -dropdown     => 1                       ,
+                          -vscroll      => 1                       , );
+
+#------------------------------------------------------------------------------#
+# Datetime Object window
+#------------------------------------------------------------------------------#
+
+my $winDTObj = Win32::GUI::Window->new( -name        => 'winDTObj'             ,
+                                        -background  => [255, 255, 255]        ,
+                                        -parent      => $win                   ,
+                                        -text        => $STR{'winDTObj'}       ,
+                                        -pos         => [$winPosX, $winPosY]   ,
+                                        -size        => [690, 290]             ,
+                                        -hasmaximize => 0                      ,
+                                        -hasminimize => 0                      ,
+                                        -resizable   => 0                      ,
+                                        -dialogui    => 1                      , );
+$winDTObj->SetIcon($winICO);
+
+$winDTObj->AddLabel(          -name         => 'lblDTObjSample'        ,
+                              -size         => [ 95, 24]               ,
+                              -pos          => [  5,  8]               ,
+                              -background   => [255, 255, 255]         ,
+                              -text         => $STR{'sample'}.':'      ,
+                              -font         => $font10                 , );
+$winDTObj->AddTextfield(      -name         => 'tfDTObjSample'         ,
+                              -size         => [285, 24]               ,
+                              -pos          => [100,  5]               ,
+                              -tabstop      => 1                       , );
+$winDTObj->AddButton(         -name         => 'btnDTObjUseFirst'      ,
+                              -size         => [120, 24]               ,
+                              -pos          => [390,  5]               ,
+                              -text         => '<- '.$STR{'useFirst'}  ,
+                              -font         => $font10                 ,
+                              -disabled     => 1                       , );
+$winDTObj->AddLabel(          -name         => 'lblDTObjPattern'       ,
+                              -size         => [ 95, 24]               ,
+                              -pos          => [  5, 38]               ,
+                              -background   => [255, 255, 255]         ,
+                              -text         => $STR{'pattern'}.':'     ,
+                              -font         => $font10                 , );
+$winDTObj->AddTextfield(      -name         => 'tfDTObjPattern'        ,
+                              -size         => [260, 24]               ,
+                              -pos          => [100, 35]               ,
+                              -tabstop      => 1                       ,
+                              -disabled     => 1                       , );
+$winDTObj->AddButton(         -name         => 'btnDTObjPatternInsert' ,
+                              -size         => [ 24, 24]               ,
+                              -pos          => [362, 35]               ,
+                              -bitmap       => $left16Bmp              ,
+                              -tip          => $STR{'btnPatternAdd'}   ,
+                              -disabled     => 1                       , );
+$winDTObj->AddCombobox(       -name         => 'cbDTObjPattern'        ,
+                              -size         => [260,100]               ,
+                              -pos          => [390, 35]               ,
+                              -font         => $font10                 ,
+                              -dropdown     => 1                       ,
+                              -vscroll      => 1                       ,
+                              -disabled     => 1                       , );
+$winDTObj->cbDTObjPattern->Add($STR{'pattern1'} , $STR{'pattern2'} , $STR{'pattern3'} ,
+                               $STR{'pattern4'} , $STR{'pattern5'} , $STR{'pattern6'} ,
+                               $STR{'pattern7'} , $STR{'pattern8'} , $STR{'pattern9'} ,
+                               $STR{'pattern10'}, $STR{'pattern11'}, $STR{'pattern12'},
+                               $STR{'pattern13'}, $STR{'pattern14'}, $STR{'pattern15'},
+                               $STR{'pattern16'}, $STR{'pattern17'}, $STR{'pattern18'},
+                               $STR{'pattern19'}, $STR{'pattern21'}, );
+$winDTObj->cbDTObjPattern->SetCurSel(0);
+$winDTObj->AddButton(         -name         => 'btnDTObjPatternHelp'   ,
+                              -size         => [ 24, 24]               ,
+                              -pos          => [652, 35]               ,
+                              -bitmap       => $help16Bmp              ,
+                              -tip          => $STR{'btnHelpTip'}      , );
+$winDTObj->AddLabel(          -name         => 'lblDTObjRegex'         ,
+                              -size         => [ 95, 24]               ,
+                              -pos          => [  5, 68]               ,
+                              -background   => [255, 255, 255]         ,
+                              -text         => $STR{'Regex'}.':'       ,
+                              -font         => $font10                 , );
+$winDTObj->AddLabel(          -name         => 'lblDTObjRegexOk'       ,
+                              -size         => [287, 26]               ,
+                              -pos          => [ 99, 64]               ,
+                              -background   => [  0, 255,   0]         ,
+                              -visible      => 0                       , );
+$winDTObj->AddLabel(          -name         => 'lblDTObjRegexErr'      ,
+                              -size         => [287, 26]               ,
+                              -pos          => [ 99, 64]               ,
+                              -background   => [255,   0,   0]         ,
+                              -visible      => 0                       , );
+$winDTObj->AddLabel(          -name         => 'lblDTObjRegexWarn'     ,
+                              -size         => [287, 26]               ,
+                              -pos          => [ 99, 64]               ,
+                              -background   => [255, 255,   0]         ,
+                              -visible      => 0                       , );
+$winDTObj->AddTextfield(      -name         => 'tfDTObjRegex'          ,
+                              -size         => [285, 24]               ,
+                              -pos          => [100, 65]               ,
+                              -tabstop      => 1                       ,
+                              -disabled     => 1                       , );
+$winDTObj->AddCheckbox(       -name         => 'chDTObjRegexAuto'      ,
+                              -size         => [150, 22]               ,
+                              -pos          => [390, 65]               ,
+                              -text         => $STR{'matchPattern'}    ,
+                              -background   => [255, 255, 255]         ,
+                              -font         => $font10                 ,
+                              -checked      => 1                       , );
+$winDTObj->AddLabel(          -name         => 'lblDTObjTZ'            ,
+                              -size         => [ 95, 22]               ,
+                              -pos          => [  5, 98]               ,
+                              -background   => [255, 255, 255]         ,
+                              -text         => $STR{'timezone'}.':'    ,
+                              -font         => $font10                 , );
+$winDTObj->AddRadioButton(    -name         => 'rbDTObjTZLocal'        ,
+                              -size         => [ 70, 22]               ,
+                              -pos          => [100, 95]               ,
+                              -background   => [255, 255, 255]         ,
+                              -text         => $STR{'Local'}           ,
+                              -font         => $font10                 ,
+                              -checked      => 1                       ,
+                              -group        => 1                       , );
+$winDTObj->AddRadioButton(    -name         => 'rbDTObjTZUTC'          ,
+                              -size         => [ 70, 22]               ,
+                              -pos          => [100,125]               ,
+                              -background   => [255, 255, 255]         ,
+                              -text         => $STR{'UTC'}             ,
+                              -font         => $font10                 , );
+$winDTObj->AddRadioButton(    -name         => 'rbDTObjTZOtherOffset'  ,
+                              -size         => [110, 22]               ,
+                              -pos          => [175, 95]               ,
+                              -background   => [255, 255, 255]         ,
+                              -text         => $STR{'otherOffset'}.':' ,
+                              -font         => $font10                 , );
+$winDTObj->AddCombobox(       -name         => 'cbDTObjTZOffset'       ,
+                              -size         => [ 65,100]               ,
+                              -pos          => [290, 95]               ,
+                              -font         => $font10                 ,
+                              -dropdownlist => 1                       ,
+                              -vscroll      => 1                       , );
+$winDTObj->cbDTObjTZOffset->Add('+1200','+1130','+1100','+1030','+1000','+0900','+0930','+0800','+0700',
+                                '+0630','+0600','+0530','+0500','+0430','+0400','+0330','+0300','+0200',
+                                '+0100','+0000','-0100','-0200','-0300','-0330','-0400','-0500','-0600',
+                                '-0700','-0800','-0830','-0900','-0930','-1000','-1100','-1200', );
+$winDTObj->cbDTObjTZOffset->SetCurSel(19);
+$winDTObj->AddRadioButton(    -name         => 'rbDTObjTZOtherName'    ,
+                              -size         => [110, 22]               ,
+                              -pos          => [175,125]               ,
+                              -background   => [255, 255, 255]         ,
+                              -text         => $STR{'otherName'}.':'   ,
+                              -font         => $font10                 , );
+$winDTObj->AddCombobox(       -name         => 'cbDTObjTZName'         ,
+                              -size         => [260,100]               ,
+                              -pos          => [290,125]               ,
+                              -font         => $font10                 ,
+                              -dropdownlist => 1                       ,
+                              -vscroll      => 1                       , );
+$winDTObj->AddLabel(          -name         => 'lblDTObjParsed'        ,
+                              -size         => [ 95, 22]               ,
+                              -pos          => [  5,158]               ,
+                              -background   => [255, 255, 255]         ,
+                              -text         => $STR{'parsed'}.':'      ,
+                              -font         => $font10                 , );
+$winDTObj->AddLabel(          -name         => 'lblDTObjParsedData'    ,
+                              -size         => [400, 22]               ,
+                              -pos          => [100,158]               ,
+                              -background   => [255, 255, 255]         ,
+                              -foreground   => [204,   0,  51]         ,
+                              -font         => $font10                 , );
+$winDTObj->AddLabel(          -name         => 'lblDTObjUseAs'         ,
+                              -size         => [ 95, 22]               ,
+                              -pos          => [  5,188]               ,
+                              -background   => [255, 255, 255]         ,
+                              -text         => $STR{'useAs'}.':'       ,
+                              -font         => $font10                 , );
+$winDTObj->AddCombobox(       -name         => 'cbDTObjUseAs'          ,
+                              -size         => [ 80,100]               ,
+                              -pos          => [100,185]               ,
+                              -font         => $font10                 ,
+                              -dropdownlist => 1                       ,
+                              -vscroll      => 1                       , );
+$winDTObj->cbDTObjUseAs->Add( $STR{'input'}, $STR{'output'}, $STR{'both'}, $STR{'none'},);
+$winDTObj->cbDTObjUseAs->SetCurSel(0);
+$winDTObj->AddLabel(          -name         => 'lblDTObjComment'       ,
+                              -size         => [ 95, 24]               ,
+                              -pos          => [280,188]               ,
+                              -background   => [255, 255, 255]         ,
+                              -text         => $STR{'comment'}.':'     ,
+                              -font         => $font10                 , );
+$winDTObj->AddTextfield(      -name         => 'tfDTObjComment'        ,
+                              -size         => [285, 24]               ,
+                              -pos          => [380,185]               ,
+                              -tabstop      => 1                       , );
+$winDTObj->AddButton(         -name         => 'btnDTObjNotReady'      ,
+                              -size         => [ 30, 30]               ,
+                              -pos          => [255,220]               ,
+                              -text         => '?'                     ,
+                              -font         => $font10                 , );
+$winDTObj->AddButton(         -name         => 'btnDTObjAdd'           ,
+                              -size         => [ 60, 30]               ,
+                              -pos          => [295,220]               ,
+                              -text         => $STR{'add'}             ,
+                              -font         => $font10                 ,
+                              -disabled     => 1                       ,
+                              -visible      => 0                       , );
+$winDTObj->AddButton(         -name         => 'btnDTObjEdit'          ,
+                              -size         => [ 60, 30]               ,
+                              -pos          => [295,220]               ,
+                              -text         => $STR{'edit'}            ,
+                              -font         => $font10                 ,
+                              -disabled     => 1                       ,
+                              -visible      => 0                       , );
+$winDTObj->AddButton(         -name         => 'btnDTObjCancel'        ,
+                              -size         => [ 70, 30]               ,
+                              -pos          => [360,220]               ,
+                              -text         => $STR{'cancel'}          ,
+                              -font         => $font10                 , );
+
+#------------------------------------------------------------------------------#
 # Config window
 #------------------------------------------------------------------------------#
 my $winConfig = Win32::GUI::DialogBox->new( -name        => 'winConfig'             ,
                                             -parent      => $win                    ,
                                             -text        => $STR{'winConfig'}       ,
                                             -pos         => [$winPosX, $winPosY]    ,
-                                            -size        => [650, 340]              ,
+                                            -size        => [650, 320]              ,
                                             -background  => [255, 255, 255]         ,
                                             -hasmaximize => 0                       ,
                                             -hasminimize => 0                       ,
@@ -888,13 +1273,14 @@ $winConfig->AddLabel(     -name         => 'lblLogo'             ,
 
 # Tabstrip
 $winConfig->AddTabStrip(            -name         => 'configTab'      ,
-                                    -size         => [505,305]        ,
+                                    -size         => [505,285]        ,
                                     -pos          => [140,  5]        ,
-                                    -fixedwidth   => 1                ,
                                     -tabstop      => 1                ,
+                                    -font         => $font10          ,
                                     -background   => [255, 255, 255]  , );
 $winConfig->configTab->InsertItem(  -text         => $STR{'general'}  , );
 $winConfig->configTab->InsertItem(  -text         => $STR{'database'} , );
+$winConfig->configTab->InsertItem(  -text         => 'XL-ToolKit '.$STR{'database'}, );
 
 # General tab
 
@@ -960,7 +1346,7 @@ $winConfig->AddCheckbox(    -name        => 'chRememberPos'         ,
                             -background  => [255, 255, 255]         ,
                             -font        => $font10                 , );
 $winConfig->AddLabel(       -name        => 'lblMaxSize1'           ,
-                            -size        => [115, 22]               ,
+                            -size        => [130, 22]               ,
                             -pos         => [150,173]               ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'MaxSize'}.':'     ,
@@ -975,7 +1361,7 @@ $winConfig->AddLabel(       -name        => 'lblMaxSize2'           ,
                             -text        => $STR{'chars'}           ,
                             -font        => $font10                 , );
 $winConfig->AddLabel(       -name        => 'lblNsLookupTO1'        ,
-                            -size        => [115, 22]               ,
+                            -size        => [130, 22]               ,
                             -pos         => [150,203]               ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'NsLookupTO1'}.':' ,
@@ -990,7 +1376,7 @@ $winConfig->AddLabel(       -name        => 'lblNsLookupTO2'        ,
                             -text        => lc($STR{'seconds'})     ,
                             -font        => $font10                 , );
 $winConfig->AddLabel(       -name        => 'lblUserAgent'          ,
-                            -size        => [115, 22]               ,
+                            -size        => [130, 22]               ,
                             -pos         => [150,233]               ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'UserAgent'}.':'   ,
@@ -999,7 +1385,7 @@ $winConfig->AddTextfield(   -name        => 'tfUserAgent'           ,
                             -size        => [350, 22]               ,
                             -pos         => [285,230]               , );
 $winConfig->AddLabel(       -name        => 'lblNoResultOpt'        ,
-                            -size        => [115, 22]               ,
+                            -size        => [130, 22]               ,
                             -pos         => [150,263]               ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'NoResultOpt'}.':' ,
@@ -1111,37 +1497,10 @@ $winConfig->AddButton(      -name        => 'btnGeoIPDBUpt'         ,
                             -tip         => $STR{'downloadDB'}      ,
                             -visible     => 0                       , );
 
-# XL-Tools Database section
-$winConfig->AddLabel(       -name        => 'lblXLWHOISDBShadowT'   ,
-                            -size        => [250, 22]               ,
-                            -pos         => [151,169]               ,
-                            -foreground  => [180, 180, 180]         ,
-                            -background  => [255, 255, 255]         ,
-                            -text        => $STR{'XLWhoisDB'}.':'   ,
-                            -font        => $fontGB2                ,
-                            -visible     => 0                       , );
-$winConfig->AddLabel(       -name        => 'lblXLWHOISDBT'         ,
-                            -size        => [250, 22]               ,
-                            -pos         => [150,168]               ,
-                            -addstyle    => 11                      , # Transparent
-                            -foreground  => [204,   0,  51]         ,
-                            -text        => $STR{'XLWhoisDB'}.':'   ,
-                            -font        => $fontGB2                ,
-                            -visible     => 0                       , );
-$winConfig->AddTextfield(   -name        => 'tfXLWHOISDB'           ,
-                            -size        => [412, 22]               ,
-                            -pos         => [150,198]               ,
-                            -visible     => 0                       , );
-$winConfig->AddButton(      -name        => 'btnXLWHOISDB'          ,
-                            -size        => [ 22, 22]               ,
-                            -pos         => [565,198]               ,
-                            -bitmap      => $fileOpenBmp            ,
-                            -tip         => $STR{'selectDBFile'}    ,
-                            -visible     => 0                       , );
 # Issuer Identification Number (IIN) Database section
 $winConfig->AddLabel(       -name        => 'lblIINDBShadowT'       ,
                             -size        => [250, 22]               ,
-                            -pos         => [151,234]               ,
+                            -pos         => [151,169]               ,
                             -foreground  => [180, 180, 180]         ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'IINLocalDB'}.':'  ,
@@ -1149,7 +1508,7 @@ $winConfig->AddLabel(       -name        => 'lblIINDBShadowT'       ,
                             -visible     => 0                       , );
 $winConfig->AddLabel(       -name        => 'lblIINDBT'             ,
                             -size        => [250, 22]               ,
-                            -pos         => [150,233]               ,
+                            -pos         => [150,168]               ,
                             -addstyle    => 11                      , # Transparent
                             -foreground  => [204,   0,  51]         ,
                             -text        => $STR{'IINLocalDB'}.':'  ,
@@ -1157,20 +1516,85 @@ $winConfig->AddLabel(       -name        => 'lblIINDBT'             ,
                             -visible     => 0                       , );
 $winConfig->AddTextfield(   -name        => 'tfIINDB'               ,
                             -size        => [412, 22]               ,
-                            -pos         => [150,263]               ,
+                            -pos         => [150,198]               ,
                             -visible     => 0                       , );
 $winConfig->AddButton(      -name        => 'btnIINDB'              ,
                             -size        => [ 22, 22]               ,
-                            -pos         => [565,263]               ,
+                            -pos         => [565,198]               ,
                             -bitmap      => $fileOpenBmp            ,
                             -tip         => $STR{'selectDBFile'}    ,
                             -visible     => 0                       , );
 $winConfig->AddButton(      -name        => 'btnIINDBUpt'           ,
                             -size        => [ 22, 22]               ,
-                            -pos         => [588,263]               ,
+                            -pos         => [588,198]               ,
                             -bitmap      => $downloadBmp            ,
                             -tip         => $STR{'downloadDB'}      ,
                             -visible     => 0                       , );
+
+# XL-ToolKit Database tab
+
+# XL-Whois database section
+$winConfig->AddLabel(       -name        => 'lblXLWHOISDBShadowT'   ,
+                            -size        => [250, 22]               ,
+                            -pos         => [151, 36]               ,
+                            -foreground  => [180, 180, 180]         ,
+                            -background  => [255, 255, 255]         ,
+                            -text        => $STR{'XLWhoisDB'}.':'   ,
+                            -font        => $fontGB2                ,
+                            -visible     => 0                       , );
+$winConfig->AddLabel(       -name        => 'lblXLWHOISDBT'         ,
+                            -size        => [250, 22]               ,
+                            -pos         => [150, 35]               ,
+                            -addstyle    => 11                      , # Transparent
+                            -foreground  => [204,   0,  51]         ,
+                            -text        => $STR{'XLWhoisDB'}.':'   ,
+                            -font        => $fontGB2                ,
+                            -visible     => 0                       , );
+$winConfig->AddTextfield(   -name        => 'tfXLWHOISDB'           ,
+                            -size        => [412, 22]               ,
+                            -pos         => [150, 68]               ,
+                            -visible     => 0                       , );
+$winConfig->AddButton(      -name        => 'btnXLWHOISDB'          ,
+                            -size        => [ 22, 22]               ,
+                            -pos         => [565, 68]               ,
+                            -bitmap      => $fileOpenBmp            ,
+                            -tip         => $STR{'selectDBFile'}    ,
+                            -visible     => 0                       , );
+
+# Datetime database section
+$winConfig->AddLabel(       -name        => 'lblDTDBShadowT'        ,
+                            -size        => [250, 22]               ,
+                            -pos         => [151,104]               ,
+                            -foreground  => [180, 180, 180]         ,
+                            -background  => [255, 255, 255]         ,
+                            -text        => $STR{'DTDB'}.':'        ,
+                            -font        => $fontGB2                ,
+                            -visible     => 0                       , );
+$winConfig->AddLabel(       -name        => 'lblDTDBT'              ,
+                            -size        => [250, 22]               ,
+                            -pos         => [150,103]               ,
+                            -addstyle    => 11                      , # Transparent
+                            -foreground  => [204,   0,  51]         ,
+                            -text        => $STR{'DTDB'}.':'        ,
+                            -font        => $fontGB2                ,
+                            -visible     => 0                       , );
+$winConfig->AddTextfield(   -name        => 'tfDTDB'                ,
+                            -size        => [412, 22]               ,
+                            -pos         => [150,133]               ,
+                            -visible     => 0                       , );
+$winConfig->AddButton(      -name        => 'btnDTDB'               ,
+                            -size        => [ 22, 22]               ,
+                            -pos         => [565,133]               ,
+                            -bitmap      => $fileOpenBmp            ,
+                            -tip         => $STR{'selectDBFile'}    ,
+                            -visible     => 0                       , );
+$winConfig->AddButton(      -name        => 'btnDTDBUpt'            ,
+                            -size        => [ 22, 22]               ,
+                            -pos         => [588,133]               ,
+                            -bitmap      => $downloadBmp            ,
+                            -tip         => $STR{'downloadDB'}      ,
+                            -visible     => 0                       , );
+
 
 #------------------------------------------------------------------------------#
 # Simple Progress window
@@ -1224,8 +1648,49 @@ $winPb->AddButton(      -name        => 'btnCancel'      ,
 $win->cbLists->SetCurSel(0);
 &cbLists_Change();
 
+# Set Datetime grid header
+$winDTDB->gridDT->SetCellText(0, 0, $STR{'sample'}  );
+$winDTDB->gridDT->SetCellText(0, 1, $STR{'pattern'} );
+$winDTDB->gridDT->SetCellText(0, 2, $STR{'Regex'}   );
+$winDTDB->gridDT->SetCellText(0, 3, $STR{'timezone'});
+$winDTDB->gridDT->SetCellText(0, 4, $STR{'useAs'}   );
+$winDTDB->gridDT->SetCellText(0, 5, $STR{'comment'} );
+
 if (-T $CONFIG_FILE) {
+  # List of timezone
+  my @listTZ = DateTime::TimeZone->all_names;
+  foreach (@listTZ) { $winDTDB->cbLocalTZ->Add($_); $winDTObj->cbDTObjTZName->Add($_); }
+  $winDTObj->cbDTObjTZName->SetCurSel(0);
+  
+  # List of language
+  my @lang = DateTime::Locale->ids();
+  foreach (sort @lang) { $winDTDB->cbOutputLang->Add($_); }
+  
   &loadConfig(\%CONFIG);
+  
+  # Load the Datetime Database
+  if (-f $CONFIG{'DT_DB_FILE'} and &validDTDB($CONFIG{'DT_DB_FILE'})) {
+    &loadDTDB;
+    &cbInputDTFormatAddITems();
+    $win->cbInputDTFormat->SetCurSel(0);
+    &cbOutputDTFormatAddITems();
+    $win->cbOutputDTFormat->SetCurSel(0);
+    # Default output format
+    if (exists($CONFIG{'DEFAULT_OUTPUT'})) { $winDTDB->cbDefaultOutput->SetCurSel($CONFIG{'DEFAULT_OUTPUT'}); }
+    else                                   { $winDTDB->cbDefaultOutput->SetCurSel(0); }
+  # If don't exist, ask to download it
+  } else {
+    threads->create(sub {
+      # Yes (6), No (7)
+      my $answer = Win32::GUI::MessageBox($win, "$STR{'DTDBNotExist'} ?", $STR{'winDTDB'}, 0x1024);
+      # Answer is Yes
+      if ($answer == 6) {
+        my $errMsg = &downloadDTDB("$USERDIR\\DT.db");
+        if ($errMsg) { Win32::GUI::MessageBox($win, "$errMsg"          , $STR{'error'}      , 0x40010); }
+        else         { Win32::GUI::MessageBox($win, $STR{'updatedDTDB'}, "XL-Tools $VERSION", 0x40040); }
+      }
+    });
+  }
   
   # Check update for tool and databases ?
   if ($CONFIG{'TOOL_AUTO_UPDATE'} or $CONFIG{'MACOUI_DB_AUTO_UPDATE'} or $CONFIG{'GEOIP_DB_AUTO_UPDATE'}) {
@@ -1290,11 +1755,23 @@ sub winMain_Resize
   $win->lblReplaceByREWarn->Width($win->ScaleWidth()/5+2);
   $win->tfReplBy->Left($win->tfReplace->Left()+$win->ScaleWidth()/5+45);
   $win->tfReplBy->Width($win->ScaleWidth()/5);
-  
-  $win->lblAddDT->Left($win->btnGuess()->Left()+65);
-  $win->tfValAddDT->Left($win->btnGuess()->Left()+100);
-  $win->cbTypeValAddDT->Left($win->btnGuess()->Left()+145);
   $win->cbCFLists->Width($win->ScaleWidth()/4);
+  $win->lblDTParser->Left($win->ScaleWidth()-($win->ScaleWidth()/5.25)-65);
+  $win->cbDTParser->Left($win->ScaleWidth()-($win->ScaleWidth()/5.25)+40);
+  $win->cbInputTimeType->BringWindowToTop(); # Prevent box from disappearing
+  $win->cbInputTimeType->SetCurSel($win->cbInputTimeType->GetCurSel());
+  $win->cbInputDTFormat->Width($win->ScaleWidth()/4.8);
+  $win->cbInputDTFormat->BringWindowToTop(); # Prevent box from disappearing
+  $win->cbInputDTFormat->SetCurSel($win->cbInputDTFormat->GetCurSel());
+  $win->btnOpenDTDB->Left(485+($win->ScaleWidth()/4.8)+2);
+  $win->btnInputFormatGuess->Left(485+($win->ScaleWidth()/4.8)+26);
+  $win->lblOutputDTFormat->Left($win->ScaleWidth()-($win->ScaleWidth()/5.25)-65);
+  $win->cbOutputDTFormat->Left($win->ScaleWidth()-($win->ScaleWidth()/5.25)-5);
+  $win->cbOutputDTFormat->Width($win->ScaleWidth()/5.25);
+  $win->cbOutputDTFormat->BringWindowToTop(); # Prevent box from disappearing
+  $win->cbOutputDTFormat->SetCurSel($win->cbOutputDTFormat->GetCurSel());
+  $win->cbCFLists->BringWindowToTop(); # Prevent box from disappearing
+  $win->cbCFLists->SetCurSel($win->cbCFLists->GetCurSel());
   $win->btnCFAdd->Left($win->cbCFLists->Left()+$win->ScaleWidth()/4+4);
   $win->btnCFRem->Left($win->cbCFLists->Left()+$win->ScaleWidth()/4+30);
   $win->btnCFEdit->Left($win->cbCFLists->Left()+$win->ScaleWidth()/4+56);
@@ -1523,23 +2000,40 @@ sub Tab_Click
     $win->cbSorts->Hide();
     $win->rbAsc->Hide();
     $win->rbDsc->Hide();
-    $win->lblDTFormat->Hide();
-    $win->cbDTFormat->Hide();
-    $win->btnGuess->Hide();
     # Hide Conversion tab
     $win->cbConv->Hide();
     # Hide Time tab
     $win->cbTime->Hide();
-    $win->rbLocaltime->Hide();
-    $win->rbGMTime->Hide();
-    $win->rbOtherTZ->Hide();
-    $win->cbOtherTZ->Hide();
+    $win->lblDTParser->Hide();
+    $win->cbDTParser->Hide();
+    $win->lblOutputDTFormat->Hide();
+    $win->cbOutputDTFormat->Hide();
     $win->chSingleDate->Hide();
     $win->dtTimeDiffDate->Hide();
     $win->dtTimeDiffTime->Hide();
-    $win->lblAddDT->Hide();
-    $win->tfValAddDT->Hide();
-    $win->cbTypeValAddDT->Hide();
+    $win->lblDeltaYears->Hide();
+    $win->tfDeltaYears->Hide();
+    $win->upDownDeltaYears->Hide();
+    $win->lblDeltaMonths->Hide();
+    $win->tfDeltaMonths->Hide();
+    $win->upDownDeltaMonths->Hide();
+    $win->lblDeltaDays->Hide();
+    $win->tfDeltaDays->Hide();
+    $win->upDownDeltaDays->Hide();
+    $win->lblDeltaTime->Hide();
+    $win->tfDeltaHours->Hide();
+    $win->upDownDeltaHours->Hide();
+    $win->lblSeparator1->Hide();
+    $win->tfDeltaMinutes->Hide();
+    $win->upDownDeltaMinutes->Hide();
+    $win->lblSeparator2->Hide();
+    $win->tfDeltaSecondes->Hide();
+    $win->upDownDeltaSecondes->Hide();
+    $win->lblInputType->Hide();
+    $win->cbInputTimeType->Hide();
+    $win->cbInputDTFormat->Hide();
+    $win->btnOpenDTDB->Hide();
+    $win->btnInputFormatGuess->Hide();
     # Hide Utils tab
     $win->cbUtils->Hide();
     $win->cbGeoIPOpt->Hide();
@@ -1561,6 +2055,14 @@ sub Tab_Click
     
   # Show Sorting tab
   } elsif ($win->Tab->SelectedItem() == 1) {
+    $win->lblInputType->Hide();
+    $win->cbInputTimeType->Hide();
+    $win->cbInputDTFormat->Hide();
+    $win->btnOpenDTDB->Hide();
+    $win->btnInputFormatGuess->Hide();
+    $win->cbInputTimeType->ResetContent();
+    $win->cbInputTimeType->Add($STR{'datetime'});
+    $win->cbInputTimeType->SetCurSel(0);
     $win->cbSorts->Show();
     if ($win->cbSorts->GetCurSel() == -1) { $win->cbSorts->SetCurSel(0); }
     $win->rbAsc->Show();
@@ -1592,16 +2094,31 @@ sub Tab_Click
     $win->cbConv->Hide();
     # Hide Time tab
     $win->cbTime->Hide();
-    $win->rbLocaltime->Hide();
-    $win->rbGMTime->Hide();
-    $win->rbOtherTZ->Hide();
-    $win->cbOtherTZ->Hide();
+    $win->lblDTParser->Hide();
+    $win->cbDTParser->Hide();
+    $win->lblOutputDTFormat->Hide();
+    $win->cbOutputDTFormat->Hide();
     $win->chSingleDate->Hide();
     $win->dtTimeDiffDate->Hide();
     $win->dtTimeDiffTime->Hide();
-    $win->lblAddDT->Hide();
-    $win->tfValAddDT->Hide();
-    $win->cbTypeValAddDT->Hide();
+    $win->lblDeltaYears->Hide();
+    $win->tfDeltaYears->Hide();
+    $win->upDownDeltaYears->Hide();
+    $win->lblDeltaMonths->Hide();
+    $win->tfDeltaMonths->Hide();
+    $win->upDownDeltaMonths->Hide();
+    $win->lblDeltaDays->Hide();
+    $win->tfDeltaDays->Hide();
+    $win->upDownDeltaDays->Hide();
+    $win->lblDeltaTime->Hide();
+    $win->tfDeltaHours->Hide();
+    $win->upDownDeltaHours->Hide();
+    $win->lblSeparator1->Hide();
+    $win->tfDeltaMinutes->Hide();
+    $win->upDownDeltaMinutes->Hide();
+    $win->lblSeparator2->Hide();
+    $win->tfDeltaSecondes->Hide();
+    $win->upDownDeltaSecondes->Hide();
     # Hide Utils tab
     $win->cbUtils->Hide();
     $win->cbGeoIPOpt->Hide();
@@ -1652,21 +2169,38 @@ sub Tab_Click
     $win->cbSorts->Hide();
     $win->rbAsc->Hide();
     $win->rbDsc->Hide();
-    $win->lblDTFormat->Hide();
-    $win->cbDTFormat->Hide();
-    $win->btnGuess->Hide();
     # Hide Time tab
     $win->cbTime->Hide();
-    $win->rbLocaltime->Hide();
-    $win->rbGMTime->Hide();
-    $win->rbOtherTZ->Hide();
-    $win->cbOtherTZ->Hide();
+    $win->lblDTParser->Hide();
+    $win->cbDTParser->Hide();
+    $win->lblOutputDTFormat->Hide();
+    $win->cbOutputDTFormat->Hide();
     $win->chSingleDate->Hide();
     $win->dtTimeDiffDate->Hide();
     $win->dtTimeDiffTime->Hide();
-    $win->lblAddDT->Hide();
-    $win->tfValAddDT->Hide();
-    $win->cbTypeValAddDT->Hide();
+    $win->lblDeltaYears->Hide();
+    $win->tfDeltaYears->Hide();
+    $win->upDownDeltaYears->Hide();
+    $win->lblDeltaMonths->Hide();
+    $win->tfDeltaMonths->Hide();
+    $win->upDownDeltaMonths->Hide();
+    $win->lblDeltaDays->Hide();
+    $win->tfDeltaDays->Hide();
+    $win->upDownDeltaDays->Hide();
+    $win->upDownDeltaHours->Hide();
+    $win->lblSeparator1->Hide();
+    $win->tfDeltaMinutes->Hide();
+    $win->upDownDeltaMinutes->Hide();
+    $win->lblSeparator2->Hide();
+    $win->tfDeltaSecondes->Hide();
+    $win->upDownDeltaSecondes->Hide();
+    $win->lblDeltaTime->Hide();
+    $win->tfDeltaHours->Hide();
+    $win->lblInputType->Hide();
+    $win->cbInputTimeType->Hide();
+    $win->cbInputDTFormat->Hide();
+    $win->btnOpenDTDB->Hide();
+    $win->btnInputFormatGuess->Hide();
     # Hide Utils tab
     $win->cbUtils->Hide();
     $win->cbGeoIPOpt->Hide();
@@ -1690,6 +2224,16 @@ sub Tab_Click
   } elsif ($win->Tab->SelectedItem() == 3) {
     $win->cbTime->Show();
     if ($win->cbTime->GetCurSel() == -1) { $win->cbTime->SetCurSel(0); }
+    $win->lblDTParser->Show();
+    $win->cbDTParser->Show();
+    $win->cbInputTimeType->ResetContent();
+    $win->cbInputTimeType->Add($STR{'datetime'}, $STR{'chromeTime'}, $STR{'LDAPTime'}, $STR{'Filetime'}, $STR{'SystemTime'}, );
+    $win->cbInputTimeType->SetCurSel(0);
+    $win->lblInputType->Show();
+    $win->cbInputTimeType->Show();
+    $win->cbInputDTFormat->Show();
+    $win->btnOpenDTDB->Show();
+    $win->btnInputFormatGuess->Show();
     &cbTime_Change();
     # Hide Lists tab
     $win->cbLists->Hide();
@@ -1769,23 +2313,40 @@ sub Tab_Click
     $win->cbSorts->Hide();
     $win->rbAsc->Hide();
     $win->rbDsc->Hide();
-    $win->lblDTFormat->Hide();
-    $win->cbDTFormat->Hide();
-    $win->btnGuess->Hide();
     # Hide Conversion tab
     $win->cbConv->Hide();
     # Hide Time tab
     $win->cbTime->Hide();
-    $win->rbLocaltime->Hide();
-    $win->rbGMTime->Hide();
-    $win->rbOtherTZ->Hide();
-    $win->cbOtherTZ->Hide();
+    $win->lblDTParser->Hide();
+    $win->cbDTParser->Hide();
+    $win->lblOutputDTFormat->Hide();
+    $win->cbOutputDTFormat->Hide();
     $win->chSingleDate->Hide();
     $win->dtTimeDiffDate->Hide();
     $win->dtTimeDiffTime->Hide();
-    $win->lblAddDT->Hide();
-    $win->tfValAddDT->Hide();
-    $win->cbTypeValAddDT->Hide();
+    $win->lblDeltaYears->Hide();
+    $win->tfDeltaYears->Hide();
+    $win->upDownDeltaYears->Hide();
+    $win->lblDeltaMonths->Hide();
+    $win->tfDeltaMonths->Hide();
+    $win->upDownDeltaMonths->Hide();
+    $win->lblDeltaDays->Hide();
+    $win->tfDeltaDays->Hide();
+    $win->upDownDeltaDays->Hide();
+    $win->upDownDeltaHours->Hide();
+    $win->lblSeparator1->Hide();
+    $win->tfDeltaMinutes->Hide();
+    $win->upDownDeltaMinutes->Hide();
+    $win->lblSeparator2->Hide();
+    $win->tfDeltaSecondes->Hide();
+    $win->upDownDeltaSecondes->Hide();
+    $win->lblDeltaTime->Hide();
+    $win->tfDeltaHours->Hide();
+    $win->lblInputType->Hide();
+    $win->cbInputTimeType->Hide();
+    $win->cbInputDTFormat->Hide();
+    $win->btnOpenDTDB->Hide();
+    $win->btnInputFormatGuess->Hide();
   }
   
   &isProcessReady(0);
@@ -1800,8 +2361,8 @@ sub cbLists_Change
   my $selFunc = $win->cbLists->GetCurSel();
   # Possibles value are 0 = 'No duplicate', 1 = 'Only duplicates', 2 = 'Count items', 3 = 'Count characters',
   # 4 = 'L1-L2', 5 = 'Column to row', 6 = 'Row to column', 7 = 'List to regex', 8 = 'Concat', 9 = 'Split strings',
-  # 10 = 'Split and extract', 11 = 'Merge lines', 12 = 'Replace', 13 = 'Reverse string', 14 = 'Transliterate',
-  # 15 = 'Lowercase', 16 = 'Uppercase', 17 = 'Add line number'
+  # 10 = 'Split and extract', 11 = 'Merge lines', 12 = 'Split and merge', 13 = 'Replace', 14 = 'Reverse string',
+  # 15 = 'Transliterate', 16 = 'Lowercase', 17 = 'Uppercase', 18 = 'Add line number'
   
   # Show available options
   
@@ -1810,7 +2371,7 @@ sub cbLists_Change
   else                                                 { &hideList2(); }
 
   # Show Match case option ?
-  if ($selFunc < 3 or $selFunc == 4 or $selFunc == 12) {
+  if ($selFunc < 3 or $selFunc == 4 or $selFunc == 13) {
     $win->chMatchCase->Checked(1);
     $win->chMatchCase->Show();
   } else {
@@ -1819,7 +2380,7 @@ sub cbLists_Change
   }
   
   # Show Regex option
-  if ($selFunc == 9 or $selFunc == 10 or $selFunc == 12) {
+  if ($selFunc == 9 or $selFunc == 10 or $selFunc == 12 or $selFunc == 13) {
     $win->chRegex->Show();
   } else {
     $win->chRegex->Checked(0);
@@ -1827,7 +2388,7 @@ sub cbLists_Change
   }
   
   # Show Eval option
-  if ($selFunc == 12) {
+  if ($selFunc == 13) {
     $win->chEval->Show();
   } else {
     $win->chEval->Checked(0);
@@ -1835,7 +2396,7 @@ sub cbLists_Change
   }
   
   # Show With textfield ?
-  if ($selFunc == 5 or $selFunc == 6 or $selFunc == 8 or $selFunc == 9 or $selFunc == 10 or $selFunc == 11) {
+  if ($selFunc == 5 or $selFunc == 6 or $selFunc == 8 or $selFunc == 9 or $selFunc == 10 or $selFunc == 12) {
     $win->lblWith->Show();
     $win->tfWith->Show();
   } else {
@@ -1844,7 +2405,7 @@ sub cbLists_Change
   }
   
   # Show ColumnsNo textfield ?
-  if ($selFunc == 10) {
+  if ($selFunc == 10 or $selFunc == 11 or $selFunc == 12) {
     $win->lblColumnsNo->Show();
     $win->tfColumnsNo->Show();
   } else {
@@ -1853,7 +2414,7 @@ sub cbLists_Change
   }
   
   # Show Replace-By textfields ?
-  if ($selFunc == 12 or $selFunc == 14) {
+  if ($selFunc == 13 or $selFunc == 15) {
     $win->lblReplace->Show();
     $win->tfReplace->Show();
     $win->lblReplBy->Show();
@@ -1874,7 +2435,7 @@ sub cbLists_Change
   }
   
   # Show lowercase-uppercase Options
-  if ($selFunc == 15 or $selFunc == 16) {
+  if ($selFunc == 16 or $selFunc == 17) {
     $win->rbAll->Show();
     $win->rbFirstOnly->Show();
     $win->rbFirstEachWord->Show();
@@ -2106,15 +2667,17 @@ sub cbSorts_Change
   &hideList2();
   
   if ($selFunc == 4) {
-    $win->lblDTFormat->Show();
-    $win->cbDTFormat->Show();
-    $win->cbDTFormat->SetCurSel(0);
-    $win->cbDTFormat->SetFocus();
-    $win->btnGuess->Show();
+    $win->lblInputType->Show();
+    $win->cbInputTimeType->Show();
+    $win->cbInputDTFormat->Show();
+    $win->btnOpenDTDB->Show();
+    $win->btnInputFormatGuess->Show();
   } else {
-    $win->lblDTFormat->Hide();
-    $win->cbDTFormat->Hide();
-    $win->btnGuess->Hide();
+    $win->lblInputType->Hide();
+    $win->cbInputTimeType->Hide();
+    $win->cbInputDTFormat->Hide();
+    $win->btnOpenDTDB->Hide();
+    $win->btnInputFormatGuess->Hide();
   }
   
   &isProcessReady(0);
@@ -2122,54 +2685,830 @@ sub cbSorts_Change
 }  #--- End cbSorts_Change
 
 #--------------------------#
-sub btnGuess_Click
+sub btnOpenDTDB_Click
+#--------------------------#
+{
+  if (my $selRow = ($winDTDB->gridDT->GetSelectedCellRange())[0]) {
+    $winDTDB->btnDTEdit->Enable();
+    $winDTDB->btnDTDel->Enable();
+  } else {
+    $winDTDB->btnDTEdit->Disable();
+    $winDTDB->btnDTDel->Disable();
+  }
+  $winDTDB->Center($win);
+  $winDTDB->Show();
+  $win->Disable();
+  return(1);
+
+}  #--- End btnOpenDTDB_Click
+  
+#--------------------------#
+sub btnInputFormatGuess_Click
+#--------------------------#
+{
+  # Guess format of the first item
+  if (my $sample = (&findInputDTFormat($win->tfList1->GetLine(0)))[0]) {
+    $win->cbInputDTFormat->SetCurSel($win->cbInputDTFormat->FindStringExact($sample));
+  # If not found
+  } else {  
+    Win32::GUI::MessageBox($win, $STR{'formatNotFound'}.'...', $STR{'error'}, 0x40010);
+  }
+
+}  #--- End btnInputFormatGuess_Click
+
+#--------------------------#
+sub findInputDTFormat
 #--------------------------#
 {
   # Local variables
-  my $firstItem = $win->tfList1->GetLine(0);
-  # Possibles value are:                                                        #  0 = 'Guess (or variable)...',
-  my @formatRE = ('\d+, \d{2}\-\w{3}\-\d{4} \d{2}\:\d{2}\:\d{2} \w{3}'    ,     #  1 = 'Tuesday, 08-Feb-2015 14:15:29 GMT',
-                  '\w{3} \w{3} + \d{1,2} \d{2}\:\d{2}\:\d{2} \w{3} \d{4}' ,     #  2 = 'Thu Feb  3 17:03:55 GMT 2015',
-                  '\d+, \d{2}\-\w{3}\-\d{2} \d{2}\:\d{2}\:\d{2} \w{3}'    ,     #  3 = 'Tuesday, 08-Feb-99 14:15:29 GMT',
-                  '\w{3}, \d{2} \w{3} \d{4} \d{2}\:\d{2}\:\d{2} \w{3}'    ,     #  4 = 'Wed, 09 Feb 2015 22:23:32 GMT',
-                  '\d{2}\/\w{3}\/\d{4}\:\d{2}\:\d{2}\:\d{2} [\-\+]?\d{4}' ,     #  5 = '03/Feb/2015:17:03:55 -0700',
-                  '\d{4}\-\d{2}\-\d{2} \d{2}\:\d{2}\:\d{2} [\-\+]?\d{4}'  ,     #  6 = '2015-02-03 14:15:29 -0100',
-                  '\d{2}\-\w{3}\-\d{4} \d{2}\:\d{2}\:\d{2} \w{3}'         ,     #  7 = '08-Feb-2015 14:15:29 GMT',
-                  '\d{2} \w{3} \d{4} \d{2}\:\d{2}\:\d{2} \w{3}'           ,     #  8 = '09 Feb 2015 22:23:32 GMT',
-                  '\d{2}\-\w{3}\-\d{2} \d{2}\:\d{2}\:\d{2} \w{3}'         ,     #  9 = '08-Feb-99 14:15:29 GMT',
-                  '\w{3} \w{3} + \d{1,2} \d{2}\:\d{2}\:\d{2}'             ,     # 10 = 'Thu Feb  3 00:00:00 2015',
-                  '\d{4}\-\d{2}\-\d{2} \d{2}\:\d{2}\:\d{2}'               ,     # 11 = '2015-02-03 14:15:29',
-                  '\d{2}\/\d{2}\/\d{4} \d{2}\:\d{2}\:\d{2}'               ,     # 12 = '03/02/2015 14:15:29',
-                  '\d{4}\-\d{2}\-\d{2}T\d{2}\:\d{2}\:\d{2}'               ,     # 13 = '2015-02-03T14:15:29',
-                  '\d{2}\-\d{2}\-\d{2} +\d{2}\:\d{2}\w{2}'                ,     # 14 = '11-15-99  03:52PM',
-                  '\w{3} +\d{1,2} +\d{2}\:\d{2}'                          ,     # 15 = 'Feb  3 17:03',
-                  '\w{3} +\d{1,2} +\d{4}'                                 ,     # 16 = 'Feb  3  2015',
-                  '\d{2}\-\w{3}\-\d{4}'                                   ,     # 17 = '08-Feb-2015',
-                  '\d{2}\/\w{3}\/\d{4}'                                   ,     # 18 = '03/Feb/2015',
-                  '\d{4}\-\d{2}\-\d{2}'                                   ,     # 19 = '2015-02-03',
-                  '\d{8}T\d{6}Z'                                          ,     # 20 = '20150203T141529Z',
-                  '\d{2}\-\w{3}\-\d{2}'                                   ,     # 21 = '08-Feb-99',
-                  '\d{2} \w{3} \d{4}'                                     ,     # 21 = '09 Feb 2015',
-                  '\d{8}'                                                 , );  # 23 = '20150203',
+  my $item = shift;
   
   # Guess format
-  my $i = 0;
-  foreach my $format (@formatRE) {
-    my $regex = $format;
-    if ($firstItem =~ /($format)/) {
-      eval { parse_date($firstItem); };
-      if (!$@) {
-        $win->cbDTFormat->SetCurSel($i+1);
-        return();
+  for (my $i = 1; $i < $winDTDB->gridDT->GetRows(); $i++) {
+    my $regex = $winDTDB->gridDT->GetCellText($i, 2);
+    if ($item =~ /($regex)/i) {
+      my $pattern = $winDTDB->gridDT->GetCellText($i, 1);
+      # Format
+      my $partItem = $1 =~ s/ +/ /gr;
+      my $strp = DateTime::Format::Strptime->new(pattern => $pattern);
+      if (my $dt = $strp->parse_datetime($partItem)) {
+        my $timezone;
+        if ($winDTDB->gridDT->GetCellText($i, 3) eq 'local') { $timezone = $winDTDB->cbLocalTZ->GetString($winDTDB->cbLocalTZ->GetCurSel()); }
+        return($winDTDB->gridDT->GetCellText($i, 0), $winDTDB->gridDT->GetCellText($i, 1),
+               $winDTDB->gridDT->GetCellText($i, 2), $timezone);
       }
     }
-    $i++;
   }
   
-  # if not found
-  Win32::GUI::MessageBox($win, $STR{'formatNotFound'}.'...', $STR{'error'}, 0x40010);
+  return(0);
+  
+}  #--- End findInputDTFormat
 
-}  #--- End btnGuess_Click
+#--------------------------#
+sub infoDTFormat
+#--------------------------#
+{
+  # Local variables
+  my $sample = shift;
+  
+  # Guess format
+  for (my $i = 1; $i < $winDTDB->gridDT->GetRows(); $i++) {
+    my $curSampleRow = $winDTDB->gridDT->GetCellText($i, 0);
+    if ($curSampleRow eq $sample) {
+      return($winDTDB->gridDT->GetCellText($i, 0), $winDTDB->gridDT->GetCellText($i, 1),
+             $winDTDB->gridDT->GetCellText($i, 2), $winDTDB->gridDT->GetCellText($i, 3));
+    }
+  }
+  
+  return(0);
+  
+}  #--- End infoDTFormat
+
+#--------------------------#
+sub gridDT_Click
+#--------------------------#
+{
+  # Local variables
+  my ($row, $column) = @_;
+  
+  $winDTDB->btnDTEdit->Enable();
+  $winDTDB->btnDTDel->Enable();
+
+  return(1);
+
+}  #--- End gridDT_Click
+
+#--------------------------#
+sub sortGridDT
+#--------------------------#
+{
+  my ($a, $b) = @_;
+  return (length($a) <=> length($b));
+
+}  #--- End sortGridDT
+
+#--------------------------#
+sub btnDTAdd_Click
+#--------------------------#
+{
+  # Reset all values
+  $winDTObj->tfDTObjSample->Text('');
+  $winDTObj->tfDTObjSample->ReadOnly(0);
+  $winDTObj->tfDTObjPattern->Text('');
+  $winDTObj->cbDTObjPattern->SetCurSel(0);
+  $winDTObj->lblDTObjRegexOk->Hide();
+  $winDTObj->lblDTObjRegexErr->Hide();
+  $winDTObj->lblDTObjRegexWarn->Hide();
+  $winDTObj->tfDTObjRegex->Text('');
+  $winDTObj->chDTObjRegexAuto->Checked(1);
+  $winDTObj->rbDTObjTZLocal->Checked(1);
+  $winDTObj->rbDTObjTZUTC->Checked(0);
+  $winDTObj->rbDTObjTZOtherOffset->Checked(0);
+  $winDTObj->rbDTObjTZOtherName->Checked(0);
+  $winDTObj->cbDTObjTZOffset->SetCurSel(0);
+  $winDTObj->cbDTObjTZName->SetCurSel(0);
+  $winDTObj->lblDTObjParsedData->Text('');
+  $winDTObj->cbDTObjUseAs->SetCurSel(0);
+  $winDTObj->tfDTObjComment->Text('');
+  
+  # Update controls
+  my $firstItem = $win->tfList1->GetLine(0);
+  if ($firstItem) { $winDTObj->btnDTObjUseFirst->Enable();  }
+  else            { $winDTObj->btnDTObjUseFirst->Disable(); }
+  $winDTObj->btnDTObjAdd->Show();
+  $winDTObj->btnDTObjEdit->Hide();
+  
+  $winDTObj->Center($win);
+  $winDTObj->Show();
+  $winDTDB->Disable();
+  return(1);
+
+}  #--- End btnDTAdd_Click
+
+#--------------------------#
+sub btnDTEdit_Click
+#--------------------------#
+{
+  # Local variables
+  my %useAsInd = ($STR{'input'} => 0, $STR{'output'} => 1, $STR{'both'} => 2, $STR{'none'} => 3);
+  
+  # Load the current values
+  my $selRow = ($winDTDB->gridDT->GetSelectedCellRange())[0];
+  $winDTObj->tfDTObjSample->Text($winDTDB->gridDT->GetCellText($selRow, 0));
+  $winDTObj->tfDTObjSample->ReadOnly(1);
+  $winDTObj->tfDTObjPattern->Text($winDTDB->gridDT->GetCellText($selRow, 1));
+  $winDTObj->tfDTObjRegex->Text($winDTDB->gridDT->GetCellText($selRow, 2));
+  my $timezone = $winDTDB->gridDT->GetCellText($selRow, 3);
+  if      ($timezone eq 'local') {
+    $winDTObj->rbDTObjTZLocal->Checked(1);
+    $winDTObj->rbDTObjTZUTC->Checked(0);
+    $winDTObj->rbDTObjTZOtherOffset->Checked(0);
+    $winDTObj->rbDTObjTZOtherName->Checked(0);
+  } elsif ($timezone eq 'UTC') {
+    $winDTObj->rbDTObjTZLocal->Checked(0);
+    $winDTObj->rbDTObjTZUTC->Checked(1);
+    $winDTObj->rbDTObjTZOtherOffset->Checked(0);
+    $winDTObj->rbDTObjTZOtherName->Checked(0);
+  } elsif ($timezone =~ /[\+\-]?\d{4}/) {
+    $winDTObj->rbDTObjTZLocal->Checked(0);
+    $winDTObj->rbDTObjTZUTC->Checked(0);
+    $winDTObj->rbDTObjTZOtherOffset->Checked(1);
+    $winDTObj->rbDTObjTZOtherName->Checked(0);
+    $winDTObj->cbDTObjTZOffset->SetCurSel($winDTObj->cbDTObjTZOffset->FindStringExact($timezone));
+  } else {
+    $winDTObj->rbDTObjTZLocal->Checked(0);
+    $winDTObj->rbDTObjTZUTC->Checked(0);
+    $winDTObj->rbDTObjTZOtherOffset->Checked(0);
+    $winDTObj->rbDTObjTZOtherName->Checked(1);
+    $winDTObj->cbDTObjTZName->SetCurSel($winDTObj->cbDTObjTZName->FindStringExact($timezone));
+  }
+  my $useAsStr = $winDTDB->gridDT->GetCellText($selRow, 4); # 0 = Input, 1 = Output, 2 = Both, 3 = None
+  if (exists($useAsInd{$useAsStr})) { $winDTObj->cbDTObjUseAs->SetCurSel($useAsInd{$useAsStr}); }
+  if ($winDTDB->gridDT->GetCellText($selRow, 5)) { $winDTObj->tfDTObjComment->Text($winDTDB->gridDT->GetCellText($selRow, 5)); }
+  else                                           { $winDTObj->tfDTObjComment->Text(''); }
+  
+  # Update controls
+  $winDTObj->btnDTObjUseFirst->Disable();
+  $winDTObj->btnDTObjEdit->Show();
+  $winDTObj->btnDTObjAdd->Hide();
+
+  $winDTObj->Center($win);
+  $winDTObj->Show();
+  $winDTDB->Disable();
+  return(1);
+
+}  #--- End btnDTEdit_Click
+
+#--------------------------#
+sub tfDTObjSample_Change
+#--------------------------#
+{
+  &isDTObjReady(0);
+  
+}  #--- End tfDTObjSample_Change
+
+#--------------------------#
+sub btnDTObjUseFirst_Click
+#--------------------------#
+{
+  $winDTObj->tfDTObjSample->Text($win->tfList1->GetLine(0));
+  
+  &isDTObjReady(0);
+  
+}  #--- End btnDTObjUseFirst_Click
+
+#--------------------------#
+sub btnDTObjPatternInsert_Click
+#--------------------------#
+{
+  # Local variables
+  my $patternObjSel = $winDTObj->cbDTObjPattern->GetCurSel();
+  my @patterns = ('%B', '%b', '%D', '%d', '%e', '%F', '%H', '%I', '%M', '%m',
+                  '%p', '%R', '%r', '%S', '%T', '%v', '%w', '%Y', '%y', '%Z',
+                  '%z', );
+    
+  $winDTObj->tfDTObjPattern->Append($patterns[$patternObjSel]);
+    
+  &isDTObjReady(0);
+
+}  #--- End btnDTObjPatternInsert_Click
+
+#--------------------------#
+sub patternRE
+#--------------------------#
+{
+  # Local variables
+  my $formatREStr = shift;
+  
+  # Possibles value are:
+  my %formatRE = ('%A' => '(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)', # full weekday name
+                  '%a' => '(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)', # abbreviated weekday name
+                  '%B' => '(?:January|February|March|April|May|June|July|August|September|October|November|December)', # full month name
+                  '%b' => '(?:Jan|Feb|Mar|Apr|May|June|July|Aug|Sept|Oct|Nov|Dec)', # abbreviated month name
+                  '%C' => '\d{2}', # (year / 100) as decimal number; single digits are preceded by a zero.
+                  '%D' => '\d{2}\/\d{2}\/\d{2}', # %m/%d/%y
+                  '%d' => '\d{2}', # day of the month as a decimal number (01-31)
+                  '%e' => '\d{1,2}', # day of the month as a decimal number (1-31); single digits are preceded by a blank.
+                  '%F' => '\d{4}\-\d{2}\-\d{2}', # %Y-%m-%d
+                  '%H' => '\d{2}', # hour (24-hour clock) as a decimal number (00-23)
+                  '%I' => '\d{2}', # hour (12-hour clock) as a decimal number (01-12)
+                  '%j' => '\d{3}', # day of the year as a decimal number (001-366)
+                  '%k' => '\d{1,2}', # hour (24-hour clock) as a decimal number (0-23); single digits are preceded by a blank.
+                  '%l' => '\d{1,2}', # hour (12-hour clock) as a decimal number (1-12); single digits are preceded by a blank.
+                  '%M' => '\d{2}', # minute as a decimal number (00-59)
+                  '%m' => '\d{1,2}', # month as a decimal number (01-12)
+                  '%n' => '\n', # newline
+                  '%p' => '[ap]\.?m\.?', # national representation of either "ante meridiem" (a.m.)  or "post meridiem" (p.m.)  as appropriate.
+                  '%R' => '\d{2}:\d{2}', # %H:%M
+                  '%r' => '\d{1,2}:\d{2}:\d{2} [ap]\.?m\.?', # %I:%M:%S %p
+                  '%S' => '\d{2}', # second as a decimal number (00-60)
+                  '%s' => '\d{10,13}', # number of seconds since the Epoch
+                  '%T' => '\d{2}:\d{2}:\d{2}', # %H:%M:%S
+                  '%R' => '\d{2}:\d{2}', # %H:%M
+                  '%t' => '\t', # tab
+                  '%U' => '\d{2}', # week number of the year (Sunday as the first day of the week) as a decimal number (00-53).
+                  '%u' => '[1-7]', # weekday (Monday as the first day of the week) as a decimal number (1-7).
+                  '%V' => '\d{2}', # week number of the year (Monday as the first day of the week) as a decimal number (01-53)
+                  '%v' => '\d{1,2}\-[a-zA-Z]{3}\-\d{4}', # %e-%b-%Y
+                  '%W' => '\d{2}', # week number of the year as a decimal number (00-53).
+                  '%w' => '[0-6]', # weekday (Sunday as the first day of the week) as a decimal number (0-6).
+                  '%Y' => '\d{4}', # year with century as a decimal number
+                  '%y' => '\d{2}', # year without century as a decimal number (00-99)
+                  '%Z' => '[\w\/]+', # time zone name
+                  '%z' => '[\-\+]?\d{4}', # time zone offset from UTC
+                  );
+  
+  # Convert other format string from strftime format (%) to regex
+  foreach my $matchRE (keys %formatRE) {
+    $formatREStr =~ s/$matchRE/$formatRE{$matchRE}/ge;
+  }
+  
+  return($formatREStr);
+
+}  #--- End patternRE
+
+#--------------------------#
+sub tfDTObjPattern_Change
+#--------------------------#
+{
+  # Local variables
+  my $pattern = $winDTObj->tfDTObjPattern->Text();
+  
+  if ($pattern =~ /%\w/ and $winDTObj->chDTObjRegexAuto->Checked()) {
+    my $regex = patternRE($pattern);
+    $winDTObj->tfDTObjRegex->Text($regex);
+  }
+  
+  &isDTObjReady(0);
+  
+}  #--- End tfDTObjPattern_Change
+
+#--------------------------#
+sub btnDTObjPatternHelp_Click
+#--------------------------#
+{
+  my $url = 'http://strftime.net/';
+  
+  # Open Default browser to a help page on Strftime
+  $win->ShellExecute('open', $url,'','',1) or Win32::GUI::MessageBox($win, Win32::FormatMessage(Win32::GetLastError()), $STR{'error'}, 0x40010);
+  
+}  #--- End btnDTObjPatternHelp_Click
+
+#--------------------------#
+sub tfDTObjRegex_Change
+#--------------------------#
+{
+  &isDTObjReady(0);
+  
+}  #--- End tfDTObjRegex_Change
+
+#--------------------------#
+sub chDTObjRegexAuto_Click
+#--------------------------#
+{
+  # Local variables
+  my $pattern = $winDTObj->tfDTObjPattern->Text();
+  
+  if ($pattern =~ /%\w/ and $winDTObj->chDTObjRegexAuto->Checked()) {
+    my $regex = patternRE($pattern);
+    $winDTObj->tfDTObjRegex->Text($regex);
+  }
+  
+  &isDTObjReady(0);
+  
+}  #--- End chDTObjRegexAuto_Click
+
+#--------------------------#
+sub isDTObjReady
+#--------------------------#
+{
+  # Local variables
+  my $confirm = shift;
+  my $nextStep;
+  
+  # Sample provided ?
+  my $sample = $winDTObj->tfDTObjSample->Text();
+  if (!$sample) {
+    $winDTObj->tfDTObjPattern->Disable();
+    $winDTObj->btnDTObjPatternInsert->Disable();
+    $winDTObj->cbDTObjPattern->Disable();
+    $winDTObj->tfDTObjRegex->Disable();
+    $nextStep = $STR{'provideSample'};
+  } else {
+    $winDTObj->tfDTObjPattern->Enable();
+    $winDTObj->btnDTObjPatternInsert->Enable();
+    $winDTObj->cbDTObjPattern->Enable();
+    
+    # Pattern provided ?
+    my $pattern = $winDTObj->tfDTObjPattern->Text();
+    if ($pattern =~ /%\w/) {
+      $winDTObj->tfDTObjRegex->Enable();
+    
+      # Regex provided ?
+      my $regex = $winDTObj->tfDTObjRegex->Text();
+      if ($regex) {
+        my ($statusRegex, $msg) = &validRegex($regex);
+        
+        # Warning
+        if      ($statusRegex == 2) {
+          $winDTObj->lblDTObjRegexWarn->Show();
+          $winDTObj->lblDTObjRegexOk->Hide();
+          $winDTObj->lblDTObjRegexErr->Hide();
+        # Error
+        } elsif ($statusRegex == 1) {
+          $winDTObj->lblDTObjRegexErr->Show();
+          $winDTObj->lblDTObjRegexOk->Hide();
+          $winDTObj->lblDTObjRegexWarn->Hide();
+          $nextStep = $STR{'errRegex'};
+        # Ok
+        } else {
+          $winDTObj->lblDTObjRegexOk->Show();
+          $winDTObj->lblDTObjRegexErr->Hide();
+          $winDTObj->lblDTObjRegexWarn->Hide();
+        }
+      } else {
+        $winDTObj->lblDTObjRegexOk->Hide();
+        $winDTObj->lblDTObjRegexErr->Hide();
+        $winDTObj->lblDTObjRegexWarn->Hide();
+        $nextStep = $STR{'errRegex'};
+      }
+      
+      # Test regex and pattern
+      if (!$nextStep) {
+        my $strp = DateTime::Format::Strptime->new(pattern => $pattern);
+        if ($sample =~ /$regex/i and my $parsedPattern = $strp->parse_datetime($sample)) {
+          $winDTObj->lblDTObjParsedData->Text($parsedPattern->strftime($pattern));
+          
+          # Timezone ?
+          if ($pattern =~ /%[Zzs]/) {
+            $winDTObj->rbDTObjTZLocal->Disable();
+            $winDTObj->rbDTObjTZUTC->Disable();
+            $winDTObj->rbDTObjTZOtherOffset->Disable();
+            $winDTObj->cbDTObjTZOffset->Disable();
+            $winDTObj->rbDTObjTZOtherName->Disable();
+            $winDTObj->cbDTObjTZName->Disable();
+          } else { # No timezone in pattern, must specify
+            $winDTObj->rbDTObjTZLocal->Enable();
+            $winDTObj->rbDTObjTZUTC->Enable();
+            $winDTObj->rbDTObjTZOtherOffset->Enable();
+            $winDTObj->cbDTObjTZOffset->Enable();
+            $winDTObj->rbDTObjTZOtherName->Enable();
+            $winDTObj->cbDTObjTZName->Enable();
+          }
+
+        } else { $winDTObj->lblDTObjParsedData->Text(''); }
+      }
+      
+    } else {
+      $winDTObj->tfDTObjRegex->Disable();
+      $nextStep = $STR{'providePattern'};
+    }
+  }
+  
+  # Return an error message or enable the button
+  if ($nextStep) {
+    $winDTObj->btnDTObjAdd->Disable();
+    $winDTObj->btnDTObjEdit->Disable();
+    $winDTObj->btnDTObjNotReady->Enable();
+    if ($confirm) {
+      Win32::GUI::MessageBox($winDTObj, "$STR{'notReady'} ?\n\n$STR{'nextStep'}: $nextStep", $STR{'notReady'}, 0x40040);
+    }
+  } else {
+    $winDTObj->btnDTObjAdd->Enable();
+    $winDTObj->btnDTObjEdit->Enable();
+    $winDTObj->btnDTObjNotReady->Disable();
+  }
+  
+}  #--- End isDTObjReady
+
+#--------------------------#
+sub btnDTObjNotReady_Click
+#--------------------------#
+{
+  &isDTObjReady(1);
+
+}  #--- End btnDTObjNotReady_Click
+
+#--------------------------#
+sub btnDTObjAdd_Click
+#--------------------------#
+{
+  # Local variables
+  my $sample   = $winDTObj->tfDTObjSample->Text();
+  my $pattern  = $winDTObj->tfDTObjPattern->Text();
+  my $regex    = $winDTObj->tfDTObjRegex->Text();
+  my $comment  = $winDTObj->tfDTObjComment->Text();
+  if (!$comment) { $comment = 'NULL'; }
+  my $useAs    = $winDTObj->cbDTObjUseAs->GetCurSel(); # 0 = Input, 1 = Output, 2 = Both, 3 = None (hidden)
+  my @useAsStr = ($STR{'input'}, $STR{'output'}, $STR{'both'}, $STR{'none'});
+  my $DTDBFile = $winConfig->tfDTDB->Text();
+  my $timezone; # Default timezone, used if not specified in pattern
+  
+  # Timezone
+  if    ($winDTObj->rbDTObjTZLocal->Checked()) { $timezone = 'local'; } # Local
+  elsif ($winDTObj->rbDTObjTZUTC->Checked())   { $timezone = 'UTC';   } # UTC
+  elsif ($winDTObj->rbDTObjTZOtherOffset->Checked()) {                  # Other, offset
+    $timezone = $winDTObj->cbDTObjTZOffset->GetString($winDTObj->cbDTObjTZOffset->GetCurSel());
+  } elsif ($winDTObj->rbDTObjTZOtherName->Checked()) {                # Other, name
+    $timezone = $winDTObj->cbDTObjTZName->GetString($winDTObj->cbDTObjTZName->GetCurSel());
+  } else { $timezone = 'NULL'; }
+  
+  # Select or create Datetime database
+  if (!-f $DTDBFile or !&validDTDB($DTDBFile)) {
+    $DTDBFile = "$USERDIR\\DT.db";
+    if (&createDTDB($DTDBFile)) { $winConfig->tfDTDB->Text($DTDBFile); }
+  }
+  
+  # Connect to DB
+  my $dsn = "DBI:SQLite:dbname=$DTDBFile";
+  if (my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })) {
+    
+    # Add to database
+    # Database: table = DT, Fields = sample, pattern, regex, timezone, use_as, comment
+    my $sth = $dbh->prepare("insert into DT (sample,pattern,regex,timezone,use_as,comment) values(?,?,?,?,?,?)");
+    my $rv = $sth->execute($sample, $pattern, $regex, $timezone, $useAs, $comment);
+    if ($rv < 0) {
+      Win32::GUI::MessageBox($winDTDB, $STR{'errorMsg'}.$DBI::errstr, $STR{'error'}, 0x40010);
+      return(0);
+    } else {
+      # Add to Grid
+      if (my $newLine = $winDTDB->gridDT->InsertRow($sample, -1)) {
+        $winDTDB->gridDT->SetCellText($newLine, 0, $sample);
+        $winDTDB->gridDT->SetCellText($newLine, 1, $pattern);
+        $winDTDB->gridDT->SetCellText($newLine, 2, $regex);
+        $winDTDB->gridDT->SetCellText($newLine, 3, $timezone);
+        $winDTDB->gridDT->SetCellText($newLine, 4, $useAsStr[$useAs]);
+        if ($comment ne 'NULL') { $winDTDB->gridDT->SetCellText($newLine, 5, $comment); }
+        
+        # Refresh grid
+        $winDTDB->gridDT->SortCells(1, 0, \&sortGridDT);
+        $winDTDB->gridDT->AutoSizeColumns();
+        $winDTDB->gridDT->ExpandColumnsToFit();
+        $winDTDB->gridDT->SetListMode();
+        
+        # Add to combobox
+        if ($useAs == 0 or $useAs == 2) { $win->cbInputDTFormat->Add($sample);  }
+        if ($useAs == 1 or $useAs == 2) { $win->cbOutputDTFormat->Add($sample); $winDTDB->cbDefaultOutput->Add($sample); }
+        
+        # Final message
+        &winDTObj_Terminate();
+        Win32::GUI::MessageBox($winDTDB, $STR{'addedDTObj'}, $STR{'winDTDB'}, 0x40040);
+        
+      } else { Win32::GUI::MessageBox($win, $STR{'errNewLine'}, $STR{'error'}, 0x40010); }
+    }
+  }
+
+}  #--- End btnDTObjAdd_Click
+
+#--------------------------#
+sub btnDTObjEdit_Click
+#--------------------------#
+{
+  # Local variables
+  my $sample   = $winDTObj->tfDTObjSample->Text();
+  my $pattern  = $winDTObj->tfDTObjPattern->Text();
+  my $regex    = $winDTObj->tfDTObjRegex->Text();
+  my $comment  = $winDTObj->tfDTObjComment->Text();
+  if (!$comment) { $comment = 'NULL'; }
+  my $useAs    = $winDTObj->cbDTObjUseAs->GetCurSel(); # 0 = Input, 1 = Output, 2 = Both, 3 = None (hidden)
+  my @useAsStr = ($STR{'input'}, $STR{'output'}, $STR{'both'}, $STR{'none'});
+  my $DTDBFile = $winConfig->tfDTDB->Text();
+  my $timezone; # Default timezone, used if not specified in pattern
+  
+  # Timezone
+  if    ($winDTObj->rbDTObjTZLocal->Checked()) { $timezone = 'local'; } # Local
+  elsif ($winDTObj->rbDTObjTZUTC->Checked())   { $timezone = 'UTC';   } # UTC
+  elsif ($winDTObj->rbDTObjTZOtherOffset->Checked()) {                  # Other, offset
+    $timezone = $winDTObj->cbDTObjTZOffset->GetString($winDTObj->cbDTObjTZOffset->GetCurSel());
+  } elsif ($winDTObj->rbDTObjTZOtherName->Checked()) {                # Other, name
+    $timezone = $winDTObj->cbDTObjTZName->GetString($winDTObj->cbDTObjTZName->GetCurSel());
+  } else { $timezone = 'NULL'; }
+  
+  # Connect to DB
+  my $dsn = "DBI:SQLite:dbname=$DTDBFile";
+  if (my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })) {
+    
+    # Update database
+    # Database: table = DT, Fields = sample, pattern, regex, timezone, use_as, comment
+    my $sth = $dbh->prepare("UPDATE DT SET pattern = ?, regex = ?, timezone = ?, use_as = ?, comment = ? WHERE ? == sample");
+    my $rv  = $sth->execute($pattern, $regex, $timezone, $useAs, $comment, $sample);
+    if ($rv < 0) {
+      Win32::GUI::MessageBox($winDTDB, $STR{'errorMsg'}.$DBI::errstr, $STR{'error'}, 0x40010);
+      return(0);
+    } else {
+      # Update Grid
+      for (my $i = 1; $i < $winDTDB->gridDT->GetRows(); $i++) {
+        my $curSampleRow = $winDTDB->gridDT->GetCellText($i, 0);
+        if ($curSampleRow eq $sample) {
+          $winDTDB->gridDT->SetCellText($i, 1, $pattern);
+          $winDTDB->gridDT->SetCellText($i, 2, $regex);
+          $winDTDB->gridDT->SetCellText($i, 3, $timezone);
+          $winDTDB->gridDT->SetCellText($i, 4, $useAsStr[$useAs]);
+          if ($comment ne 'NULL') { $winDTDB->gridDT->SetCellText($i, 5, $comment); }
+
+          # Refresh grid
+          $winDTDB->gridDT->SortCells(1, 0, \&sortGridDT);
+          $winDTDB->gridDT->AutoSizeColumns();
+          $winDTDB->gridDT->ExpandColumnsToFit();
+          $winDTDB->gridDT->SetListMode();
+          
+          # Add to combobox
+          if ($useAs == 0 or $useAs == 2) { # Add to input
+            if ((my $index = $win->cbInputDTFormat->FindStringExact($sample)) > 1) { # Already in Combobox ?
+              my $inComboboxSample = $win->cbInputDTFormat->GetString($index);
+              if ($inComboboxSample ne $sample) { $win->cbInputDTFormat->Add($sample); }
+            } else { $win->cbInputDTFormat->Add($sample); }
+          } elsif ((my $index = $win->cbInputDTFormat->FindStringExact($sample)) > 1) {
+            my $inComboboxSample = $win->cbInputDTFormat->GetString($index);
+            if ($inComboboxSample eq $sample) { $win->cbInputDTFormat->DeleteString($index); }
+          }
+          if ($useAs == 1 or $useAs == 2) { # Add to output
+            if ((my $index = $win->cbOutputDTFormat->FindStringExact($sample)) > 1) { # Already in Combobox ?
+              my $inComboboxSample = $win->cbOutputDTFormat->GetString($index);
+              if ($inComboboxSample ne $sample) { $win->cbOutputDTFormat->Add($sample); $winDTDB->cbDefaultOutput->Add($sample); }
+            } else { $win->cbOutputDTFormat->Add($sample); $winDTDB->cbDefaultOutput->Add($sample); }
+          } elsif ((my $index = $win->cbOutputDTFormat->FindStringExact($sample)) > 1) {
+            my $inComboboxSample = $win->cbOutputDTFormat->GetString($index);
+            if ($inComboboxSample eq $sample) { $win->cbOutputDTFormat->DeleteString($index); $winDTDB->cbDefaultOutput->DeleteString($index); }
+          }
+          
+          # Final message
+          &winDTObj_Terminate();
+          Win32::GUI::MessageBox($winDTDB, $STR{'updatedDTObj'}, $STR{'winDTDB'}, 0x40040);
+          last;
+        } 
+      }
+      &winDTObj_Terminate();
+    }
+  }
+
+}  #--- End btnDTObjEdit_Click
+
+#--------------------------#
+sub btnDTDel_Click
+#--------------------------#
+{
+  # Local variables
+  my $DTDBFile = $winConfig->tfDTDB->Text();
+  
+  # Get selected row
+  my $selRow = ($winDTDB->gridDT->GetSelectedCellRange())[0];
+  my $sample = $winDTDB->gridDT->GetCellText($selRow, 0);
+  
+  # Delete in Datetime database
+  # Connect to DB
+  my $dsn = "DBI:SQLite:dbname=$DTDBFile";
+  if (my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })) {
+    my $sth = $dbh->prepare("DELETE from DT where sample == ?");
+    my $rv = $sth->execute($sample);
+    if ($rv < 0) { Win32::GUI::MessageBox($winDTDB, $STR{'errorMsg'}.$DBI::errstr, $STR{'error'}, 0x40010); }
+    else { 
+      # Find the entry in grid and delete
+      for (my $i = 1; $i < $winDTDB->gridDT->GetRows(); $i++) {
+        my $curSampleRow = $winDTDB->gridDT->GetCellText($i, 0);
+        if ($curSampleRow eq $sample) {
+          $winDTDB->gridDT->DeleteRow($i);
+          # Refresh grid
+          $winDTDB->gridDT->SortCells(1, 0, \&sortGridDT);
+          $winDTDB->gridDT->AutoSizeColumns();
+          $winDTDB->gridDT->ExpandColumnsToFit();
+          $winDTDB->gridDT->SetListMode();
+          
+          # If entry is in combobox, delete it
+          $win->cbInputDTFormat->DeleteString($win->cbInputDTFormat->FindStringExact($sample));
+          $win->cbOutputDTFormat->DeleteString($win->cbOutputDTFormat->FindStringExact($sample));
+          
+          Win32::GUI::MessageBox($winDTDB, $STR{'deletedDTObj'}, $STR{'winDTDB'}, 0x40040);
+          last;
+        }
+      }
+    }
+  }
+  
+}  #--- End btnDTDel_Click
+
+#--------------------------#
+sub createDTDB
+#--------------------------#
+{
+  # Local variables
+  my $DTDBFile = shift;
+
+  # Create a new database
+  my $dsn = "DBI:SQLite:dbname=$DTDBFile";
+  my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 }) or return(0);
+  
+  # Create main table
+  my $stmt = qq(CREATE TABLE IF NOT EXISTS DT
+                (sample     VARCHAR(255)  NOT NULL,
+                 pattern    VARCHAR(255)  NOT NULL,
+                 regex      VARCHAR(255)  NOT NULL,
+                 timezone   VARCHAR(255)          ,
+                 use_as     INT                   ,
+                 comment    VARCHAR(255)          ,
+                 PRIMARY KEY (sample)));
+  my $rv = $dbh->do($stmt);
+  if ($rv < 0) { return(0); }
+  $dbh->disconnect();
+
+  return(1);
+  
+}  #--- End createDTDB
+
+#--------------------------#
+sub loadDTDB
+#--------------------------#
+{
+  # Local variables
+  my $DTDBFile = $winConfig->tfDTDB->Text();
+  my @useAsStr = ($STR{'input'}, $STR{'output'}, $STR{'both'}, $STR{'none'});
+  
+  if (-f $DTDBFile) {
+    # Connect to DB
+    my $dsn = "DBI:SQLite:dbname=$DTDBFile";
+    my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })
+              or Win32::GUI::MessageBox($win, $STR{'errorConnectDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
+              
+    # Check if DT table exists
+    my $sth;
+    eval { $sth = $dbh->table_info(undef, undef, '%', 'TABLE'); };
+    if ($@) {
+      Win32::GUI::MessageBox($win, $STR{'errorConnectDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
+      return(0);
+    }
+    my @info = $sth->fetchrow_array;
+    $sth->finish();
+    if ($info[2] eq 'DT') { # If table DT exists, than load data
+      my $all = $dbh->selectall_arrayref("SELECT * FROM DT ORDER BY sample ASC");
+    
+      # Database: table = DT, Fields = sample, pattern, regex, timezone, use_as, comment
+      # Feed the grid
+      my $i = 1;
+      $winDTDB->gridDT->SetRows(scalar(@$all)+1);
+      foreach my $row (@$all) {
+        my (@values) = @$row;
+        $winDTDB->gridDT->SetCellText($i, 0, $values[0]); # Sample
+        $winDTDB->gridDT->SetCellText($i, 1, $values[1]); # Pattern
+        $winDTDB->gridDT->SetCellText($i, 2, $values[2]); # Regex
+        if ($values[3] ne 'NULL') { $winDTDB->gridDT->SetCellText($i, 3, $values[3]); } # Timezone
+        $winDTDB->gridDT->SetCellText($i, 4, $useAsStr[$values[4]]); # Use As
+        if ($values[5] ne 'NULL') { $winDTDB->gridDT->SetCellText($i, 5, $values[5]); } # Timezone
+        $i++;
+      }
+      
+      # Refresh grid
+      $winDTDB->gridDT->SortCells(1, 0, \&sortGridDT);
+      $winDTDB->gridDT->AutoSizeColumns();
+      $winDTDB->gridDT->ExpandColumnsToFit();
+      $winDTDB->gridDT->ScrollPos(1,0);
+      $winDTDB->gridDT->SetListMode();
+      
+      $dbh->disconnect();
+      return(1);
+    } else { Win32::GUI::MessageBox($win, $STR{'errTableLoggingDB'}, $STR{'error'}, 0x40010); return(0); }
+  } else { return(0); }
+
+}  #--- End loadDTDB
+
+#--------------------------#
+sub btnDTObjCancel_Click
+#--------------------------#
+{
+  &winDTObj_Terminate();
+
+}  #--- End btnDTObjCancel_Click
+
+#--------------------------#
+sub winDTObj_Terminate
+#--------------------------#
+{
+  $winDTObj->Hide();
+  $winDTDB->Enable();
+  $winDTDB->SetForegroundWindow();
+  return(0);
+
+}  #--- End winDTObj_Terminate
+
+#--------------------------#
+sub winDTDB_Resize
+#--------------------------#
+{
+  $winDTDB->gridDT->Width($winDTDB->ScaleWidth()-39);
+  $winDTDB->gridDT->Height($winDTDB->ScaleHeight()-70);
+  $winDTDB->gridDT->AutoSizeColumns();
+  $winDTDB->gridDT->ExpandLastColumn();
+  $winDTDB->gridDT->Refresh();
+  $winDTDB->btnDTAdd->Left($winDTDB->ScaleWidth()-32);
+  $winDTDB->btnDTEdit->Left($winDTDB->ScaleWidth()-32);
+  $winDTDB->btnDTDel->Left($winDTDB->ScaleWidth()-32);
+  $winDTDB->lblLocalTZ->Top($winDTDB->ScaleHeight()-57);
+  $winDTDB->cbLocalTZ->Top($winDTDB->ScaleHeight()-60);
+  $winDTDB->lblOutputLang->Top($winDTDB->ScaleHeight()-27);
+  $winDTDB->cbOutputLang->Top($winDTDB->ScaleHeight()-30);
+  $winDTDB->lblOutputCharset->Top($winDTDB->ScaleHeight()-27);
+  $winDTDB->cbOutputCharset->Top($winDTDB->ScaleHeight()-30);
+  $winDTDB->lblDefaultOutput->Top($winDTDB->ScaleHeight()-27);
+  $winDTDB->cbDefaultOutput->Top($winDTDB->ScaleHeight()-30);  
+
+}  #--- End winDTDB_Resize
+
+#--------------------------#
+sub winDTDB_Terminate
+#--------------------------#
+{
+  $winDTDB->Hide();
+  $win->Enable();
+  $win->SetForegroundWindow();
+  return(0);
+
+}  #--- End winDTDB_Terminate
+
+#--------------------------#
+sub cbInputDTFormatAddITems
+#--------------------------#
+{
+  # Local variables
+  my @inputFormats;
+  
+  # Browse Datetime grid and list available Datetime object for input
+  for (my $i = 1; $i < $winDTDB->gridDT->GetRows(); $i++) {
+    my $useAs = $winDTDB->gridDT->GetCellText($i, 4);
+    if ($useAs eq $STR{'input'} or $useAs eq $STR{'both'}) {
+      push(@inputFormats, $winDTDB->gridDT->GetCellText($i, 0));
+    }
+  }
+  
+  # Update the combobox
+  if (scalar(@inputFormats)) {
+    $win->cbInputDTFormat->Add($STR{'guessORVar'}); # First is "Guess (or variables)"
+    foreach (@inputFormats) { $win->cbInputDTFormat->Add($_); }
+  }
+  
+}  #--- End cbInputDTFormatAddITems
+
+#--------------------------#
+sub cbOutputDTFormatAddITems
+#--------------------------#
+{
+  # Local variables
+  my @outputFormats;
+  
+  # Browse Datetime grid and list available Datetime object for output
+  for (my $i = 1; $i < $winDTDB->gridDT->GetRows(); $i++) {
+    my $useAs = $winDTDB->gridDT->GetCellText($i, 4);
+    if ($useAs eq $STR{'output'} or $useAs eq $STR{'both'}) {
+      push(@outputFormats, $winDTDB->gridDT->GetCellText($i, 0));
+    }
+  }
+  
+  # Update the combobox (Current output and Default output selection)
+  if (scalar(@outputFormats)) {
+    $win->cbOutputDTFormat->Add($STR{'default'}); # Default
+    $winDTDB->cbDefaultOutput->Add($STR{'same'});     # Same as input
+    foreach (@outputFormats) { $win->cbOutputDTFormat->Add($_); $winDTDB->cbDefaultOutput->Add($_); }
+  }
+  
+}  #--- End cbOutputDTFormatAddITems
 
 #--------------------------#
 sub cbConv_Change
@@ -2188,62 +3527,75 @@ sub cbTime_Change
 {
   # Local variables
   my $selFunc = $win->cbTime->GetCurSel();
-  # Possibles value are 0 = 'Anytime to Anytime', 1 = 'Unixtime to Anytime', 2 = 'ChromeTime to Anytime',
-  # 3 = 'LDAPTime to Anytime', 4 = 'Anytime to Unixtime', 5 = 'Date to Weekday', 6 = 'Time difference',
-  # 7 = 'Add time', 8 = 'Substract time'
+  # Possibles value are 0 = 'Anytime to Anytime', 1 = 'Time difference', 2 = 'Add time', 3 = 'Substract time'
   
-  # Show List 2 ?
-  if ($selFunc == 6) { &showList2(); }
-  else               { &hideList2(); }
-  
-  # Show input format options if input is a date
-  if ($selFunc == 0 or $selFunc > 3) {
-    $win->lblDTFormat->Show();
-    $win->cbDTFormat->Show();
-    $win->cbDTFormat->SetCurSel(0);
-    $win->cbDTFormat->SetFocus();
-    $win->btnGuess->Show();
+  # Except for 'Anytime to Anytime', all other function operate on Datetime only
+  if ($selFunc) {
+    $win->cbInputTimeType->ResetContent();
+    $win->cbInputTimeType->Add($STR{'datetime'});
+    $win->cbInputTimeType->SetCurSel(0);
   } else {
-    $win->lblDTFormat->Hide();
-    $win->cbDTFormat->Hide();
-    $win->btnGuess->Hide();
+    $win->cbInputTimeType->ResetContent();
+    $win->cbInputTimeType->Add($STR{'datetime'}, $STR{'chromeTime'}, $STR{'LDAPTime'}, $STR{'Filetime'}, $STR{'SystemTime'}, );
+    $win->cbInputTimeType->SetCurSel(0);
   }
   
-  # Show output format options if output is a date
-  if ($selFunc < 4 or $selFunc == 7 or $selFunc == 8) {
-    $win->rbLocaltime->Show();
-    $win->rbGMTime->Show();
-    $win->rbOtherTZ->Show();
-    $win->cbOtherTZ->Show();
-    if ($win->rbOtherTZ->Checked()) { $win->cbOtherTZ->Enable(); }
-  } else {
-    $win->rbLocaltime->Hide();
-    $win->rbGMTime->Hide();
-    $win->rbOtherTZ->Hide();
-    $win->cbOtherTZ->Hide();
-  }
-  
-  # Show single date
-  if ($selFunc == 6) {
+  # Time difference options
+  if ($selFunc == 1) {
     $win->chSingleDate->Show();
     $win->dtTimeDiffDate->Show();
     $win->dtTimeDiffTime->Show();
-
+    $win->lblOutputDTFormat->Hide();
+    $win->cbOutputDTFormat->Hide();
+    &showList2();
   } else {
     $win->chSingleDate->Hide();
     $win->dtTimeDiffDate->Hide();
     $win->dtTimeDiffTime->Hide();
+    $win->lblOutputDTFormat->Show();
+    $win->cbOutputDTFormat->Show();
+    &hideList2();
   }
   
-  # Show date and time UpAndDown controls
-  if ($selFunc == 7 or $selFunc == 8) {
-    $win->lblAddDT->Show();
-    $win->tfValAddDT->Show();
-    $win->cbTypeValAddDT->Show();
+  # Show Add or substract time controls
+  if ($selFunc == 2 or $selFunc == 3) {
+    $win->lblDeltaYears->Show();
+    $win->tfDeltaYears->Show();
+    $win->upDownDeltaYears->Show();
+    $win->lblDeltaMonths->Show();
+    $win->tfDeltaMonths->Show();
+    $win->upDownDeltaMonths->Show();
+    $win->lblDeltaDays->Show();
+    $win->tfDeltaDays->Show();
+    $win->upDownDeltaDays->Show();
+    $win->lblDeltaTime->Show();
+    $win->tfDeltaHours->Show();
+    $win->upDownDeltaHours->Show();
+    $win->lblSeparator1->Show();
+    $win->tfDeltaMinutes->Show();
+    $win->upDownDeltaMinutes->Show();
+    $win->lblSeparator2->Show();
+    $win->tfDeltaSecondes->Show();
+    $win->upDownDeltaSecondes->Show();
   } else {
-    $win->lblAddDT->Hide();
-    $win->tfValAddDT->Hide();
-    $win->cbTypeValAddDT->Hide();
+    $win->lblDeltaYears->Hide();
+    $win->tfDeltaYears->Hide();
+    $win->upDownDeltaYears->Hide();
+    $win->lblDeltaMonths->Hide();
+    $win->tfDeltaMonths->Hide();
+    $win->upDownDeltaMonths->Hide();
+    $win->lblDeltaDays->Hide();
+    $win->tfDeltaDays->Hide();
+    $win->upDownDeltaDays->Hide();
+    $win->lblDeltaTime->Hide();
+    $win->tfDeltaHours->Hide();
+    $win->upDownDeltaHours->Hide();
+    $win->lblSeparator1->Hide();
+    $win->tfDeltaMinutes->Hide();
+    $win->upDownDeltaMinutes->Hide();
+    $win->lblSeparator2->Hide();
+    $win->tfDeltaSecondes->Hide();
+    $win->upDownDeltaSecondes->Hide();
   }
   
   &isProcessReady(0);
@@ -2251,32 +3603,24 @@ sub cbTime_Change
 }  #--- End cbTime_Change
 
 #--------------------------#
-sub rbLocaltime_Click
+sub cbInputTimeType_Change
 #--------------------------#
 {
-  $win->cbOtherTZ->Disable();
+  # Possibles value are 0 = 'Datetime', 1 = 'ChromeTime', 2 = 'LDAPTime', 3 = 'Filetime', 4 = 'SystemTime'
+  if (!$win->cbInputTimeType->GetCurSel()) { $win->cbInputDTFormat->Enable();  } # Datetime
+  else                                     { $win->cbInputDTFormat->Disable(); } # Else
+  
   &isProcessReady(0);
-
-}  #--- End rbLocaltime_Click
+  
+}  #--- End cbInputTimeType_Change
 
 #--------------------------#
-sub rbGMTime_Click
+sub cbOutputDTFormat_Change
 #--------------------------#
 {
-  $win->cbOtherTZ->Disable();
   &isProcessReady(0);
 
-}  #--- End rbGMTime_Click
-
-#--------------------------#
-sub rbOtherTZ_Click
-#--------------------------#
-{
-  $win->cbOtherTZ->Enable();
-  $win->cbOtherTZ->SetCurSel(0);
-  &isProcessReady(0);
-
-}  #--- End rbOtherTZ_Click
+}  #--- End cbOutputDTFormat_Change
 
 #--------------------------#
 sub chSingleDate_Click
@@ -2317,6 +3661,7 @@ sub cbUtils_Change
   # Custom Functions options
   if   ($selFunc == 11) {
     $win->cbCFLists->Show();
+    $win->cbCFLists->Enable();
     $win->btnCFAdd->Show();
     $win->btnCFRem->Show();
     $win->btnCFEdit->Show();
@@ -2564,13 +3909,14 @@ sub isProcessReady
   # Every function require items in List1, except some functions in Lists
   if (!$nbrList1 and $win->Tab->SelectedItem() != 0) { $nextStep = $STR{'insertList1'}; }
   else {
+    $win->btnInputFormatGuess->Enable();
     # Lists tab selected
     if ($win->Tab->SelectedItem() == 0) {
       my $selFunc = $win->cbLists->GetCurSel();
       # Possibles value are 0 = 'No duplicate', 1 = 'Only duplicates', 2 = 'Count items', 3 = 'Count characters',
       # 4 = 'L1-L2', 5 = 'Column to row', 6 = 'Row to column', 7 = 'List to regex', 8 = 'Concat', 9 = 'Split strings',
-      # 10 = 'Split and extract', 11 = 'Merge lines', 12 = 'Replace', 13 = 'Reverse string', 14 = 'Transliterate',
-      # 15 = 'Lowercase', 16 = 'Uppercase', 17 = 'Add line number'
+      # 10 = 'Split and extract', 11 = 'Merge lines', 12 = 'Split and merge', 13 = 'Replace', 14 = 'Reverse string',
+      # 15 = 'Transliterate', 16 = 'Lowercase', 17 = 'Uppercase', 18 = 'Add line number'
       
       # Some functions require items in List 1 or in List 2
       if ($selFunc == 1 or $selFunc == 4 or $selFunc == 8) {
@@ -2579,12 +3925,12 @@ sub isProcessReady
       } elsif (!$nbrList1) { $nextStep = $STR{'insertList1'}; }
         
       # Some functions require a value in With textfield
-      if (($selFunc == 9 or $selFunc == 10 or $selFunc == 11) and !$win->tfWith->Text()) {
+      if (($selFunc == 9 or $selFunc == 10 or $selFunc == 11 or $selFunc == 12) and !$win->tfWith->Text()) {
         $nextStep = $STR{'insertWith'};
       }
       
       # Replace function require value in Replace textfield
-      if (($selFunc == 12 or $selFunc == 14) and !$win->tfReplace->Text()) {
+      if (($selFunc == 13 or $selFunc == 15) and !$win->tfReplace->Text()) {
         $nextStep = $STR{'insertReplace'};
       } elsif ($selFunc == 12 and ($win->chRegex->Checked() or $win->chEval->Checked())) { # Valid regex
         # Regex is valid ?
@@ -2618,13 +3964,17 @@ sub isProcessReady
     # Time tab selected
     } elsif ($win->Tab->SelectedItem() == 3) {
       my $selFunc = $win->cbTime->GetCurSel();
-      # Possibles value are 0 = 'Anytime to Anytime', 1 = 'Unixtime to Anytime', 2 = 'ChromeTime to Anytime',
-      # 3 = 'LDAPTime to Anytime', 4 = 'Anytime to Unixtime', 5 = 'Date to Weekday', 6 = 'Time difference',
-      # 7 = 'Add time', 8 = 'Substract time'
+      # Possibles value are 0 = 'Anytime to Anytime', 1 = 'Time difference', 2 = 'Add time', 3 = 'Substract time'
+      
+      # If InputType is not a Datetime object, Output format can't be "Same as input"
+      # Possibles value are 0 = 'Datetime', 1 = 'ChromeTime', 2 = 'LDAPTime', 3 = 'Filetime', 4 = 'SystemTime'
+      if ($win->cbInputTimeType->GetCurSel() and !$win->cbOutputDTFormat->GetCurSel() and !$winDTDB->cbDefaultOutput->GetCurSel()) {
+        $nextStep = $STR{'setOutputFormat'};
+      }
       
       # 'Time difference' can be used with a single date or with items in List 2
       # If so, number of items in List 1 and List 2 must be the same
-      if ($selFunc == 6 and !$win->chSingleDate->Checked()) {
+      if ($selFunc == 1 and !$win->chSingleDate->Checked()) {
         my $refList1  = &enumItems(\$win->tfList1);
         my $refList2  = &enumItems(\$win->tfList2);
         if (scalar(@{$refList1}) != scalar(@{$refList2})) {
@@ -2672,14 +4022,13 @@ sub isProcessReady
 
   # Return an error message or enable the button
   if ($nextStep) {
-    $win->btnGuess->Disable();
+    $win->btnInputFormatGuess->Disable();
     $win->btnProcess->Disable();
     $win->lblNotReady->Show();
     if ($confirm) { Win32::GUI::MessageBox($win, "$STR{'notReady'} ?\n\n$STR{'nextStep'}: $nextStep", $STR{'notReady'}, 0x40040); }
   } else {
     if ($win->cbCFLists->IsEnabled()) { $win->btnProcess->Enable(); }
     $win->lblNotReady->Hide();
-    $win->btnGuess->Enable();
   }
 
 }  #--- End isProcessReady
@@ -2750,13 +4099,13 @@ sub btnProcess_Click
       $win->ChangeCursor($HOURGLASS);
       
       # Lists tab selected
-      if ($win->Tab->SelectedItem() == 0) {
+      if (!$win->Tab->SelectedItem()) {
         my $selFunc = $win->cbLists->GetCurSel();
         # Possibles value are 0 = 'No duplicate', 1 = 'Only duplicates', 2 = 'Count items', 3 = 'Count characters',
         # 4 = 'L1-L2', 5 = 'Column to row', 6 = 'Row to column', 7 = 'List to regex', 8 = 'Concat', 9 = 'Split strings',
-        # 10 = 'Split and extract', 11 = 'Merge lines', 12 = 'Replace', 13 = 'Reverse string', 14 = 'Transliterate',
-        # 15 = 'Lowercase', 16 = 'Uppercase', 17 = 'Add line number'
-        if    ($selFunc ==  0) { $refList3 = &noDuplicates($refList1, $refList2);    }
+        # 10 = 'Split and extract', 11 = 'Merge lines', 12 = 'Split and merge', 13 = 'Replace', 14 = 'Reverse string',
+        # 15 = 'Transliterate', 16 = 'Lowercase', 17 = 'Uppercase', 18 = 'Add line number'
+        if    (!$selFunc)      { $refList3 = &noDuplicates($refList1, $refList2);    }
         elsif ($selFunc ==  1) { $refList3 = &onlyDuplicates($refList1, $refList2);  }
         elsif ($selFunc ==  2) { $refList3 = &countDuplicates($refList1, $refList2); }
         elsif ($selFunc ==  3) { $refList3 = &countChars($refList1, $refList2);      }
@@ -2768,12 +4117,13 @@ sub btnProcess_Click
         elsif ($selFunc ==  9) { $refList3 = &splitStr($refList1, $refList2);        }
         elsif ($selFunc == 10) { $refList3 = &splitExtract($refList1, $refList2);    }
         elsif ($selFunc == 11) { $refList3 = &mergeLines($refList1, $refList2);      }
-        elsif ($selFunc == 12) { $refList3 = &replace($refList1, $refList2);         }
-        elsif ($selFunc == 13) { $refList3 = &reverseStr($refList1, $refList2);      }
-        elsif ($selFunc == 14) { $refList3 = &transliterate($refList1, $refList2);   }
-        elsif ($selFunc == 15) { $refList3 = &lowercase($refList1, $refList2);       }
-        elsif ($selFunc == 16) { $refList3 = &uppercase($refList1, $refList2);       }
-        elsif ($selFunc == 17) { $refList3 = &addLineNumber($refList1, $refList2);   }
+        elsif ($selFunc == 12) { $refList3 = &splitMerge($refList1, $refList2);      }
+        elsif ($selFunc == 13) { $refList3 = &replace($refList1, $refList2);         }
+        elsif ($selFunc == 14) { $refList3 = &reverseStr($refList1, $refList2);      }
+        elsif ($selFunc == 15) { $refList3 = &transliterate($refList1, $refList2);   }
+        elsif ($selFunc == 16) { $refList3 = &lowercase($refList1, $refList2);       }
+        elsif ($selFunc == 17) { $refList3 = &uppercase($refList1, $refList2);       }
+        elsif ($selFunc == 18) { $refList3 = &addLineNumber($refList1, $refList2);   }
 
       # Sorting tab selected
       } elsif ($win->Tab->SelectedItem() == 1) {
@@ -2827,7 +4177,7 @@ sub btnHelp_Click
 #--------------------------#
 {
   # Open Firefox to XL-Tools page
-  $win->ShellExecute('open', $URL_DOC,'','',1) or Win32::GUI::MessageBox($win, Win32::FormatMessage(Win32::GetLastError()), "$STR{'update3'} XL-Tools",0x40010);
+  $win->ShellExecute('open', $URL_DOC,'','',1) or Win32::GUI::MessageBox($win, Win32::FormatMessage(Win32::GetLastError()), $STR{'error'}, 0x40010);
 
 }  #--- End btnHelp_Click
 
@@ -3478,9 +4828,9 @@ sub mergeLines
   # Local variables
   my ($refList1, $refList2) = @_;
   push(@{$refList1}, @{$refList2}); # Merge lists
-  my $splitBy  = $win->tfWith->Text();
-  my $nbrItems = scalar(@{$refList1});
-  my $curr     = 0;
+  my $nbrColumns = $win->tfColumnsNo->Text();
+  my $nbrItems   = scalar(@{$refList1});
+  my $curr       = 0;
   my @items;
   
   # Progress
@@ -3497,7 +4847,7 @@ sub mergeLines
     $item =~ s/[\r\n]//g;  # Remove any line break
     $resItem .= $item . "\t";
     $count++;
-    if ($count == $splitBy) {
+    if ($count == $nbrColumns) {
       chop($resItem);
       push(@items, $resItem);
       $count = 0;
@@ -3517,6 +4867,61 @@ sub mergeLines
   return(\$itemsRes);  
   
 }  #--- End mergeLines
+
+#--------------------------#
+sub splitMerge
+#--------------------------#
+{
+  # Local variables
+  my ($refList1, $refList2) = @_;
+  push(@{$refList1}, @{$refList2}); # Merge lists
+  my $expr       = $win->tfWith->Text();
+  my $nbrItems   = scalar(@{$refList1});
+  my $nbrColumns = $win->tfColumnsNo->Text();
+  my $curr       = 0;
+  my $headers;
+  my @items;
+  
+  # Progress
+  $win->pb->SetRange(0, $nbrItems);
+  $win->pb->SetPos(0);
+  $win->pb->SetStep(1);
+  $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
+  $win->lblPbCount->Text("0 / $nbrItems");
+  
+  # Loop on each item of merged list
+  if (!$win->chRegex->Checked()) { $expr = quotemeta($expr); }
+  my $header  = 0;
+  my $count   = 0;
+  my $resItem = '';
+  foreach my $item (@{$refList1}) {
+    $item =~ s/[\r\n]//g;  # Remove any line break
+    my ($field, $value) = split(/$expr/, $item);
+    if (!$header) { $headers .= $field . "\t"; } # Gather header strings
+    $resItem .= $value . "\t";
+    $count++;
+    if ($count == $nbrColumns) {
+      $header++;
+      if ($header == 1) { chop($headers); push(@items, $headers); }
+      chop($resItem);
+      push(@items, $resItem);
+      $count = 0;
+      $resItem = '';
+    }
+
+    # Progress
+    $curr++;
+    $win->lblPbCount->Text("$curr / $nbrItems");
+    $win->pb->StepIt();
+  }
+
+  # Format results
+  my $itemsRes;
+  foreach (@items) { $itemsRes .= "$_\r\n"; }
+  
+  return(\$itemsRes);
+  
+}  #--- End splitMerge
 
 #--------------------------#
 sub replace
@@ -3840,44 +5245,21 @@ sub sortingTabFunc
   }
   # Date and time
   elsif ($selFunc == 4) {
-    my $selFormat = $win->cbDTFormat->GetCurSel();
-    # Possibles value are:                                                        #  0 = 'Guess (or variable)...',
-    my @formatRE = ('\d+, \d{2}\-\w{3}\-\d{4} \d{2}\:\d{2}\:\d{2} \w{3}'    ,     #  1 = 'Tuesday, 08-Feb-2015 14:15:29 GMT',
-                    '\w{3} \w{3} + \d{1,2} \d{2}\:\d{2}\:\d{2} \w{3} \d{4}' ,     #  2 = 'Thu Feb  3 17:03:55 GMT 2015',
-                    '\d+, \d{2}\-\w{3}\-\d{2} \d{2}\:\d{2}\:\d{2} \w{3}'    ,     #  3 = 'Tuesday, 08-Feb-99 14:15:29 GMT',
-                    '\w{3}, \d{2} \w{3} \d{4} \d{2}\:\d{2}\:\d{2} \w{3}'    ,     #  4 = 'Wed, 09 Feb 2015 22:23:32 GMT',
-                    '\d{2}\/\w{3}\/\d{4}\:\d{2}\:\d{2}\:\d{2} [\-\+]?\d{4}' ,     #  5 = '03/Feb/2015:17:03:55 -0700',
-                    '\d{4}\-\d{2}\-\d{2} \d{2}\:\d{2}\:\d{2} [\-\+]?\d{4}'  ,     #  6 = '2015-02-03 14:15:29 -0100',
-                    '\d{2}\-\w{3}\-\d{4} \d{2}\:\d{2}\:\d{2} \w{3}'         ,     #  7 = '08-Feb-2015 14:15:29 GMT',
-                    '\d{2} \w{3} \d{4} \d{2}\:\d{2}\:\d{2} \w{3}'           ,     #  8 = '09 Feb 2015 22:23:32 GMT',
-                    '\d{2}\-\w{3}\-\d{2} \d{2}\:\d{2}\:\d{2} \w{3}'         ,     #  9 = '08-Feb-99 14:15:29 GMT',
-                    '\w{3} \w{3} + \d{1,2} \d{2}\:\d{2}\:\d{2}'             ,     # 10 = 'Thu Feb  3 00:00:00 2015',
-                    '\d{4}\-\d{2}\-\d{2} \d{2}\:\d{2}\:\d{2}'               ,     # 11 = '2015-02-03 14:15:29',
-                    '\d{2}\/\d{2}\/\d{4} \d{2}\:\d{2}\:\d{2}'               ,     # 12 = '03/02/2015 14:15:29',
-                    '\d{4}\-\d{2}\-\d{2}T\d{2}\:\d{2}\:\d{2}'               ,     # 13 = '2015-02-03T14:15:29',
-                    '\d{2}\-\d{2}\-\d{2} +\d{2}\:\d{2}\w{2}'                ,     # 14 = '11-15-99  03:52PM',
-                    '\w{3} +\d{1,2} +\d{2}\:\d{2}'                          ,     # 15 = 'Feb  3 17:03',
-                    '\w{3} +\d{1,2} +\d{4}'                                 ,     # 16 = 'Feb  3  2015',
-                    '\d{2}\-\w{3}\-\d{4}'                                   ,     # 17 = '08-Feb-2015',
-                    '\d{2}\/\w{3}\/\d{4}'                                   ,     # 18 = '03/Feb/2015',
-                    '\d{4}\-\d{2}\-\d{2}'                                   ,     # 19 = '2015-02-03',
-                    '\d{8}T\d{6}Z'                                          ,     # 20 = '20150203T141529Z',
-                    '\d{2}\-\w{3}\-\d{2}'                                   ,     # 21 = '08-Feb-99',
-                    '\d{2} \w{3} \d{4}'                                     ,     # 21 = '09 Feb 2015',
-                    '\d{8}'                                                 , );  # 23 = '20150203',
-    # Set Regex
-    my $regex;
-    if ($selFormat == 0) { $regex = join('|', @formatRE);    } # Merge each regex in one
-    else                 { $regex = $formatRE[$selFormat-1]; }
+    my ($sample, $pattern, $regex, $timezone);
+    # Input Datetime format
+    my $inputFormat = $win->cbInputDTFormat->GetCurSel();
+    if ($inputFormat ne $STR{'guessORVar'}) {
+      ($sample, $pattern, $regex, $timezone) = &findInputDTFormat($$refList1[0]);
+    } else { $sample = $inputFormat; }
     
     if (!$order) { # Ascending
-      @items = map $_->[0],
-                sort { str2time( $a->[1] ) <=> str2time( $b->[1] ) }
-                  map  [ $_, /^($regex)/ ], @{$refList1};
+      @items = map  { $_->[0] }
+                sort {$a->[1] cmp $b->[1]}
+                  map { [$_, (str2Epoch($_, $sample, $pattern, $regex, 0, $timezone))[0]] } @{$refList1};
     } else       {  # Descending
-      @items = map $_->[0],
-                sort { str2time( $b->[1] ) <=> str2time( $a->[1] ) }
-                  map  [ $_, /^($regex)/ ], @{$refList1};
+      @items = map  { $_->[0] }
+                sort {$b->[1] cmp $a->[1]}
+                  map { [$_, (str2Epoch($_, $sample, $pattern, $regex, 0, $timezone))[0]] } @{$refList1};
     }
   }
 
@@ -3888,6 +5270,33 @@ sub sortingTabFunc
   return(\$itemsRes);  
   
 }  #--- End sortingTabFunc
+
+#--------------------------#
+sub str2Epoch
+#--------------------------#
+{
+  # Local variables
+  my ($str, $sample, $pattern, $regex, $parseContext, $timezone) = @_;
+  my $strp;
+  
+  # Guess Input Datetime format if not unique
+  if ($sample eq $STR{'guessORVar'}) { ($sample, $pattern, $regex, $timezone) = &findInputDTFormat($str); }
+
+  # Format
+  if ($pattern and $str =~ /($regex)/) {
+    my $extract = $1;
+    my $before;
+    my $after;
+    if ($parseContext == 1 or $parseContext == 3) { $before = $`; }
+    if ($parseContext == 2 or $parseContext == 3) { $after  = $'; }
+    $strp = DateTime::Format::Strptime->new(pattern => $pattern);
+    if (my $dt = $strp->parse_datetime($extract)) {
+      my $inputTimezone = $dt->time_zone_long_name();
+      $dt->set_time_zone($timezone);
+      return($dt->epoch(), $inputTimezone, $pattern, $before, $after);
+    } else { return(2); } # Error conversion
+  } else { return(1);  } # Invalid input
+}
 
 #--------------------------#
 sub conversionTabFunc
@@ -4165,57 +5574,45 @@ sub timeTabFunc
 {
   # Local variables
   my ($refList1, $refList2) = @_;
-  my $selFunc     = $win->cbTime->GetCurSel();
-  my $noResultOpt = $winConfig->rbNoResultOpt2->Checked();
-  # Possibles value are 0 = 'Anytime to Anytime', 1 = 'Unixtime to Anytime', 2 = 'ChromeTime to Anytime',
-  # 3 = 'LDAPTime to Anytime', 4 = 'Anytime to Unixtime', 5 = 'Date to Weekday', 6 = 'Time difference',
-  # 7 = 'Add time', 8 = 'Substract time'
-  my $inputFormat;  # Input format
-  my $outputTZ;     # Output Timezone
-  my $localTZ;
+  my $selFunc           = $win->cbTime->GetCurSel(); # Possibles value are 0 = 'Anytime to Anytime', 1 = 'Time difference', 2 = 'Add time', 3 = 'Substract time'
+  my $noResultOpt       = $winConfig->rbNoResultOpt2->Checked(); 
+  my $selInputType      = $win->cbInputTimeType->GetCurSel(); # Possibles value are 0 = 'Datetime', 1 = 'ChromeTime', 2 = 'LDAPTime', 3 = 'Filetime', 4 = 'SystemTime'
+  my $localTZ           = $winDTDB->cbLocalTZ->GetString($winDTDB->cbLocalTZ->GetCurSel());
+  my $outputLang        = $winDTDB->cbOutputLang->GetString($winDTDB->cbOutputLang->GetCurSel());
+  my $selOutputDTFormat = $win->cbOutputDTFormat->GetCurSel();
+  my ($sample, $pattern, $regex, $timezone); # Input
+  my ($outPutPattern, $outputTZ);            # Output
+  my $sameAsInput       = 0;                 # If == 1, don't use outputPattern, use input pattern instead
+  my $parseContext      = $win->cbDTParser->GetCurSel(); # Possibles value are 0 = None, 1 = Before, 2 = After, 3 = Both
   my $curr = 0;
   my @items;
   
-  # Input format
-  if ($selFunc == 0 or $selFunc > 3) {
-    my $selFormat = $win->cbDTFormat->GetCurSel();
-    # Possibles value are:                                                        #  0 = 'Guess (or variable)...',
-    my @formatRE = ('\d+, \d{2}\-\w{3}\-\d{4} \d{2}\:\d{2}\:\d{2} \w{3}'    ,     #  1 = 'Tuesday, 08-Feb-2015 14:15:29 GMT',
-                    '\w{3} \w{3} + \d{1,2} \d{2}\:\d{2}\:\d{2} \w{3} \d{4}' ,     #  2 = 'Thu Feb  3 17:03:55 GMT 2015',
-                    '\d+, \d{2}\-\w{3}\-\d{2} \d{2}\:\d{2}\:\d{2} \w{3}'    ,     #  3 = 'Tuesday, 08-Feb-99 14:15:29 GMT',
-                    '\w{3}, \d{2} \w{3} \d{4} \d{2}\:\d{2}\:\d{2} \w{3}'    ,     #  4 = 'Wed, 09 Feb 2015 22:23:32 GMT',
-                    '\d{2}\/\w{3}\/\d{4}\:\d{2}\:\d{2}\:\d{2} [\-\+]?\d{4}' ,     #  5 = '03/Feb/2015:17:03:55 -0700',
-                    '\d{4}\-\d{2}\-\d{2} \d{2}\:\d{2}\:\d{2} [\-\+]?\d{4}'  ,     #  6 = '2015-02-03 14:15:29 -0100',
-                    '\d{2}\-\w{3}\-\d{4} \d{2}\:\d{2}\:\d{2} \w{3}'         ,     #  7 = '08-Feb-2015 14:15:29 GMT',
-                    '\d{2} \w{3} \d{4} \d{2}\:\d{2}\:\d{2} \w{3}'           ,     #  8 = '09 Feb 2015 22:23:32 GMT',
-                    '\d{2}\-\w{3}\-\d{2} \d{2}\:\d{2}\:\d{2} \w{3}'         ,     #  9 = '08-Feb-99 14:15:29 GMT',
-                    '\w{3} \w{3} + \d{1,2} \d{2}\:\d{2}\:\d{2}'             ,     # 10 = 'Thu Feb  3 00:00:00 2015',
-                    '\d{4}\-\d{2}\-\d{2} \d{2}\:\d{2}\:\d{2}'               ,     # 11 = '2015-02-03 14:15:29',
-                    '\d{2}\/\d{2}\/\d{4} \d{2}\:\d{2}\:\d{2}'               ,     # 12 = '03/02/2015 14:15:29',
-                    '\d{4}\-\d{2}\-\d{2}T\d{2}\:\d{2}\:\d{2}'               ,     # 13 = '2015-02-03T14:15:29',
-                    '\d{2}\-\d{2}\-\d{2} +\d{2}\:\d{2}\w{2}'                ,     # 14 = '11-15-99  03:52PM',
-                    '\w{3} +\d{1,2} +\d{2}\:\d{2}'                          ,     # 15 = 'Feb  3 17:03',
-                    '\w{3} +\d{1,2} +\d{4}'                                 ,     # 16 = 'Feb  3  2015',
-                    '\d{2}\-\w{3}\-\d{4}'                                   ,     # 17 = '08-Feb-2015',
-                    '\d{2}\/\w{3}\/\d{4}'                                   ,     # 18 = '03/Feb/2015',
-                    '\d{4}\-\d{2}\-\d{2}'                                   ,     # 19 = '2015-02-03',
-                    '\d{8}T\d{6}Z'                                          ,     # 20 = '20150203T141529Z',
-                    '\d{2}\-\w{3}\-\d{2}'                                   ,     # 21 = '08-Feb-99',
-                    '\d{2} \w{3} \d{4}'                                     ,     # 21 = '09 Feb 2015',
-                    '\d{8}'                                                 , );  # 23 = '20150203',
-    # Set Regex
-    if ($selFormat == 0) { $inputFormat = join('|', @formatRE);    } # Merge each regex in one
-    else                 { $inputFormat = $formatRE[$selFormat-1]; }
+  # Merge lists (except time difference)
+  if ($selFunc != 1) { push(@{$refList1}, @{$refList2}); }
+  
+  # Input Datetime format
+  if (!$selInputType) {
+    my $inputFormat = $win->cbInputDTFormat->GetString($win->cbInputDTFormat->GetCurSel());
+    if ($inputFormat ne $STR{'guessORVar'}) {
+      ($sample, $pattern, $regex, $timezone) = &findInputDTFormat($$refList1[0]);
+    } else { $sample = $inputFormat; }
   }
   
-  # Input data
-  if ($selFunc < 6 or $selFunc == 7 or $selFunc == 8) { push(@{$refList1}, @{$refList2}); }  # Merge lists
-  
   # Output format
-  if ($selFunc < 4 or $selFunc == 7 or $selFunc == 8) {
-    if    ($win->rbLocaltime->Checked()) { $outputTZ  = DateTime::TimeZone->new(name => 'local'); } # Localtime
-    elsif ($win->rbGMTime->Checked()   ) { $outputTZ  = DateTime::TimeZone->new(name => 'UTC');   } # GMTtime
-    else  { $outputTZ  = DateTime::TimeZone->new(name => $win->cbOtherTZ->GetString($win->cbOtherTZ->GetCurSel())); } # Other
+  if (!$selOutputDTFormat) { # Default selected
+    my $index = $winDTDB->cbDefaultOutput->GetCurSel();
+    if (!$index) {
+      if ($pattern and $timezone) {
+        $outPutPattern = $pattern;
+        $outputTZ      = $timezone;
+      } else { $sameAsInput = 1; }
+    } else {
+      ($outPutPattern, $outputTZ) = (&infoDTFormat($winDTDB->cbDefaultOutput->GetString($index)))[1,3];
+      if ($outputTZ eq 'local') { $outputTZ = $localTZ; }
+    }
+  } else {
+    ($outPutPattern, $outputTZ) = (&infoDTFormat($win->cbOutputDTFormat->GetString($win->cbOutputDTFormat->GetCurSel())))[1,3];
+    if ($outputTZ eq 'local') { $outputTZ = $localTZ; }
   }
   
   # Progress
@@ -4227,22 +5624,99 @@ sub timeTabFunc
   $win->lblPbCount->Text("0 / $nbrItems");
   
   # 0 = 'Anytime to Anytime'
-  if ($selFunc == 0) {
+  if (!$selFunc) {
     foreach my $item (@{$refList1}) {
       $item =~ s/[\r\n]//g;  # Remove any line break
       if ($item) {
-        if ($item =~ /($inputFormat)/) {
-          if (my $time = str2time($1)) { # Convert to unixtime
-            my $dt = DateTime->from_epoch(epoch => $time);
-            $dt->set_time_zone($outputTZ);
-            push(@items, $dt->strftime('%Y-%m-%d %H:%M:%S %z'));
+        my ($epoch, $inputTimezone, $before, $after);
+        
+        # Datetime Input
+        if (!$selInputType) {
+          if ($pattern) { ($epoch, $inputTimezone, $pattern, $before, $after) = &str2Epoch($item, $sample, $pattern, $regex, $parseContext, $timezone); }
+          else          { ($epoch, $inputTimezone, $pattern, $before, $after) = &str2Epoch($item, $sample, undef   , undef , $parseContext, undef    ); }
+          
+        # ChromeTime Input
+        } elsif ($selInputType == 1) {
+          if ($item =~ /([0-9]{17})/) {
+            $epoch  = ($1/1000000)-11644473600; # Convert to unixtime
+            if ($parseContext == 1 or $parseContext == 3) { $before = $`; }
+            if ($parseContext == 2 or $parseContext == 3) { $after  = $'; }
+          } else { $epoch  = 1;  } # Invalid input
+          
+        # LDAPTime Input
+        } elsif ($selInputType == 2) {
+          if ($item =~ /([0-9]{18})/) {
+            $epoch  = ($1/10000000)-11644473600; # Convert to unixtime
+            if      ($parseContext == 1 or $parseContext == 3) { $before = $`; }
+            if      ($parseContext == 2 or $parseContext == 3) { $after  = $'; }
+          } else { $epoch  = 1;  } # Invalid input
+        
+        # Windows FILETIME (64 bits hexadecimal) (Ex.: 88 33 9d cb 38 36 d0 01)
+        } elsif ($selInputType == 3) {
+          my $extract;
+          if ($item =~ /((?:[0-9a-fA-F]{2} ?){7}[0-9a-fA-F]{2})/) {
+            $extract = $1;
+            if ($parseContext == 1 or $parseContext == 3) { $before = $`; }
+            if ($parseContext == 2 or $parseContext == 3) { $after  = $'; }
+          } else { $epoch  = 1;  } # Invalid input
+          
+          if ($extract) {
+            $extract =~ s/ //g; # Remove space
+            my $int64bits = string_to_int64(join('', reverse(split(/([0-9a-fA-F]{2})/, $extract))), 16); # All-in-one!
+            $epoch = int(($int64bits-116444736000000000)/10000000); # Convert to unixtime
+          }
+        
+        # Windows SYSTEMTIME (128 bits hexadecimal, ex.: D9070B00010002000600090013000000)
+        } elsif ($selInputType == 4) {
+          my $extract;
+          if ($item =~ /((?:[0-9a-fA-F]{2} ?){15}[0-9a-fA-F]{2})/) {
+            $extract = $1;
+            if ($parseContext == 1 or $parseContext == 3) { $before = $`; }
+            if ($parseContext == 2 or $parseContext == 3) { $after  = $'; }
+          } else { $epoch  = 1;  } # Invalid input
+          
+          if ($extract) {
+            $extract =~ s/ //g; # Remove space
+            my @parts = split(/([0-9a-fA-F]{4} ?)/, $extract);
+            my $y   = hex(join('', reverse(split(/([0-9a-fA-F]{2})/, $parts[1]))));
+            my $m   = hex(join('', reverse(split(/([0-9a-fA-F]{2})/, $parts[3]))));
+            my $d   = hex(join('', reverse(split(/([0-9a-fA-F]{2})/, $parts[7]))));
+            my $h   = hex(join('', reverse(split(/([0-9a-fA-F]{2})/, $parts[9]))));
+            my $min = hex(join('', reverse(split(/([0-9a-fA-F]{2})/, $parts[11]))));
+            my $s   = hex(join('', reverse(split(/([0-9a-fA-F]{2})/, $parts[13]))));
+            my $dt    = DateTime->new(year       => $y    ,
+                                      month      => $m    ,
+                                      day        => $d    ,
+                                      hour       => $h    ,
+                                      minute     => $min  ,
+                                      second     => $s    ,
+                                      time_zone  => $localTZ, );
+            $epoch = $dt->epoch; # Convert to unixtime
+          }
+        }
+        
+        # Convert to output
+        if      ($epoch == 1) {
+          if ($noResultOpt) { push(@items, $STR{'invalidInput'}); }
+          else { push(@items, undef); }
+        } elsif ($epoch == 2) {
+          if ($noResultOpt) { push(@items, $STR{'errorConversion'}); }
+          else { push(@items, undef); }
+        } else {
+          if (my $dt = DateTime->from_epoch(epoch => $epoch)) {
+            if ($sameAsInput) { if ($inputTimezone eq 'floating') { $inputTimezone = $localTZ; } $dt->set_time_zone($inputTimezone); }
+            else              { $dt->set_time_zone($outputTZ);      }
+            $dt->set(locale => $outputLang);
+            my $newItem;
+            if ($before)      { $newItem .= $before;                       }
+            if ($sameAsInput) { $newItem .= $dt->strftime($pattern);       }
+            else              { $newItem .= $dt->strftime($outPutPattern); }
+            if ($after)       { $newItem .= $after;                        }
+            push(@items, encode($CONFIG{'OUTPUT_CHARSET'}, $newItem));
           } else {
             if ($noResultOpt) { push(@items, $STR{'errorConversion'}); }
             else { push(@items, undef); }
           }
-        } else {
-          if ($noResultOpt) { push(@items, $STR{'invalidInput'}); }
-          else { push(@items, undef); }
         }
       } else {
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
@@ -4256,147 +5730,13 @@ sub timeTabFunc
     }
   }
   
-  # 1 = 'Unixtime to Anytime'
+  # 1 = 'Time difference'
   elsif ($selFunc == 1) {
-    foreach my $item (@{$refList1}) {
-      $item =~ s/[\r\n]//g;  # Remove any line break
-      if ($item) {
-        if ($item =~ /([0-9]{1,10})[0-9]*$/) {
-          my $dt = DateTime->from_epoch(epoch => $1);
-          $dt->set_time_zone($outputTZ);
-          push(@items, $dt->strftime('%Y-%m-%d %H:%M:%S %z'));
-        } else {
-          if ($noResultOpt) { push(@items, $STR{'invalidInput'}); }
-          else { push(@items, undef); }
-        }
-      } else {
-        if ($noResultOpt) { push(@items, $STR{'noInput'}); }
-        else { push(@items, undef); }
-      }
-
-      # Progress
-      $curr++;
-      $win->lblPbCount->Text("$curr / $nbrItems");
-      $win->pb->StepIt();
-    }
-  }
-  
-  # 2 = 'ChromeTime to Anytime'
-  elsif ($selFunc == 2) {
-    foreach my $item (@{$refList1}) {
-      $item =~ s/[\r\n]//g;  # Remove any line break
-      if ($item) {
-        if ($item =~ /([0-9]{17})$/) { # ChromeTime (17 digits) (Webkit : 12883423549317375)
-          my $time = ($1/1000000)-11644473600; # Convert to unixtime
-          my $dt = DateTime->from_epoch(epoch => $time);
-          $dt->set_time_zone($outputTZ);
-          push(@items, $dt->strftime('%Y-%m-%d %H:%M:%S %z'));
-        } else {
-          if ($noResultOpt) { push(@items, $STR{'invalidInput'}); }
-          else { push(@items, undef); }
-        }
-      } else {
-        if ($noResultOpt) { push(@items, $STR{'noInput'}); }
-        else { push(@items, undef); }
-      }
-
-      # Progress
-      $curr++;
-      $win->lblPbCount->Text("$curr / $nbrItems");
-      $win->pb->StepIt();
-    }
-  }
-  
-  # 3 = 'LDAPTime to Anytime'
-  elsif ($selFunc == 3) {
-    foreach my $item (@{$refList1}) {
-      $item =~ s/[\r\n]//g;  # Remove any line break
-      if ($item) {
-        if ($item =~ /([0-9]{18})$/) { # LDAPTime (18 digits)
-          my $time = int($1/10000000)-11644473600; # Convert to unixtime
-          my $dt = DateTime->from_epoch(epoch => $time);
-          $dt->set_time_zone($outputTZ);
-          push(@items, $dt->strftime('%Y-%m-%d %H:%M:%S %z'));
-        } else {
-          if ($noResultOpt) { push(@items, $STR{'invalidInput'}); }
-          else { push(@items, undef); }
-        }
-      } else {
-        if ($noResultOpt) { push(@items, $STR{'noInput'}); }
-        else { push(@items, undef); }
-      }
-
-      # Progress
-      $curr++;
-      $win->lblPbCount->Text("$curr / $nbrItems");
-      $win->pb->StepIt();
-    }
-  }
-
-  # 4 = 'Anytime to Unixtime'
-  elsif ($selFunc == 4) {
-    foreach my $item (@{$refList1}) {
-      $item =~ s/[\r\n]//g;  # Remove any line break
-      if ($item) {
-        if ($item =~ /($inputFormat)/) {
-          if (my $time = str2time($1)) { # Convert to unixtime
-            push(@items, $time);
-          } else {
-            if ($noResultOpt) { push(@items, $STR{'errorConversion'}); }
-            else { push(@items, undef); }
-          }
-        } else {
-          if ($noResultOpt) { push(@items, $STR{'invalidInput'}); }
-          else { push(@items, undef); }
-        }
-      } else {
-        if ($noResultOpt) { push(@items, $STR{'noInput'}); }
-        else { push(@items, undef); }
-      }
-
-      # Progress
-      $curr++;
-      $win->lblPbCount->Text("$curr / $nbrItems");
-      $win->pb->StepIt();
-    }
-  }
-  
-  # 5 = 'Date to Weekday'
-  elsif ($selFunc == 5) {
-    my @weekDayName = ($STR{'monday'}, $STR{'tuesday'}, $STR{'wednesday'}, $STR{'thursday'}, $STR{'friday'}, $STR{'saturday'}, $STR{'sunday'});
-    foreach my $item (@{$refList1}) {
-      $item =~ s/[\r\n]//g;  # Remove any line break
-      if ($item) {
-        if ($item =~ /($inputFormat)/) {
-          if (my $time = str2time($1)) { # Convert to unixtime
-            my $dt = DateTime->from_epoch(epoch => $time);
-            my $weekDay = $dt->day_of_week();
-            push(@items, $weekDayName[$weekDay-1]);
-          } else {
-            if ($noResultOpt) { push(@items, $STR{'errorConversion'}); }
-            else { push(@items, undef); }
-          }
-        } else {
-          if ($noResultOpt) { push(@items, $STR{'invalidInput'}); }
-          else { push(@items, undef); }
-        }
-      } else {
-        if ($noResultOpt) { push(@items, $STR{'noInput'}); }
-        else { push(@items, undef); }
-      }
-
-      # Progress
-      $curr++;
-      $win->lblPbCount->Text("$curr / $nbrItems");
-      $win->pb->StepIt();
-    }
-  }
-  
-  # 6 = 'Time difference'
-  elsif ($selFunc == 6) {
     my $timeDiff;
     my $dt2;
-    my $tzLocal = DateTime::TimeZone->new( name => 'local' );
+    # Local timezone
+    $localTZ  = $winDTDB->cbLocalTZ->GetString($winDTDB->cbLocalTZ->GetCurSel());
+    $outputTZ = DateTime::TimeZone->new(name => $localTZ);
     # If "Use a single date" option is checked
     if ($win->chSingleDate->Checked()) {
       my ($d, $m, $y)   = $win->dtTimeDiffDate->GetDate();
@@ -4407,58 +5747,52 @@ sub timeTabFunc
                                         hour       => $h    ,
                                         minute     => $min  ,
                                         second     => $s    ,
-                                        time_zone  => $tzLocal, );
+                                        time_zone  => $outputTZ, );
       push(@{$refList1}, @{$refList2}); # Merge lists
     }
 
     foreach my $item (@{$refList1}) {
-      # Gather date in list 2
-      if (!$win->chSingleDate->Checked()) {
-        my $item2 = $$refList2[$curr];
-        $item2 =~ s/[\r\n]//g;  # Remove any line break
-        if ($item2 and $item2 =~ /^($inputFormat)/) {
-          if (my ($y, $m, $d, $h, $min, $s, $tz) = parse_date($1)) { # Parse date
-            $dt2 = DateTime->new( year       => $y    ,
-                                  month      => $m    ,
-                                  day        => $d    ,
-                                  hour       => $h    ,
-                                  minute     => $min  ,
-                                  second     => $s    , );
-            if (!defined($tz)) { $dt2->set_time_zone($tzLocal); } # Local timezone
-            else               { $dt2->set_time_zone($tz); $dt2->set_time_zone($tzLocal); } # Set to local timezone
+      $item =~ s/[\r\n]//g;  # Remove any line break
+      if ($item) {
+        # Gather date in list 2
+        if (!$win->chSingleDate->Checked() and my $item2 = $$refList2[$curr]) {
+          $item2 =~ s/[\r\n]//g;  # Remove any line break
+          if ($item2) {
+            my ($epoch, $inputTimezone, $before, $after);
+            if ($pattern) { ($epoch, $inputTimezone, $pattern, $before, $after) = &str2Epoch($item2, $sample, $pattern, $regex, $parseContext, $timezone); }
+            else          { ($epoch, $inputTimezone, $pattern, $before, $after) = &str2Epoch($item2, $sample, undef   , undef , $parseContext, undef    ); }
+            if ($epoch) {
+              $dt2 = DateTime->from_epoch(epoch => $epoch);
+              $dt2->set_time_zone($outputTZ);
+            }
           }
         }
-      }
-      # Gather date in list 1 and calculate difference
-      $item =~ s/[\r\n]//g;  # Remove any line break
-      if ($dt2 and $item and $item =~ /^($inputFormat)/) {
-        if (my ($y, $m, $d, $h, $min, $s, $tz) = parse_date($1)) { # Parse date
-            my $dt1 = DateTime->new(year       => $y  ,
-                                    month      => $m  ,
-                                    day        => $d  ,
-                                    hour       => $h  ,
-                                    minute     => $min,
-                                    second     => $s  , );
-          if (!defined($tz)) { $dt1->set_time_zone($tzLocal); } # Local timezone
-          else               { $dt1->set_time_zone($tz); $dt1->set_time_zone($tzLocal); } # Set to local timezone
-          my ($d_y,$d_m,$d_d,$d_h,$d_min,$d_s) = N_Delta_YMDHMS($dt1->year(), $dt1->month(), $dt1->day(), $dt1->hour(), $dt1->minute(), $dt1->second(),
-                                                                $dt2->year(), $dt2->month(), $dt2->day(), $dt2->hour(), $dt2->minute(), $dt2->second(), );
-          my $diffStr;
-          if ($d_y)   { $diffStr .= "$d_y $STR{'years'}, ";     }
-          if ($d_m)   { $diffStr .= "$d_m $STR{'months'}, ";    }
-          if ($d_d)   { $diffStr .= "$d_d $STR{'days'}, ";      }
-          if ($d_h)   { $diffStr .= "$d_h $STR{'hours'}, ";     }
-          if ($d_min) { $diffStr .= "$d_min $STR{'minutes'}, "; }
-          if ($d_s)   { $diffStr .= "$d_s $STR{'seconds'}, ";   }
-          if ($diffStr) { chop($diffStr); chop($diffStr); }
-          push(@items, $diffStr);
+        # Gather date in list 1 and calculate difference
+        if ($dt2) {
+          my $dt1;
+          my ($epoch, $inputTimezone, $before, $after);
+          if ($pattern) { ($epoch, $inputTimezone, $pattern, $before, $after) = &str2Epoch($item, $sample, $pattern, $regex, $parseContext, $timezone); }
+          else          { ($epoch, $inputTimezone, $pattern, $before, $after) = &str2Epoch($item, $sample, undef   , undef , $parseContext, undef    ); }
+          if ($epoch) {
+            $dt1 = DateTime->from_epoch(epoch => $epoch);
+            $dt1->set_time_zone($outputTZ);
+          }
+          
+          if ($dt1 and $dt2) {
+            my $oldestDT = $dt1->epoch < $dt2->epoch ? $dt1 : $dt2;
+            my $d = DateTime::Format::Duration->new(pattern   => "%Y $STR{'years'}, %m $STR{'months'}, %e $STR{'days'}, %H $STR{'hours'}, %M $STR{'minutes'}, %S $STR{'seconds'}",
+                                                    normalize => 1,
+                                                    base      => $oldestDT);
+            my $diffInSec = $dt1->subtract_datetime_absolute($dt2);
+            push(@items, $d->format_duration($diffInSec));
+          } else {
+            if ($noResultOpt) { push(@items, $STR{'errorConversion'}); }
+            else { push(@items, undef); }
+          }
         } else {
-          if ($noResultOpt) { push(@items, $STR{'errorConversion'}); }
+          if ($noResultOpt) { push(@items, $STR{'invalidInput'}); }
           else { push(@items, undef); }
         }
-      } else {
-        if ($noResultOpt) { push(@items, $STR{'invalidInput'}); }
-        else { push(@items, undef); }
       }
 
       # Progress
@@ -4468,45 +5802,46 @@ sub timeTabFunc
     }
   }
   
-  # 7 = 'Add time' and 8 = 'Substract time'
-  elsif ($selFunc == 7 or $selFunc == 8) {
-    my $offsetY     = 0;
-    my $offsetM     = 0;
-    my $offsetD     = 0;
-    my $offsetH     = 0;
-    my $offsetMin   = 0;
-    my $offsetS     = 0;
-    my $addTimeType = $win->cbTypeValAddDT->GetCurSel();
-    my $offsetVal   = $win->tfValAddDT->Text();
-    if    ($addTimeType == 0) { $offsetY    = $offsetVal; }
-    elsif ($addTimeType == 1) { $offsetM    = $offsetVal; }
-    elsif ($addTimeType == 2) { $offsetD    = $offsetVal; }
-    elsif ($addTimeType == 3) { $offsetH    = $offsetVal; }
-    elsif ($addTimeType == 4) { $offsetMin  = $offsetVal; }
-    elsif ($addTimeType == 5) { $offsetS    = $offsetVal; }
-    my $offset = DateTime::Duration->new( years   => $offsetY  ,
-                                          months  => $offsetM  ,
-                                          days    => $offsetD  ,
-                                          hours   => $offsetH  ,
-                                          minutes => $offsetMin,
-                                          seconds => $offsetS  , );
+  # 2 = 'Add time' and 3 = 'Substract time'
+  elsif ($selFunc == 2 or $selFunc == 3) {
+    my $offsetY     = $win->tfDeltaYears->Text();
+    my $offsetM     = $win->tfDeltaMonths->Text();
+    my $offsetD     = $win->tfDeltaDays->Text();
+    my $offsetH     = $win->tfDeltaHours->Text();
+    my $offsetMin   = $win->tfDeltaMinutes->Text();
+    my $offsetS     = $win->tfDeltaSecondes->Text();
+    my $offset      = DateTime::Duration->new(years   => $offsetY  ,
+                                              months  => $offsetM  ,
+                                              days    => $offsetD  ,
+                                              hours   => $offsetH  ,
+                                              minutes => $offsetMin,
+                                              seconds => $offsetS  , );
     foreach my $item (@{$refList1}) {
       $item =~ s/[\r\n]//g;  # Remove any line break
       if ($item) {
-        if ($item =~ /^($inputFormat)/) {
-          if (my $time = str2time($1)) { # Convert to unixtime
-            my $dt = DateTime->from_epoch(epoch => $time);
-            $dt->set_time_zone($outputTZ);
-            if ($selFunc == 7) { $dt->add_duration($offset);      }
-            else               { $dt->subtract_duration($offset); }
-            push(@items, $dt->strftime('%Y-%m-%d %H:%M:%S %z'));
-          } else {
-            if ($noResultOpt) { push(@items, $STR{'errorConversion'}); }
-            else { push(@items, undef); }
-          }
-        } else {
+        my ($epoch, $inputTimezone, $before, $after);
+        if ($pattern) { ($epoch, $inputTimezone, $pattern, $before, $after) = &str2Epoch($item, $sample, $pattern, $regex, $parseContext, $timezone); }
+        else          { ($epoch, $inputTimezone, $pattern, $before, $after) = &str2Epoch($item, $sample, undef   , undef , $parseContext, undef    ); }
+        if      ($epoch == 1) {
           if ($noResultOpt) { push(@items, $STR{'invalidInput'}); }
           else { push(@items, undef); }
+        } elsif ($epoch == 2) {
+          if ($noResultOpt) { push(@items, $STR{'errorConversion'}); }
+          else { push(@items, undef); }
+        } elsif ($epoch) {
+          my $dt = DateTime->from_epoch(epoch => $epoch);
+          if ($sameAsInput) { if ($inputTimezone eq 'floating') { $inputTimezone = $localTZ; } $dt->set_time_zone($inputTimezone); }
+          else              { $dt->set_time_zone($outputTZ);      }
+          $dt->set(locale => $outputLang);
+          if ($selFunc == 2) { $dt->add_duration($offset);      }
+          else               { $dt->subtract_duration($offset); }
+          # Output
+          my $newItem;
+          if ($before)      { $newItem .= $before;                       }
+          if ($sameAsInput) { $newItem .= $dt->strftime($pattern);       }
+          else              { $newItem .= $dt->strftime($outPutPattern); }
+          if ($after)       { $newItem .= $after;                        }
+          push(@items, encode($CONFIG{'OUTPUT_CHARSET'}, $newItem));
         }
       } else {
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
@@ -4951,8 +6286,8 @@ sub utilsTabFunc
     # Add headers
     if ($win->chUAAddHeaders->Checked()) {
       my $headers;
-      if    ($selOpt == 0) { $headers = "$STR{'uaType'}\t$STR{'uaOS'}\t$STR{'uaBrowser'}\t$STR{'uaDevice'}\t$STR{'uaLang'}"; }
-      elsif ($selOpt == 1) { $headers = $STR{'uaType'};    }
+      if    ($selOpt == 0) { $headers = "$STR{'type'}\t$STR{'uaOS'}\t$STR{'uaBrowser'}\t$STR{'uaDevice'}\t$STR{'uaLang'}"; }
+      elsif ($selOpt == 1) { $headers = $STR{'type'};      }
       elsif ($selOpt == 2) { $headers = $STR{'uaOS'};      }
       elsif ($selOpt == 3) { $headers = $STR{'uaBrowser'}; }
       elsif ($selOpt == 4) { $headers = $STR{'uaDevice'};  }
@@ -5415,13 +6750,12 @@ sub btnCFAdd_Click
 #--------------------------#
 {
   # Show OpenFile dialog window
-  my $CFDBFile = Win32::GUI::GetOpenFileName( -owner         => $win                              ,
-                                              -title         => $STR{'selectDBFile'}              ,
-                                              -filter        => [$STR{'dbFile'}.' - .db', '*.db'] ,
-                                              -defaultfilter => 0                                 ,
-                                              -filemustexist => 1                                 ,
-                                              -explorer      => 1                                 , );
-  if ($CFDBFile) {
+  if (my $CFDBFile = Win32::GUI::GetOpenFileName( -owner         => $win                              ,
+                                                  -title         => $STR{'selectDBFile'}              ,
+                                                  -filter        => [$STR{'dbFile'}.' - .db', '*.db'] ,
+                                                  -defaultfilter => 0                                 ,
+                                                  -filemustexist => 1                                 ,
+                                                  -explorer      => 1                                 , )) {
     if (-f $CFDBFile and &validCFDB($CFDBFile)) {
       # Connect to DB
       my $dsn = "DBI:SQLite:dbname=$CFDBFile";
@@ -6007,6 +7341,8 @@ sub updateAll
   # Update MACOUI DB ?
   if ($CONFIG{'MACOUI_DB_AUTO_UPDATE'}) { &updateMACOUIDB(0); }
   
+  
+  
 }  #--- End updateAll
 
 #--------------------------#
@@ -6018,7 +7354,7 @@ sub createCW
                                           -parent      => $win                      , # May be open from many Window
                                           -text        => $STR{'winCW'}             ,
                                           -pos         => [$winPosX, $winPosY]      ,
-                                          -size        => [400, 170]                ,
+                                          -size        => [400, 195]                ,
                                           -background  => [255, 255, 255]           ,
                                           -hasmaximize => 0                         ,
                                           -hasminimize => 1                         ,
@@ -6085,9 +7421,29 @@ sub createCW
                         -bitmap      => $errorBmp             ,
                         -background  => [255, 255, 255]       ,
                         -visible     => 0                     , );
-  $winCW->AddLabel(     -name        => 'lblDLGeoIPDB'        ,
+  $winCW->AddLabel(     -name        => 'lblDLDTDB'           ,
                         -size        => [220, 22]             ,
                         -pos         => [140, 70]             ,
+                        -font        => $font10               ,
+                        -text        => $STR{'downloadDTDB'}.'...',
+                        -background  => [255, 255, 255]       ,
+                        -foreground  => [  0, 102, 204]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblDLDTDBDone'       ,
+                        -size        => [ 20, 20]             ,
+                        -pos         => [365, 70]             ,
+                        -bitmap      => $checkBmp             ,
+                        -background  => [255, 255, 255]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblDLDTDBError'      ,
+                        -size        => [ 20, 20]             ,
+                        -pos         => [365, 70]             ,
+                        -bitmap      => $errorBmp             ,
+                        -background  => [255, 255, 255]       ,
+                        -visible     => 0                     , );
+  $winCW->AddLabel(     -name        => 'lblDLGeoIPDB'        ,
+                        -size        => [220, 22]             ,
+                        -pos         => [140, 90]             ,
                         -font        => $font10               ,
                         -text        => $STR{'downloadGeoIP'}.'...',
                         -background  => [255, 255, 255]       ,
@@ -6095,19 +7451,19 @@ sub createCW
                         -visible     => 0                     , );
   $winCW->AddLabel(     -name        => 'lblDLGeoIPDBDone'    ,
                         -size        => [ 20, 20]             ,
-                        -pos         => [365, 70]             ,
+                        -pos         => [365, 90]             ,
                         -bitmap      => $checkBmp             ,
                         -background  => [255, 255, 255]       ,
                         -visible     => 0                     , );
   $winCW->AddLabel(     -name        => 'lblDLGeoIPDBError'   ,
                         -size        => [ 20, 20]             ,
-                        -pos         => [365, 70]             ,
+                        -pos         => [365, 90]             ,
                         -bitmap      => $errorBmp             ,
                         -background  => [255, 255, 255]       ,
                         -visible     => 0                     , );
   $winCW->AddLabel(     -name        => 'lblDLMACOUIDB'       ,
                         -size        => [220, 22]             ,
-                        -pos         => [140, 90]             ,
+                        -pos         => [140,110]             ,
                         -font        => $font10               ,
                         -text        => $STR{'downloadMACOUI'}.'...',
                         -background  => [255, 255, 255]       ,
@@ -6115,13 +7471,13 @@ sub createCW
                         -visible     => 0                     , );
   $winCW->AddLabel(     -name        => 'lblDLMACOUIDBDone'   ,
                         -size        => [ 20, 20]             ,
-                        -pos         => [365, 90]             ,
+                        -pos         => [365,110]             ,
                         -bitmap      => $checkBmp             ,
                         -background  => [255, 255, 255]       ,
                         -visible     => 0                     , );
   $winCW->AddLabel(     -name        => 'lblDLMACOUIDBError'  ,
                         -size        => [ 20, 20]             ,
-                        -pos         => [365, 90]             ,
+                        -pos         => [365,110]             ,
                         -bitmap      => $errorBmp             ,
                         -background  => [255, 255, 255]       ,
                         -visible     => 0                     , );
@@ -6223,7 +7579,7 @@ sub firstStart
       $CONFIG{'MACOUI_DB_AUTO_UPDATE'} = 0;
       &saveConfig(\%CONFIG);
       $$refWinCW->lblSetGenOptDone->Show();
-      
+
       # Select the XL-Whois DB
       my $defaultPath = "$ENV{'APPDATA'}\\XL-Toolkit\\XL-Whois\\Whois.db";
       my $XLWHOISDBFile;
@@ -6252,6 +7608,15 @@ sub firstStart
         $$refWinCW->lblDLIINDBError->Show();
         Win32::GUI::MessageBox($win, $return, $STR{'error'}, 0x40010);
       } else { $$refWinCW->lblDLIINDBDone->Show(); }
+      &saveConfig(\%CONFIG);
+      
+      # Download DTDB Database
+      $$refWinCW->lblDLDTDB->Show();
+      $return = &downloadDTDB("$dir\\DT.db"); # $return contains error msg if any
+      if ($return) { 
+        $$refWinCW->lblDLDTDBError->Show();
+        Win32::GUI::MessageBox($win, $return, $STR{'error'}, 0x40010);
+      } else { $$refWinCW->lblDLDTDBDone->Show(); }
       &saveConfig(\%CONFIG);
       
       # Download GeoIP Database
@@ -6336,15 +7701,22 @@ sub configTab_Click
     $winConfig->tfGeoIPDB->Hide();
     $winConfig->btnGeoIPDB->Hide();
     $winConfig->btnGeoIPDBUpt->Hide();
-    $winConfig->lblXLWHOISDBShadowT->Hide();
-    $winConfig->lblXLWHOISDBT->Hide();
-    $winConfig->tfXLWHOISDB->Hide();
-    $winConfig->btnXLWHOISDB->Hide();
     $winConfig->lblIINDBShadowT->Hide();
     $winConfig->lblIINDBT->Hide();
     $winConfig->tfIINDB->Hide();
     $winConfig->btnIINDB->Hide();
     $winConfig->btnIINDBUpt->Hide();
+    
+    # XL-Toolkit databases tab
+    $winConfig->lblXLWHOISDBShadowT->Hide();
+    $winConfig->lblXLWHOISDBT->Hide();
+    $winConfig->tfXLWHOISDB->Hide();
+    $winConfig->btnXLWHOISDB->Hide();
+    $winConfig->lblDTDBShadowT->Hide();
+    $winConfig->lblDTDBT->Hide();
+    $winConfig->tfDTDB->Hide();
+    $winConfig->btnDTDB->Hide();
+    $winConfig->btnDTDBUpt->Hide();
   
   # Show Databases tab
   } elsif ($winConfig->configTab->SelectedItem() == 1) {
@@ -6362,10 +7734,6 @@ sub configTab_Click
     $winConfig->tfGeoIPDB->Show();
     $winConfig->btnGeoIPDB->Show();
     $winConfig->btnGeoIPDBUpt->Show();
-    $winConfig->lblXLWHOISDBShadowT->Show();
-    $winConfig->lblXLWHOISDBT->Show();
-    $winConfig->tfXLWHOISDB->Show();
-    $winConfig->btnXLWHOISDB->Show();
     $winConfig->lblIINDBShadowT->Show();
     $winConfig->lblIINDBT->Show();
     $winConfig->tfIINDB->Show();
@@ -6393,6 +7761,72 @@ sub configTab_Click
     $winConfig->lblNoResultOpt->Hide();
     $winConfig->rbNoResultOpt1->Hide();
     $winConfig->rbNoResultOpt2->Hide();
+    
+    # XL-Toolkit databases tab
+    $winConfig->lblXLWHOISDBShadowT->Hide();
+    $winConfig->lblXLWHOISDBT->Hide();
+    $winConfig->tfXLWHOISDB->Hide();
+    $winConfig->btnXLWHOISDB->Hide();
+    $winConfig->lblDTDBShadowT->Hide();
+    $winConfig->lblDTDBT->Hide();
+    $winConfig->tfDTDB->Hide();
+    $winConfig->btnDTDB->Hide();
+    $winConfig->btnDTDBUpt->Hide();
+
+  # Show XL-Toolkit databases tab
+  } elsif ($winConfig->configTab->SelectedItem() == 2) {
+    # XL-Toolkit databases tab
+    $winConfig->lblXLWHOISDBShadowT->Show();
+    $winConfig->lblXLWHOISDBT->Show();
+    $winConfig->tfXLWHOISDB->Show();
+    $winConfig->btnXLWHOISDB->Show();
+    $winConfig->lblDTDBShadowT->Show();
+    $winConfig->lblDTDBT->Show();
+    $winConfig->tfDTDB->Show();
+    $winConfig->btnDTDB->Show();
+    $winConfig->btnDTDBUpt->Show();
+    
+    # General tab
+    $winConfig->lblToolShadowT->Hide();
+    $winConfig->lblToolT->Hide();
+    $winConfig->btnCheckUpdate->Hide();
+    $winConfig->chAutoUpdate->Hide();
+    $winConfig->btnExportLang->Hide();
+    $winConfig->lblOptFunctionsShadowT->Hide();
+    $winConfig->lblOptFunctionsT->Hide();
+    $winConfig->chFullScreen->Hide();
+    $winConfig->chRememberPos->Hide();
+    $winConfig->lblMaxSize1->Hide();
+    $winConfig->tfMaxSize->Hide();
+    $winConfig->lblMaxSize2->Hide();
+    $winConfig->lblNsLookupTO1->Hide();
+    $winConfig->tfLookupTO->Hide();
+    $winConfig->lblNsLookupTO2->Hide();
+    $winConfig->lblUserAgent->Hide();
+    $winConfig->tfUserAgent->Hide();
+    $winConfig->lblNoResultOpt->Hide();
+    $winConfig->rbNoResultOpt1->Hide();
+    $winConfig->rbNoResultOpt2->Hide();
+    
+    # Databases tab
+    $winConfig->lblMACOUIDBShadowT->Hide();
+    $winConfig->lblMACOUIDBT->Hide();
+    $winConfig->chMACOUIDBAutoUpt->Hide();
+    $winConfig->tfMACOUIDB->Hide();
+    $winConfig->btnMACOUIDB->Hide();
+    $winConfig->btnMACOUIDBUpt->Hide();
+    $winConfig->btnMACOUIDBImport->Hide();
+    $winConfig->lblGeoIPDBShadowT->Hide();
+    $winConfig->lblGeoIPDBT->Hide();
+    $winConfig->chGeoIPDBAutoUpt->Hide();
+    $winConfig->tfGeoIPDB->Hide();
+    $winConfig->btnGeoIPDB->Hide();
+    $winConfig->btnGeoIPDBUpt->Hide();
+    $winConfig->lblIINDBShadowT->Hide();
+    $winConfig->lblIINDBT->Hide();
+    $winConfig->tfIINDB->Hide();
+    $winConfig->btnIINDB->Hide();
+    $winConfig->btnIINDBUpt->Hide();
   }
 
 }  #--- End configTab_Click
@@ -6433,13 +7867,13 @@ sub updateTool
       if ($answer == 6) {
         # Open Firefox to XL-Tools page
         $win->ShellExecute('open', $URL_TOOL,'','',1) or
-          Win32::GUI::MessageBox($winConfig, Win32::FormatMessage(Win32::GetLastError()), "$STR{'update3'} XL-Tools",0x40010);
+          Win32::GUI::MessageBox($winConfig, Win32::FormatMessage(Win32::GetLastError()), "$STR{'update3'} XL-Tools", 0x40010);
       }
     }
   }
   # Error 
   else {
-    if ($confirm) { Win32::GUI::MessageBox($winConfig, $STR{'errorConnection'}.': '.$res->status_line, "$STR{'update3'} XL-Tools",0x40010); }
+    if ($confirm) { Win32::GUI::MessageBox($winConfig, $STR{'errorConnection'}.': '.$res->status_line, "$STR{'update3'} XL-Tools", 0x40010); }
   }
 
 }  #--- End updateTool
@@ -6577,6 +8011,46 @@ sub tfUserAgent_Change
   }
 
 }  #--- End tfUserAgent_Change
+
+#--------------------------#
+sub cbLocalTZ_Change
+#--------------------------#
+{
+  # Remember
+  $CONFIG{'LOCAL_TIMEZONE'} = $winDTDB->cbLocalTZ->GetCurSel();
+  &saveConfig(\%CONFIG);
+  
+}  #--- End cbLocalTZ_Change
+
+#--------------------------#
+sub cbOutputLang_Change
+#--------------------------#
+{
+  # Remember
+  $CONFIG{'OUTPUT_LANG'} = $winDTDB->cbOutputLang->GetCurSel();
+  &saveConfig(\%CONFIG);
+  
+}  #--- End cbOutputLang_Change
+
+#--------------------------#
+sub cbOutputCharset_Change
+#--------------------------#
+{
+  # Remember
+  $CONFIG{'OUTPUT_CHARSET'} = $winDTDB->cbOutputCharset->GetString($winDTDB->cbOutputCharset->GetCurSel());
+  &saveConfig(\%CONFIG);
+  
+}  #--- End cbOutputCharset_Change
+
+#--------------------------#
+sub cbDefaultOutput_Change
+#--------------------------#
+{
+  # Remember
+  $CONFIG{'DEFAULT_OUTPUT'} = $winDTDB->cbDefaultOutput->GetCurSel();
+  &saveConfig(\%CONFIG);
+  
+}  #--- End cbDefaultOutput_Change
 
 #--------------------------#
 sub chMACOUIDBAutoUpt_Click
@@ -6884,9 +8358,9 @@ sub checkDateMACOUIDB
   if (!$localMACOUIDB or !-f $localMACOUIDB) { return(0, undef, undef, undef); }
   
   # Check date of local file
-  my $dateMACOUIDB    = (stat($localMACOUIDB))[9];
-  my ($dl, $ml, $yl)  = (&date($dateMACOUIDB))[3,4,5];
-  my $dateLocalFile   = "$yl-$ml-$dl";
+  my $dateMACOUIDB  = (stat($localMACOUIDB))[9];
+  my $strp          = DateTime::Format::Strptime->new(pattern => '%s');
+  my $localFileT    = $strp->parse_datetime($dateMACOUIDB);
 
   # Check date of the remote file
   my $ua = new LWP::UserAgent;
@@ -6901,18 +8375,12 @@ sub checkDateMACOUIDB
   } else { return(3, $return, undef, undef); } # Error connection
   
   # Compare local et remote file date
-  if ($lastModifDate and my ($y, $m, $d) = parse_date($lastModifDate)) { # Parse date
-    my $dateUpt = sprintf("%4d-%02d-%02d", $y, $m, $d);
-    my ($yd, $md, $dd)  = split(/-/, $dateUpt);
-    if    ($yl  > $yd) { return(1, $return, $dateLocalFile, $dateUpt);   } # MACOUIDB is up to date
-    elsif ($yl == $yd) { # Same year
-      if ($ml > $md)     { return(1, $return, $dateLocalFile, $dateUpt); } # MACOUIDB is up to date
-      elsif ($ml == $md) { # Same month
-        if ($dl >= $dd) { return(1, $return, $dateLocalFile, $dateUpt);  } # MACOUIDB is up to date
-        else            { return(2, $return, $dateLocalFile, $dateUpt);  } # MACOUIDB is outdated
-      } else { return(2, $return, $dateLocalFile, $dateUpt); }             # MACOUIDB is outdated
-    } else { return(2, $return, $dateLocalFile, $dateUpt); }               # MACOUIDB is outdated
-  } else { return(3, $return, undef, undef); }                  					 # Connection error
+  my $strp2 = DateTime::Format::Strptime->new(pattern => '%a, %d %b %Y %T %Z');
+  if (my $lastModifT = $strp2->parse_datetime($lastModifDate)) {
+    my $cmp = DateTime->compare($localFileT, $lastModifT);
+    if ($cmp > -1) { return(1, $return, $localFileT->ymd(), $lastModifT->ymd()); } # MACOUIDB is up to date 
+    else           { return(2, $return, $localFileT->ymd(), $lastModifT->ymd()); } # MACOUIDB is outdated
+  } else           { return(3, $return, undef             , undef             ); } # Connection error
 
 }  #--- End checkDateMACOUIDB
 
@@ -7272,7 +8740,7 @@ sub updateGeoIPDB
     if ($dateLocalFile and $dateRemoteFile) {
       Encode::from_to($dateRemoteFile, 'utf8', 'iso-8859-1');
       $msg = "$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} Maxmind: $dateRemoteFile\n\n$STR{'updateAvailable'} ?";
-    } else { $msg = "The GeoIP database (GeoLiteCity.dat) does not exist, download ?"; }
+    } else { $msg = "$STR{'GeoIPNotExist'} ?"; }
     
     # Yes (6), No (7)
     my $answer = Win32::GUI::MessageBox($win, $msg, $STR{'uptGeoIP'}, 0x1024);
@@ -7315,10 +8783,10 @@ sub checkDateGeoIPDB
   if (!$localGeoIPDB or !-f $localGeoIPDB) { return(0, undef, undef, undef); }
   
   # Check date of local file
-  my $dateGeoIPDB     = (stat($localGeoIPDB))[9];
-  my ($dl, $ml, $yl)  = (&date($dateGeoIPDB))[3,4,5];
-  my $dateLocalFile   = "$yl-$ml-$dl";
-
+  my $dateGeoIPDB   = (stat($localGeoIPDB))[9];
+  my $strp          = DateTime::Format::Strptime->new(pattern => '%s');
+  my $localFileT    = $strp->parse_datetime($dateGeoIPDB);
+  
   # Check date of the remote file
   my $ua = new LWP::UserAgent;
   $ua->agent($CONFIG{'USERAGENT'});
@@ -7332,18 +8800,12 @@ sub checkDateGeoIPDB
   } else { return(3, $return, undef, undef); } # Error connection
   
   # Compare local et remote file date
-  if ($lastModifDate and my ($y, $m, $d) = parse_date($lastModifDate)) { # Parse date
-    my $dateUpt = sprintf("%4d-%02d-%02d", $y, $m, $d);
-    my ($yd, $md, $dd)  = split(/-/, $dateUpt);
-    if    ($yl  > $yd) { return(1, $return, $dateLocalFile, $dateUpt);   } # GeoIPDB is up to date
-    elsif ($yl == $yd) { # Same year
-      if ($ml > $md)     { return(1, $return, $dateLocalFile, $dateUpt); } # GeoIPDB is up to date
-      elsif ($ml == $md) { # Same month
-        if ($dl >= $dd) { return(1, $return, $dateLocalFile, $dateUpt);  } # GeoIPDB is up to date
-        else            { return(2, $return, $dateLocalFile, $dateUpt);  } # GeoIPDB is outdated
-      } else { return(2, $return, $dateLocalFile, $dateUpt); }             # GeoIPDB is outdated
-    } else { return(2, $return, $dateLocalFile, $dateUpt); }               # GeoIPDB is outdated
-  } else { return(3, $return, undef, undef); }                  					 # Connection error
+  my $strp2 = DateTime::Format::Strptime->new(pattern => '%a, %d %b %Y %T %Z');
+  if (my $lastModifT = $strp2->parse_datetime($lastModifDate)) {
+    my $cmp = DateTime->compare($localFileT, $lastModifT);
+    if ($cmp > -1) { return(1, $return, $localFileT->ymd(), $lastModifT->ymd()); } # GeoIPDB is up to date 
+    else           { return(2, $return, $localFileT->ymd(), $lastModifT->ymd()); } # GeoIPDB is outdated
+  } else           { return(3, $return, undef             , undef             ); } # Connection error
 
 }  #--- End checkDateGeoIPDB
 
@@ -7826,28 +9288,250 @@ sub downloadIINDB
 }  #--- End downloadIINDB
 
 #--------------------------#
-sub date
+sub tfDTDB_Change
 #--------------------------#
 {
   # Local variables
-  my ($time) = @_;
+  my $DTDBFile = $winConfig->tfDTDB->Text();
   
-  # Conversion
-  if (!$time or $time == 0) { $time = time; }
-  my ($s,$min,$h,$d,$m,$y,$d_w,$ha,$isDST) = localtime($time);
+  # Remember
+  if ($DTDBFile and -f $DTDBFile and &validDTDB($DTDBFile)) {
+    $CONFIG{'DT_DB_FILE'} = $DTDBFile;
+    &saveConfig(\%CONFIG);
+  } else {
+    delete($CONFIG{'DT_DB_FILE'});
+    &saveConfig(\%CONFIG);
+    if ($DTDBFile) {
+      $winConfig->tfDTDB->Text('');
+      if ($START == 1) { Win32::GUI::MessageBox($win, $STR{'invalidFile'}, $STR{'error'}, 0x40010); }
+    }
+  }
 
-  # Format
-  $y += 1900;
-  $m++;
-  $m   = $m   < 10 ? $m   = "0".$m   : $m;
-  $d   = $d   < 10 ? $d   = "0".$d   : $d;
-  $h   = $h   < 10 ? $h   = "0".$h   : $h;
-  $min = $min < 10 ? $min = "0".$min : $min;
-  $s   = $s   < 10 ? $s   = "0".$s   : $s;
+}  #--- End tfDTDB_Change
+
+#--------------------------#
+sub validDTDB
+#--------------------------#
+{
+  # Local variables
+  my $DTDBFile = shift;
   
-  return($s,$min,$h,$d,$m,$y,$d_w,$ha,$isDST);
+  if (-f $DTDBFile) {
+    # Connect to DB
+    my $dsn = "DBI:SQLite:dbname=$DTDBFile";
+    if (my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })) {
+      my $sth;
+      eval { $sth = $dbh->table_info(undef, undef, '%', 'TABLE'); };
+      if ($@) { return(0); }
+      # If table DT exists, database is valid
+      my @info = $sth->fetchrow_array;
+      $sth->finish();
+      if ($info[2] eq 'DT') { return(1); }
+    }
+  }
+  
+  return(0);
+  
+}  #--- End validDTDB
 
-}  #--- End date
+#--------------------------#
+sub btnDTDB_Click
+#--------------------------#
+{
+  # Local variables
+  my $lastDir = $winConfig->tfDTDB->Text();
+  my $DTDBFile;
+
+  # Show OpenFile dialog window
+  if ($lastDir) {
+    my(@parts) = split(/\\/, $lastDir);
+    if (pop(@parts) =~ /\./) {
+      while ($lastDir =~ /[^\\]$/) { chop($lastDir); }
+    }
+    $DTDBFile = Win32::GUI::GetOpenFileName( -owner         => $winConfig                 ,
+                                              -title         => $STR{'selectDBFile'}.':'   ,
+                                              -defaultfilter => 0                          ,
+                                              -filemustexist => 1                          ,
+                                              -directory     => $lastDir                   ,
+                                              -file          => 'DT.db'                   ,
+                                              -explorer      => 1                          , );
+  } else {
+    $DTDBFile = Win32::GUI::GetOpenFileName( -owner         => $winConfig                 ,
+                                              -title         => $STR{'selectDBFile'}.':'   ,
+                                              -defaultfilter => 0                          ,
+                                              -filemustexist => 1                          ,
+                                              -file          => 'DT.db'                   ,
+                                              -explorer      => 1                          , );
+  }
+
+  # Selected file
+  if ($DTDBFile and -f $DTDBFile) {
+    $winConfig->tfDTDB->Text($DTDBFile);
+    $CONFIG{'DT_DB_FILE'} = $DTDBFile;
+  }
+
+}  #--- End btnDTDB_Click
+
+#--------------------------#
+sub btnDTDBUpt_Click
+#--------------------------#
+{
+  if ($THR_UPDATE and $THR_UPDATE->is_running()) {
+    Win32::GUI::MessageBox($win, $STR{'processRunning'}, $STR{'error'}, 0x40010);
+  } else {
+    $THR_UPDATE = threads->create(sub {
+      # Thread 'cancellation' signal handler
+      $SIG{'KILL'} = sub {
+        $win->ChangeCursor($ARROW);
+        # Turn off progress bar
+        $winPb->lblPbCurr->Text('');
+        $winPb->lblCount->Text('');
+        $winPb->pbWinPb->SetPos(0);
+        $winPb->Hide();
+        threads->exit();
+      };
+      
+      # Thread 'die' signal handler
+      $SIG{__DIE__} = sub {
+        my $errMsg = (split(/ at /,$_[0]))[0];
+        chomp($errMsg);
+        $errMsg =~ s/[\t\r\n]/ /g;
+        $win->ChangeCursor($ARROW);
+        # Turn off progress bar
+        $winPb->lblPbCurr->Text('');
+        $winPb->lblCount->Text('');
+        $winPb->pbWinPb->SetPos(0);
+        $winPb->Hide();
+        Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $errMsg", $STR{'error'}, 0x40010);
+      };
+
+      my $errMsg = &downloadDTDB("$USERDIR\\DT.db");
+      if ($errMsg) { Win32::GUI::MessageBox($win, "$errMsg"          , $STR{'error'}      , 0x40010); }
+      else         { Win32::GUI::MessageBox($win, $STR{'updatedDTDB'}, "XL-Tools $VERSION", 0x40040); }
+    });
+  }
+  return(1);
+  
+}  #--- End btnDTDBUpt_Click
+
+#--------------------------#
+sub downloadDTDB
+#--------------------------#
+{
+  # Local variables
+  my $localDTDB = shift; # Default location
+  
+  # Show progress window
+  $win->ChangeCursor($HOURGLASS);
+  $winPb->Text($STR{'downloadDTDB'});
+  $winPb->lblPbCurr->Text($STR{'connecting'}.' le-tools.com...');
+  $winPb->lblCount->Text("0 %");
+  $winPb->pbWinPb->SetRange(0, 100);
+  $winPb->pbWinPb->SetPos(0);
+  $winPb->pbWinPb->SetStep(1);
+  $winPb->Center($win);
+  $winPb->Show();
+  
+  # Start an agent
+  my $ua = new LWP::UserAgent;
+  $ua->agent($CONFIG{'USERAGENT'});
+  $ua->default_header('Accept-Language' => 'en');
+  
+  # Check size of the remote file
+  my $req    = new HTTP::Request HEAD => $DTDB_URL;
+  my $res    = $ua->request($req);
+  my $return = $res->status_line;
+  if ($res->code == 200) { $TOTAL_SIZE = $res->header('content_length'); }
+  else {
+    # Hide progress window
+    $win->ChangeCursor($ARROW);
+    $winPb->lblPbCurr->Text('');
+    $winPb->lblCount->Text('');
+    $winPb->pbWinPb->SetPos(0);
+    $winPb->Hide();
+    return("$STR{'errorMsg'}: $STR{'errorConRemote'}...");
+  }
+  
+  # Download the file
+  if ($TOTAL_SIZE) {
+    my $downloadData;
+    # Download the file
+    $winPb->lblPbCurr->Text($STR{'downloadDTDB'}.'...');
+    my $response = $ua->get($DTDB_URL, ':content_cb' => sub {
+      # Local variables
+      my ($data, $response, $protocol) = @_;
+      
+      $downloadData       .= $data;                                     # Downloaded data
+      my $totalDownloaded  = length($downloadData);                     # Size of downloaded data
+      my $completed        = int($totalDownloaded / $TOTAL_SIZE * 100); # Pourcentage of download completed
+      
+      $winPb->pbWinPb->SetPos($completed);    # Set the progress bar
+      $winPb->lblCount->Text("$completed %"); # Indicate purcentage
+    });
+    
+    # Save data in a temp file
+    my $DTDB_ZIP = $localDTDB."\.zip";
+    if ($response and $response->is_success) {
+      open(ZIP,">$DTDB_ZIP");
+      binmode(ZIP);
+      print ZIP $downloadData;
+      close(ZIP);
+    } else {
+      # Hide progress window
+      $win->ChangeCursor($ARROW);
+      $winPb->lblPbCurr->Text('');
+      $winPb->lblCount->Text('');
+      $winPb->pbWinPb->SetPos(0);
+      $winPb->Hide();
+      return("$STR{'errorMsg'}: $STR{'errorConRemote'}...");
+    }
+    
+    # Uncompress DTDB ZIP
+    my ($error, $msg);
+    if (-e $DTDB_ZIP) {
+      $TOTAL_SIZE = 0;
+      if (unzip $DTDB_ZIP => $localDTDB, BinModeOut => 1) {
+        if (&validDTDB($localDTDB)) {
+          unlink $DTDB_ZIP;
+          $winConfig->tfDTDB->Text($localDTDB);
+          $CONFIG{'DT_DB_FILE'} = $localDTDB;
+          &saveConfig(\%CONFIG);
+          
+          # Load the Datetime database
+          &loadDTDB;
+          &cbInputDTFormatAddITems();
+          $win->cbInputDTFormat->SetCurSel(0);
+          &cbOutputDTFormatAddITems();
+          $win->cbOutputDTFormat->SetCurSel(0);
+          # Default output format
+          if (exists($CONFIG{'DEFAULT_OUTPUT'})) { $winDTDB->cbDefaultOutput->SetCurSel($CONFIG{'DEFAULT_OUTPUT'}); }
+          else                                   { $winDTDB->cbDefaultOutput->SetCurSel(0); }
+        } else { $error = 1; $msg = "$STR{'errorMsg'}: $STR{'invalidFile'}"; }
+      } else { $error = 1; $msg = "$STR{'errorMsg'}: $UnzipError"; }
+    } else { $error = 1; $msg = "$STR{'errorMsg'}: $STR{'errorDownload'}..."; }
+    
+    # Turn off progress bar
+    $win->ChangeCursor($ARROW);
+    $winPb->lblPbCurr->Text('');
+    $winPb->lblCount->Text('');
+    $winPb->pbWinPb->SetPos(0);
+    $winPb->Hide();
+    
+    # Final message
+    if ($error) { return($msg); } # Error
+    else        { return(0);    }
+    
+  } else {
+    # Hide progress window
+    $win->ChangeCursor($ARROW);
+    $winPb->lblPbCurr->Text('');
+    $winPb->lblCount->Text('');
+    $winPb->pbWinPb->SetPos(0);
+    $winPb->Hide();
+    return("$STR{'errorMsg'}: $STR{'errorDownload'}...");
+  }
+
+}  #--- End downloadDTDB
 
 #--------------------------#
 sub saveConfig
@@ -7901,10 +9585,27 @@ sub loadConfig
   if (exists($$refConfig{'USERAGENT'}))             { $winConfig->tfUserAgent->Text($$refConfig{'USERAGENT'});                      }
   else                                              { $winConfig->tfUserAgent->Text('XL-Tools (http://www.le-tools.com)');
                                                      $$refConfig{'USERAGENT'} = 'XL-Tools (http://www.le-tools.com)';               } # Use Default
+  if (exists($$refConfig{'LOCAL_TIMEZONE'}))        { $winDTDB->cbLocalTZ->SetCurSel($$refConfig{'LOCAL_TIMEZONE'}); }
+  else { # Try to find local timezone, if not found, set to first visible in list
+    my $index = 0;
+    my $localTZ;
+    eval { $localTZ = DateTime::TimeZone->new(name => 'local'); };
+    if (!$@) { $index = $winDTDB->cbLocalTZ->FindStringExact($localTZ->{name}); }
+    $winDTDB->cbLocalTZ->SetCurSel($index);
+    $$refConfig{'LOCAL_TIMEZONE'} = $index;
+  }
+  if (exists($$refConfig{'OUTPUT_LANG'})) { $winDTDB->cbOutputLang->SetCurSel($$refConfig{'OUTPUT_LANG'}); }
+  else {
+    my $index = $winDTDB->cbOutputLang->FindStringExact('en-US'); # Use default
+    $winDTDB->cbOutputLang->SetCurSel($index);
+    $$refConfig{'OUTPUT_LANG'} = $index;
+  }
+  if (exists($$refConfig{'OUTPUT_CHARSET'}))        { $winDTDB->cbOutputCharset->SetCurSel($winDTDB->cbOutputCharset->FindString($$refConfig{'OUTPUT_CHARSET'})); }
+  else                                              { $winDTDB->cbOutputCharset->SetCurSel(0); $$refConfig{'OUTPUT_CHARSET'} = 'cp1252';                          } # Default is cp1252
   if (exists($$refConfig{'NO_RESULT_OPT'}))         {
     if ($$refConfig{'NO_RESULT_OPT'} == 1)          { $winConfig->rbNoResultOpt1->Checked(1); $winConfig->rbNoResultOpt2->Checked(0); }
     else                                            { $winConfig->rbNoResultOpt2->Checked(1); $winConfig->rbNoResultOpt1->Checked(0); }
-  } else                                            { $winConfig->rbNoResultOpt1->Checked(1);                                      } # Default is Opt1 : Leave a blank
+  } else                                            { $winConfig->rbNoResultOpt1->Checked(1);                                         } # Default is Opt1 : Leave a blank
   
   # MACOUIDB Database location
   if (exists($$refConfig{'MACOUI_DB_AUTO_UPDATE'})) { $winConfig->chMACOUIDBAutoUpt->Checked($$refConfig{'MACOUI_DB_AUTO_UPDATE'}); }
@@ -7918,13 +9619,17 @@ sub loadConfig
   if (exists($$refConfig{'GEOIP_DB_FILE'}) and
       -f $$refConfig{'GEOIP_DB_FILE'})              { $winConfig->tfGeoIPDB->Text($$refConfig{'GEOIP_DB_FILE'});                    }
   
+  # IIN Database location
+  if (exists($$refConfig{'IIN_DB_FILE'}) and
+      -f $$refConfig{'IIN_DB_FILE'})                { $winConfig->tfIINDB->Text($$refConfig{'IIN_DB_FILE'});                        }
+  
   # XL-Whois Database location
   if (exists($$refConfig{'XLWHOIS_DB_FILE'}) and
       -f $$refConfig{'XLWHOIS_DB_FILE'})            { $winConfig->tfXLWHOISDB->Text($$refConfig{'XLWHOIS_DB_FILE'});                }
   
-  # IIN Database location
-  if (exists($$refConfig{'IIN_DB_FILE'}) and
-      -f $$refConfig{'IIN_DB_FILE'})                { $winConfig->tfIINDB->Text($$refConfig{'IIN_DB_FILE'});                        }
+  # Datetime Database location
+  if (exists($$refConfig{'DT_DB_FILE'}) and
+      -f $$refConfig{'DT_DB_FILE'})                { $winConfig->tfDTDB->Text($$refConfig{'DT_DB_FILE'});                           }
   
   # Custom Functions
   my $j = 1;
