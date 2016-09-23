@@ -2,10 +2,12 @@
 # Perl - v: 5.16.3
 #------------------------------------------------------------------------------#
 # XL-ToolsLang.pl : Strings for XL-Tools
-# Website         : http://le-tools.com/
-# GitHub		      : https://github.com/arioux/XL-Tools
+# WebSite				  : http://le-tools.com/XL-Tools.html
+# CodePlex			  : https://xltools2.codeplex.com/
+# GitHub				  : https://github.com/arioux/XL-Tools
+# Documentation	  : http://le-tools.com/XL-ToolsDoc.html
 # Creation        : 2015-12-21
-# Modified        : 2016-04-08
+# Modified        : 2016-08-25
 # Author          : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
@@ -123,6 +125,7 @@ sub loadDefaultStr
   $$refSTR{'errorConnection'} = 'Connection error';
   $$refSTR{'invalidInput'}    = 'Invalid input';
   $$refSTR{'noMatch'}         = 'No match';
+  $$refSTR{'errorDB'}         = 'Error database';
   $$refSTR{'errorConnectDB'}  = 'Error connecting to database';
   $$refSTR{'errorConRemote'}  = 'Error connecting to remote site';
   $$refSTR{'errorDownload'}   = 'Error downloading the database';
@@ -147,7 +150,9 @@ sub loadDefaultStr
   $$refSTR{'Regex'}         = 'Regex';
   $$refSTR{'Eval'}          = 'Eval';
   $$refSTR{'ResetContent'}  = 'Reset content';
+  $$refSTR{'btnList1UseRes'} = 'Copy data from results';
   $$refSTR{'Results'}       = 'Results';
+  $$refSTR{'resInFile'}     = 'Use file';
   $$refSTR{'ViewReport'}    = 'View the report';
   $$refSTR{'lblNotReady'}   = 'Not Ready ? Click here';
   $$refSTR{'notReady'}      = 'Not ready';
@@ -203,6 +208,7 @@ sub loadDefaultStr
   $$refSTR{'cbSorts3'}      = 'String length';
   $$refSTR{'cbSorts4'}      = 'IPv4 Address';
   $$refSTR{'cbSorts5'}      = 'Date and time';
+  $$refSTR{'cbSorts6'}      = 'Randomize';
   $$refSTR{'Ascending'}     = 'Ascending';
   $$refSTR{'Descending'}    = 'Descending';
   

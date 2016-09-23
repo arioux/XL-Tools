@@ -1,16 +1,18 @@
 #!/usr/bin/perl
 # Perl - v: 5.16.3
 #------------------------------------------------------------------------------#
-# Tool name   : XL-Tools
-# Website     : http://le-tools.com/
-# GitHub		  : https://github.com/arioux/XL-Tools
-# Description : Part of the XL-Toolkit, XL-Tools provides a bunch of functions
-#               for list of strings like sorting, converting, replacing, date
-#               and time utilities, etc.
-# Creation    : 2015-12-21
-# Modified    : 2016-08-07
-my $VERSION   = "3.0";
-# Author      : Alain Rioux (admin@le-tools.com)
+# Tool name     : XL-Tools
+# WebSite				: http://le-tools.com/XL-Tools.html
+# CodePlex			: https://xltools2.codeplex.com/
+# GitHub				: https://github.com/arioux/XL-Tools
+# Documentation	: http://le-tools.com/XL-ToolsDoc.html
+# Description   : Part of the XL-Toolkit, XL-Tools provides a bunch of functions
+#                 for list of strings like sorting, converting, replacing, date
+#                 and time utilities, etc.
+# Creation      : 2015-12-21
+# Modified      : 2016-09-23
+my $VERSION     = "3.1";
+# Author        : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
 #
@@ -117,7 +119,7 @@ my ($winICO, $logoBmp, $logo128Bmp, $fileOpenBmp, $deleteBmp, $viewReportBmp, $d
     $processBmp, $stopBmp, $config32Bmp, $helpBmp, $aboutBmp, $config128Bmp, $fileNewBmp,
     $database16, $import16Bmp, $addCFBmp, $remCFBmp, $editCFBmp, $newCFBmp, $saveCFBmp,
     $cancelCFBmp, $checkBmp, $errorBmp, $left16Bmp, $help16Bmp, $datetime16Bmp, $guess16Bmp,
-    $datetimeAdd, $datetimeEdit, $datetimeDel) = &loadGraph();
+    $datetimeAdd, $datetimeEdit, $datetimeDel, $useResBmp) = &loadGraph();
 
 #------------------------------------------------------------------------------#
 # Strings
@@ -369,7 +371,7 @@ $win->AddCombobox(    -name        => 'cbSorts'               ,
                       -visible     => 0                       , );
 $win->cbSorts->Add(   $STR{'cbSorts1'} , $STR{'cbSorts2'}     ,
                       $STR{'cbSorts3'} , $STR{'cbSorts4'}     ,
-                      $STR{'cbSorts5'}                        , );
+                      $STR{'cbSorts5'} , $STR{'cbSorts6'}     , );
 $win->AddRadioButton( -name       => 'rbAsc'                  ,
                       -size       => [100, 22]                ,
                       -pos        => [560, 30]                ,
@@ -777,6 +779,12 @@ $win->AddButton(      -name        => 'btnList1Del'           ,
                       -pos         => [ 31,125]               ,
                       -bitmap      => $deleteBmp              ,
                       -tip         => $STR{'ResetContent'}    , );
+$win->AddButton(      -name        => 'btnList1UseRes'        ,
+                      -size        => [ 22, 22]               ,
+                      -pos         => [ 55,125]               ,
+                      -bitmap      => $useResBmp              ,
+                      -tip         => $STR{'btnList1UseRes'}  ,
+                      -disabled    => 1                       , );
 $win->AddLabel(       -name        => 'lblList1Count'         ,
                       -size        => [ 60, 22]               ,
                       -pos         => [$winWidth/3.18-68, 128],
@@ -796,7 +804,7 @@ $win->AddSplitter(    -name        => 'split1'                ,
                       -vertical    => 1                       ,
                       -size        => [  2, $winHeight-190]   ,
                       -pos         => [$winWidth/3.2+7,100]   ,
-                      -min         => 200                     ,
+                      -min         => 300                     ,
                       -max         => $win->ScaleWidth()/2    ,
                       -onRelease   => \&split1                ,
                       -visible     => 0                       , );
@@ -846,14 +854,20 @@ $win->AddSplitter(    -name        => 'split2'                ,
 $win->AddGroupbox(    -name        => 'gbList3'               ,
                       -title       => $STR{'Results'}         ,
                       -size        => [$winWidth/2.98, $winHeight-200] ,
-                      -pos         => [$winWidth/3.2+$winWidth/3.2+16,105]  ,
+                      -pos         => [$winWidth/3.2+$winWidth/3.2+16,105],
                       -font        => $fontGB                 ,
                       -background  => [255, 255, 255]         , );
 $win->AddButton(      -name        => 'btnList3Open'          ,
                       -size        => [ 22, 22]               ,
-                      -pos         => [$winWidth/3.2+$winWidth/3.2+17,125]  ,
+                      -pos         => [$winWidth/3.2+$winWidth/3.2+17,125],
                       -bitmap      => $viewReportBmp          ,
                       -tip         => $STR{'ViewReport'}      , );
+$win->AddCheckbox(    -name        => 'chList3InFile'         ,
+                      -size        => [100, 22]               ,
+                      -pos         => [$winWidth/3.2+$winWidth/3.2+46,125],
+                      -text        => $STR{'resInFile'}       ,
+                      -background  => [255, 255, 255]         ,
+                      -font        => $font10                 , );
 $win->AddLabel(       -name        => 'lblList3Count'         ,
                       -size        => [ 60, 22]               ,
                       -pos         => [$winWidth-87, 128]     ,
@@ -1595,7 +1609,6 @@ $winConfig->AddButton(      -name        => 'btnDTDBUpt'            ,
                             -tip         => $STR{'downloadDB'}      ,
                             -visible     => 0                       , );
 
-
 #------------------------------------------------------------------------------#
 # Simple Progress window
 #------------------------------------------------------------------------------#
@@ -1669,7 +1682,7 @@ if (-T $CONFIG_FILE) {
   &loadConfig(\%CONFIG);
   
   # Load the Datetime Database
-  if (-f $CONFIG{'DT_DB_FILE'} and &validDTDB($CONFIG{'DT_DB_FILE'})) {
+  if ($CONFIG{'DT_DB_FILE'} and -f $CONFIG{'DT_DB_FILE'} and &validDTDB($CONFIG{'DT_DB_FILE'})) {
     &loadDTDB;
     &cbInputDTFormatAddITems();
     $win->cbInputDTFormat->SetCurSel(0);
@@ -1783,7 +1796,10 @@ sub winMain_Resize
   # Lists
   # Adjusts splitter position
   my $split1Pos;
-  if ($SPLIT1_CURR_POS) { $split1Pos = $win->ScaleWidth()/$SPLIT1_CURR_POS; }
+  if ($SPLIT1_CURR_POS) {
+    $split1Pos = $win->ScaleWidth()/$SPLIT1_CURR_POS;
+    if ($split1Pos < 300) { $split1Pos = 300; }
+  }
   else {
     $split1Pos = $win->split1->Left();
     $SPLIT1_CURR_POS = $win->ScaleWidth()/$split1Pos;
@@ -1796,7 +1812,7 @@ sub winMain_Resize
   }
   $win->split1->Max($win->ScaleWidth()/2);
   if ($LIST2_VISIBLE) { $win->split2->Min($win->ScaleWidth()/2); }
-  else                { $win->split2->Min(200);                  }
+  else                { $win->split2->Min(300);                  }
   $win->split2->Max($win->ScaleWidth()-200);
   $win->split1->Left($split1Pos);
   $win->split1->Height($win->ScaleHeight()-150);
@@ -1827,6 +1843,7 @@ sub winMain_Resize
   $win->gbList3->Left($split2Pos+5);
   $win->gbList3->Resize($win->ScaleWidth()-$split2Pos-8, $win->ScaleHeight()-162);
   $win->btnList3Open->Left($split2Pos+9);
+  $win->chList3InFile->Left($split2Pos+36);
   $win->lblList3Count->Left($win->ScaleWidth()-70);
   $win->tfList3->Left($split2Pos+9);
   $win->tfList3->Resize($win->ScaleWidth()-$split2Pos-16, $win->ScaleHeight()-212);
@@ -1940,6 +1957,7 @@ sub split2
   $win->gbList3->Width($win->ScaleWidth() - $left - 9);
   $win->gbList3->Left($left + 5);
   $win->btnList3Open->Left($left+9);
+  $win->chList3InFile->Left($left+36);
   $win->lblList3Count->Left($win->ScaleWidth()-70);
   $win->tfList3->Left($left+9);
   $win->tfList3->Width($win->ScaleWidth()-$left-16);
@@ -1983,7 +2001,7 @@ sub hideList2
   $win->split2->Left($win->ScaleWidth()/2);
   &split1(undef, $win->ScaleWidth()/2);
   &split2(undef, $win->ScaleWidth()/2);
-  $win->split2->Min(200);
+  $win->split2->Min(300);
   
 }  #--- End hideList2
 
@@ -2224,8 +2242,6 @@ sub Tab_Click
   } elsif ($win->Tab->SelectedItem() == 3) {
     $win->cbTime->Show();
     if ($win->cbTime->GetCurSel() == -1) { $win->cbTime->SetCurSel(0); }
-    $win->lblDTParser->Show();
-    $win->cbDTParser->Show();
     $win->cbInputTimeType->ResetContent();
     $win->cbInputTimeType->Add($STR{'datetime'}, $STR{'chromeTime'}, $STR{'LDAPTime'}, $STR{'Filetime'}, $STR{'SystemTime'}, );
     $win->cbInputTimeType->SetCurSel(0);
@@ -2661,11 +2677,12 @@ sub cbSorts_Change
 {
   # Local variables
   my $selFunc = $win->cbSorts->GetCurSel();
-  # Possibles value are 0 = 'Alphabetical order', 1 = 'Numerical order', 2 = 'String length', 3 = 'IPv4 Address', 4 = 'Date and time'
+  # Possibles value are 0 = 'Alphabetical order', 1 = 'Numerical order', 2 = 'String length', 3 = 'IPv4 Address', 4 = 'Date and time', 5 = 'Random'
   
   # Hide List 2
   &hideList2();
   
+  # Date and time options
   if ($selFunc == 4) {
     $win->lblInputType->Show();
     $win->cbInputTimeType->Show();
@@ -2678,6 +2695,15 @@ sub cbSorts_Change
     $win->cbInputDTFormat->Hide();
     $win->btnOpenDTDB->Hide();
     $win->btnInputFormatGuess->Hide();
+  }
+  
+  # Random
+  if ($selFunc == 5) {
+    $win->rbAsc->Hide();
+    $win->rbDsc->Hide();
+  } else {
+    $win->rbAsc->Show();
+    $win->rbDsc->Show();
   }
   
   &isProcessReady(0);
@@ -3405,7 +3431,7 @@ sub loadDTDB
       
       $dbh->disconnect();
       return(1);
-    } else { Win32::GUI::MessageBox($win, $STR{'errTableLoggingDB'}, $STR{'error'}, 0x40010); return(0); }
+    } else { Win32::GUI::MessageBox($win, $STR{'errorDB'}, $STR{'error'}, 0x40010); return(0); }
   } else { return(0); }
 
 }  #--- End loadDTDB
@@ -3534,10 +3560,14 @@ sub cbTime_Change
     $win->cbInputTimeType->ResetContent();
     $win->cbInputTimeType->Add($STR{'datetime'});
     $win->cbInputTimeType->SetCurSel(0);
+    $win->lblDTParser->Hide(); # Parse context
+    $win->cbDTParser->Hide();
   } else {
     $win->cbInputTimeType->ResetContent();
     $win->cbInputTimeType->Add($STR{'datetime'}, $STR{'chromeTime'}, $STR{'LDAPTime'}, $STR{'Filetime'}, $STR{'SystemTime'}, );
     $win->cbInputTimeType->SetCurSel(0);
+    $win->lblDTParser->Show(); # Parse context
+    $win->cbDTParser->Show();
   }
   
   # Time difference options
@@ -3735,6 +3765,18 @@ sub btnList1Del_Click
 }  #--- End btnList1Del_Click
 
 #--------------------------#
+sub btnList1UseRes_Click
+#--------------------------#
+{
+  if ($win->tfList3->Text()) {
+    $win->tfList1->Text($win->tfList3->Text());
+  }
+  
+  &isProcessReady(0);
+
+}  #--- End btnList1UseRes_Click
+
+#--------------------------#
 sub tfList1_Change
 #--------------------------#
 {
@@ -3863,6 +3905,15 @@ sub btnList3Open_Click
   }
 
 }  #--- End btnList3Open_Click
+
+#--------------------------#
+sub tfList3_Change
+#--------------------------#
+{
+  if ($win->tfList3->Text()) { $win->btnList1UseRes->Enable();  }
+  else                       { $win->btnList1UseRes->Disable(); }
+  
+}  #--- End tfList3_Change
 
 #--------------------------#
 # CTRL + A (Select All)
@@ -4013,8 +4064,8 @@ sub isProcessReady
         if (!-e $IINFile) { $nextStep = $STR{'insertIIN'}; }
       }
       
-      # In 'Custom functions', a function must be selected
-      elsif ($selFunc == 11 and $win->cbCFLists->GetCurSel() == 0) {
+      # In 'Custom functions', a function must be selected, except if we are adding or modifying a function
+      elsif ($selFunc == 11 and !$win->cbCFLists->GetCurSel() and !$win->tfCFTitle->IsVisible()) {
         $nextStep = $STR{'selectFunc'};
       }
     }
@@ -4209,21 +4260,19 @@ sub btnAbout_Click
                         -size        => [ 90, 75]               ,
                         -pos         => [140, 10]               ,
                         -font        => $font10                 ,
-                        -foreground  => [0  , 0  , 102]         ,
                         -background  => [255, 255, 255]         ,
                         -text        => "$STR{'version'}:\n$STR{'website'}:\n$STR{'author'}:\n$STR{'translatedBy'}:", );
   $winAbout->AddLabel(  -name        => 'lblAbout2'             ,
                         -size        => [230, 75]               ,
                         -pos         => [235, 10]               ,
-                        -font        => $font10                 ,
-                        -foreground  => [185, 154,   0]         ,
+                        -font        => $font10b                ,
+                        -foreground  => [204,   0,  51]         ,
                         -background  => [255, 255, 255]         ,
                         -text        => "$VERSION\nhttp://www.le-tools.com\nAlain Rioux (admin\@le-tools.com)\n$STR{'translatorName'}", );
   $winAbout->AddLabel(  -name        => 'lblAbout3'             ,
                         -size        => [300, 20]               ,
                         -pos         => [140, 80]               ,
                         -font        => $font10                 ,
-                        -foreground  => [0  , 0  , 102]         ,
                         -background  => [255, 255, 255]         ,
                         -text        => '© Copyright 2015-2016 Alain Rioux', );
   
@@ -4276,18 +4325,21 @@ sub writeResults
   if ($$refItems) {
     my $nbrChars = length($$refItems);
     # Max of chars reached or exceeded
-    if ($nbrChars >= $win->tfList3->MaxLength()) {
-      # Ask to write results in a file
-      my $answer = Win32::GUI::MessageBox($win, $STR{'saveToFileMsg'}, $STR{'saveToFile'}, 0x40023);
-      
-      # Cancel (2)
-      if ($answer == 2) { return; }
-      
-      # No (7), write truncated text
-      elsif ($answer == 7) { $win->tfList3->Text($$refItems); }
+    if ($nbrChars >= $win->tfList3->MaxLength() or $win->chList3InFile->Checked()) {
+      my $answer;
+      if (!$win->chList3InFile->Checked()) {
+        # Ask to write results in a file
+        $answer = Win32::GUI::MessageBox($win, $STR{'saveToFileMsg'}, $STR{'saveToFile'}, 0x40023);
+        
+        # Cancel (2)
+        if ($answer == 2) { return; }
+        
+        # No (7), write truncated text
+        elsif ($answer == 7) { $win->tfList3->Text($$refItems); }
+      }
       
       # Yes
-      else {
+      if (($answer and $answer == 6) or $win->chList3InFile->Checked()) {
         # Extract directory of the input file
         my $first  = $win->tfList1->GetLine(0);
         my $resDir = '';
@@ -4312,11 +4364,14 @@ sub writeResults
             foreach (@tab) { print $fh "$_\n"; $nbrItems++; }
             close($fh);
             $win->tfList3->Text("\"$file\"");
+            &tfList3_Change();
           } else { Win32::GUI::MessageBox($win, "$STR{'errorWriting'}: ".$!, $STR{'error'}, 0x40010); }
         }
       }
     } else {
+      $$refItems = encode($CONFIG{'OUTPUT_CHARSET'}, $$refItems);
       $win->tfList3->Text($$refItems);
+      &tfList3_Change();
       $nbrItems = $win->tfList3->GetLineCount() - 1;
     }
   }
@@ -5261,6 +5316,9 @@ sub sortingTabFunc
                 sort {$b->[1] cmp $a->[1]}
                   map { [$_, (str2Epoch($_, $sample, $pattern, $regex, 0, $timezone))[0]] } @{$refList1};
     }
+  # Random
+  } elsif ($selFunc == 5) {
+    for (my $i = $nbrItems; $i > 0; $i--) { push(@items, splice(@{$refList1}, rand($i), 1)); }
   }
 
   # Format results
@@ -6421,7 +6479,8 @@ sub utilsTabFunc
     if ($selFuncStr and $selFuncStr ne $STR{'cbCFLists'}.'...') {
       my $j = 1;
       while (exists($CONFIG{'CF'.$j})) {
-        if ($CONFIG{'CF'.$j} =~ /$selFuncStr\|/) {
+        my $selFuncStrQuoted = quotemeta($selFuncStr);
+        if ($CONFIG{'CF'.$j} =~ /$selFuncStrQuoted\|/) {
           ($title, $dbFile) = split(/\|/, $CONFIG{'CF'.$j});
           &saveConfig(\%CONFIG);
           last;
@@ -6869,7 +6928,8 @@ sub btnCFRem_Click
     if ($selFuncStr and $selFuncStr ne $STR{'cbCFLists'}.'...') {
       my $j = 1;
       while (exists($CONFIG{'CF'.$j})) {
-        if ($CONFIG{'CF'.$j} =~ /$selFuncStr\|/) {
+        my $selFuncStrQuoted = quotemeta($selFuncStr);
+        if ($CONFIG{'CF'.$j} =~ /$selFuncStrQuoted\|/) {
           ($title, $dbFile) = split(/\|/, $CONFIG{'CF'.$j});
           $index = $j;
           delete($CONFIG{'CF'.$j});
@@ -6921,7 +6981,8 @@ sub btnCFEdit_Click
   if ($selFuncStr and $selFuncStr ne $STR{'cbCFLists'}.'...') {
     my $j = 1;
     while (exists($CONFIG{'CF'.$j})) {
-      if ($CONFIG{'CF'.$j} =~ /$selFuncStr\|/) {
+      my $selFuncStrQuoted = quotemeta($selFuncStr);
+      if ($CONFIG{'CF'.$j} =~ /$selFuncStrQuoted\|/) {
         ($title, $dbFile) = split(/\|/, $CONFIG{'CF'.$j});
         last;
       }
@@ -6998,7 +7059,8 @@ sub btnCFSave_Click
     # Verify if function already exists
     my $j = 1;
     while (exists($CONFIG{'CF'.$j})) {
-      if ($CONFIG{'CF'.$j} =~ /$title\|/) {
+      my $titleQuoted = quotemeta($title);
+      if ($CONFIG{'CF'.$j} =~ /$titleQuoted\|/) {
         $dbFile  = (split(/\|/, $CONFIG{'CF'.$j}))[1];
         $indexCF = $j;
         last;
@@ -7664,7 +7726,7 @@ sub configTab_Click
 #--------------------------#
 {
   # Show General tab
-  if ($winConfig->configTab->SelectedItem() == 0) {
+  if (!$winConfig->configTab->SelectedItem()) {
     # General tab
     $winConfig->lblToolShadowT->Show();
     $winConfig->lblToolT->Show();
@@ -7848,7 +7910,7 @@ sub updateTool
   
   # Download the version file  
   my $ua = new LWP::UserAgent;
-  $ua->agent('XL-Tools Update $VERSION');
+  $ua->agent("XL-Tools Update $VERSION");
   $ua->default_header('Accept-Language' => 'en');
   my $req = new HTTP::Request GET => $URL_VER;
   my $res = $ua->request($req);

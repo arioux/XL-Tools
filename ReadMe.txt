@@ -43,7 +43,7 @@ Link for the database is http://standards-oui.ieee.org/oui.txt.
 For icons:
 
 The main logo of XL-Tools have been created by Saki (Alexandre Moore, 
-http://sa-ki.deviantart.com/) and distributed on term of the GNU 
+http://sa-ki.deviantart.com) and distributed on term of the GNU 
 General Public License.
 
 The icon used for Process button come from Danish Royalty Free Icons 
@@ -55,7 +55,7 @@ been created by Oxygen Team (http://www.oxygen-icons.org) and distributed
 on term of the GNU Lesser General Public License.
 
 A lot of icons used for buttons come from the Blue Bits collection of 
-Icojam (http://www.icojam.com/, licensed as "Public Domain") like config, 
+Icojam (http://www.icojam.com, licensed as "Public Domain") like config, 
 about, open file, delete, check update, import database, etc.
 
 Stop icon has been created by emey87 (Manuel Lopez, emey87.deviantart.com) 
@@ -66,7 +66,11 @@ come from Farm Fresh Icons by Fatcow Web Hosting (http://www.fatcow.com/free-ico
 and are distributed on term of the CC Attribution 4.0 license.
 
 The check icon used in Configuration Wizard has been created by Cheezen (Anders 
-Bjarnle, http://cheezen.deviantart.com/) and distributed as freeware.
+Bjarnle, http://cheezen.deviantart.com) and distributed as freeware.
+
+The Copy data from results icon has been created by Yusuke Kamiyamane 
+(http://p.yusukekamiyamane.com) and is licensed under a Creative Commons 
+Attribution 4.0 License.
 
 
 

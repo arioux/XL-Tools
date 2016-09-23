@@ -7359,7 +7359,6 @@ wMDqrKzkrKzjra3kr6/kwsLrurrnmZnd+Pj9////////////////////////3t70r6/kqqrira3j
 ra3jqqrisLDk39/0////////////////
 ) );
   
-    
   my $left16Bmp = Win32::GUI::BitmapInline->new( q(
 Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA////
 ////////////////8vLy7+/v6enp7+/v////////////////////////////////////////5ubm
@@ -7537,12 +7536,30 @@ gqP8gqP8gqL8faD+lZmmu7avdYSrf6L+gaL8VH/5w8jV////////////8PL6rb/wnbPvlarke4ah
 ////////////////////
 ) );
   
+  my $useResBmp = Win32::GUI::BitmapInline->new( q(
+Qk02AwAAAAAAADYAAAAoAAAAEAAAABAAAAABABgAAAAAAAADAADEDgAAxA4AAAAAAAAAAAAA////
++/v75+fn0dHRzMzMuKKMrXE1uKKM0NDQ2NjY4ODg6urq9PT0+/v7/////////////f398/Pz6Ojo
+wKqTsHQ3/7wesHQ3wquV6+vr7+/v9PT0+fn5/f39////////////////////3cKntHg6/8Aq/7IB
+/74ktHg63cKn////////////////////////////////4MWouX09+8I++K4J+K4J+K4J+r0wuX09
+4MWo////////////////////////4seqvYFB9sRT87Y08a4l7qcX8K0j8rMt9Ls/vYFB4seq////
+////////////////0aRzw4dFw4dFw4dF6bFD4p8m6a4/w4dFw4dFw4dF0aRz////////////////
+////////////////yIxJ465S2Jg24qxPyIxJ////////////////////////////////////////
+////zZJO361ez5JB3apbzZJO////////////////////////////////////////////1JhS5bVp
+zZFF3Ktf1JhS/fr3////////////////////////////////////////2Z5Y9cd76a1h57Jm36hg
+7dGv/fv4////////////////////////////////////4Kdj9ch977Nn77Vp88V55a5k36Nb3qJa
+3qJa57qE////////////////////////6r2F9Md8871x87tv87xw9sZ6+MyA+MyA+tOH46dd////
+////////////////////9+TM67Rp+tKG+sl9+ch8+ch8+ch8+ch8/NSI56th////////////////
+///////////+9NSr7rdr+dCE/diM/tqO/tqO/tqO/96S669k////////////////////////////
+///++ebO8sSM7rZu7rJo7bFm7bFm7bFm8sWM////////////////////////////////////////
+////////////////////////////////
+) );
+  
   return( $winICO, $logoBmp, $logo128Bmp, $fileOpenBmp, $deleteBmp, $viewReportBmp,
           $downloadBmp, $processBmp, $stopBmp, $config32Bmp, $helpBmp, $aboutBmp,
           $config128Bmp, $fileNewBmp, $database16, $import16Bmp, $addCFBmp, $remCFBmp,
           $editCFBmp, $newCFBmp, $saveCFBmp, $cancelCFBmp, $checkBmp, $errorBmp,
           $left16Bmp, $help16Bmp, $datetime16Bmp, $guess16Bmp, $datetimeAdd, $datetimeEdit,
-          $datetimeDel);
+          $datetimeDel, $useResBmp);
 }
 
 #------------------------------------------------------------------------------#
