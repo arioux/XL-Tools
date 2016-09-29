@@ -10,8 +10,8 @@
 #                 for list of strings like sorting, converting, replacing, date
 #                 and time utilities, etc.
 # Creation      : 2015-12-21
-# Modified      : 2016-09-23
-my $VERSION     = "3.1";
+# Modified      : 2016-09-29
+my $VERSION     = "3.2";
 # Author        : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
@@ -1113,7 +1113,7 @@ $winDTObj->cbDTObjPattern->Add($STR{'pattern1'} , $STR{'pattern2'} , $STR{'patte
                                $STR{'pattern10'}, $STR{'pattern11'}, $STR{'pattern12'},
                                $STR{'pattern13'}, $STR{'pattern14'}, $STR{'pattern15'},
                                $STR{'pattern16'}, $STR{'pattern17'}, $STR{'pattern18'},
-                               $STR{'pattern19'}, $STR{'pattern21'}, );
+                               $STR{'pattern19'}, $STR{'pattern20'}, $STR{'pattern21'}, );
 $winDTObj->cbDTObjPattern->SetCurSel(0);
 $winDTObj->AddButton(         -name         => 'btnDTObjPatternHelp'   ,
                               -size         => [ 24, 24]               ,
@@ -3976,8 +3976,13 @@ sub isProcessReady
       } elsif (!$nbrList1) { $nextStep = $STR{'insertList1'}; }
         
       # Some functions require a value in With textfield
-      if (($selFunc == 9 or $selFunc == 10 or $selFunc == 11 or $selFunc == 12) and !$win->tfWith->Text()) {
+      if (($selFunc == 9 or $selFunc == 10 or $selFunc == 12) and !$win->tfWith->Text()) {
         $nextStep = $STR{'insertWith'};
+      }
+      
+      # Some functions require a value in Columns textfield
+      if (($selFunc == 10 or $selFunc == 11 or $selFunc == 12) and !$win->tfColumnsNo->Text()) {
+        $nextStep = $STR{'insertColumns'};
       }
       
       # Replace function require value in Replace textfield
@@ -4302,7 +4307,7 @@ sub enumItems
     } else { Win32::GUI::MessageBox($win, "$STR{'errorReading'}: ".$!, $STR{'error'}, 0x40010); }
   } else {
     # Items are in the textfield
-    if (length($$refList->GetLine(0)) == 0 and !$$refList->GetLine(1)) { return(\@items); }
+    #if (length($$refList->GetLine(0)) == 0 and !$$refList->GetLine(1)) { return(\@items); }
     for (my $i = 0; $i < $$refList->GetLineCount(); $i++) {
       my $item = $$refList->GetLine($i);
       chomp($item);

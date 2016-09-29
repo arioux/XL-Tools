@@ -160,6 +160,7 @@ sub loadDefaultStr
   $$refSTR{'insertList1'}   = 'Insert items in List 1.';
   $$refSTR{'insertLists'}   = 'Insert items in List 1 or in List 2.';
   $$refSTR{'insertWith'}    = 'Insert a value in With textfield. See documentation about this function.';
+  $$refSTR{'insertColumns'} = 'Insert a value in Columns textfield. See documentation about this function.';
   $$refSTR{'insertReplace'} = 'Insert value in Replace textfield. See documentation about this function.';
   $$refSTR{'insertSameNbr'} = 'You must insert the same number of items in both List 1 and List 2.';
   $$refSTR{'setOutputFormat'} = 'You must select a different output format for this input type.';
