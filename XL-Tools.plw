@@ -10,8 +10,8 @@
 #                 for list of strings like sorting, converting, replacing, date
 #                 and time utilities, etc.
 # Creation      : 2015-12-21
-# Modified      : 2016-09-29
-my $VERSION     = "3.2";
+# Modified      : 2016-11-27
+my $VERSION     = "3.3";
 # Author        : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
@@ -110,6 +110,32 @@ my $LIST2_VISIBLE = 0;                                                         #
 my $SPLIT1_CURR_POS;                                                           # Current pos of split 1, change when splitter is moved
 my $SPLIT2_CURR_POS;                                                           # Current pos of split 2, change when splitter is moved
 my $TOTAL_SIZE   :shared = 0;                                                  # Total size for download
+my %ZONE_MAP = ('ADT'    => '-0300', # Atlantic Daylight Time                  # Ambiguous timezones
+                'AST'    => '-0400', # Atlantic Standard Time
+                'BST'    => '+0100', # British Summer Time
+                'BT'     => '+0600', # Baghdad Time
+                'CAT'    => '+0200', # Central Africa Time
+                'CCT'    => '+0630', # Cocos Islands Time
+                'CDT'    => '-0500', # Central Daylight Time
+                'CST'    => '-0600', # Central Standard Time
+                'EAST'   => '-0600', # Easter Island Standard Time
+                'ECT'    => '-0500', # Ecuador Time
+                'EDT'    => '-0400', # Eastern Daylight Time
+                'EST'    => '-0500', # Eastern Standard Time
+                'FDT'    => '-0100', # Fernando de Noronha Daylight Time
+                'FST'    => '-0200', # Fernando de Noronha Standard Time
+                'GST'    => '-0200', # South Georgia Time
+                'IDT'    => '+0300', # Israel Daylight Time
+                'IST'    => '+0200', # Israel Standard Time
+                'MET'    => '+0100', # Middle European Time
+                'NFT'    => '-0230', # Newfoundland Daylight Time
+                'NST'    => '-0330', # Newfoundland Standard Time
+                'PST'    => '-0800', # Pacific Standard Time
+                'SAST'   => '+0200', # South Africa Standard Time
+                'SST'    => '+0800', # Singapore Standard Time
+                'WAST'   => '+0200', # West Africa Summer Time
+                'WST'    => '+0800', # Western Standard Time}
+              );
 
 #------------------------------------------------------------------------------#
 # Graphic elements
@@ -1014,9 +1040,9 @@ $winDTDB->AddLabel(       -name         => 'lblOutputLang'         ,
                           -size         => [120, 22]               ,
                           -pos          => [  5,333]               ,
                           -background   => [255, 255, 255]         ,
-                          -text         => $STR{'outputLang'}.':'  ,
+                          -text         => $STR{'defaultLang'}.':' ,
                           -font         => $font10                 , );
-$winDTDB->AddCombobox(    -name         => 'cbOutputLang'          ,
+$winDTDB->AddCombobox(    -name         => 'cbDefaultLang'         ,
                           -size         => [140,100]               ,
                           -pos          => [130,330]               ,
                           -font         => $font10                 ,
@@ -1677,7 +1703,7 @@ if (-T $CONFIG_FILE) {
   
   # List of language
   my @lang = DateTime::Locale->ids();
-  foreach (sort @lang) { $winDTDB->cbOutputLang->Add($_); }
+  foreach (sort @lang) { $winDTDB->cbDefaultLang->Add($_); }
   
   &loadConfig(\%CONFIG);
   
@@ -2756,7 +2782,7 @@ sub findInputDTFormat
       my $pattern = $winDTDB->gridDT->GetCellText($i, 1);
       # Format
       my $partItem = $1 =~ s/ +/ /gr;
-      my $strp = DateTime::Format::Strptime->new(pattern => $pattern);
+      my $strp     = DateTime::Format::Strptime->new(pattern => $pattern, zone_map => \%ZONE_MAP, locale => $CONFIG{'DEFAULT_LANG'},);
       if (my $dt = $strp->parse_datetime($partItem)) {
         my $timezone;
         if ($winDTDB->gridDT->GetCellText($i, 3) eq 'local') { $timezone = $winDTDB->cbLocalTZ->GetString($winDTDB->cbLocalTZ->GetCurSel()); }
@@ -2803,6 +2829,19 @@ sub gridDT_Click
   return(1);
 
 }  #--- End gridDT_Click
+
+#--------------------------#
+sub gridDT_DblClick
+#--------------------------#
+{
+  # Local variables
+  my ($row, $column) = @_;
+  
+  &btnDTEdit_Click();
+
+  return(1);
+
+}  #--- End gridDT_DblClick
 
 #--------------------------#
 sub sortGridDT
@@ -2947,9 +2986,12 @@ sub patternRE
   my $formatREStr = shift;
   
   # Possibles value are:
-  my %formatRE = ('%A' => '(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)', # full weekday name
-                  '%a' => '(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)', # abbreviated weekday name
-                  '%B' => '(?:January|February|March|April|May|June|July|August|September|October|November|December)', # full month name
+  my %formatRE = ('%A' => '\w+', # full weekday name, since 3.3 (to fit any language)
+                  #'%A' => '(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)', # full weekday name
+                  '%a' => '\w+', # abbreviated weekday name, since 3.3 (to fit any language)
+                  #'%a' => '(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)', # abbreviated weekday name
+                  '%B' => '\w+', # full month name, since 3.3 (to fit any language)
+                  #'%B' => '(?:January|February|March|April|May|June|July|August|September|October|November|December)', # full month name
                   '%b' => '(?:Jan|Feb|Mar|Apr|May|June|July|Aug|Sept|Oct|Nov|Dec)', # abbreviated month name
                   '%C' => '\d{2}', # (year / 100) as decimal number; single digits are preceded by a zero.
                   '%D' => '\d{2}\/\d{2}\/\d{2}', # %m/%d/%y
@@ -3101,7 +3143,7 @@ sub isDTObjReady
       
       # Test regex and pattern
       if (!$nextStep) {
-        my $strp = DateTime::Format::Strptime->new(pattern => $pattern);
+        my $strp = DateTime::Format::Strptime->new(pattern => $pattern, zone_map => \%ZONE_MAP, locale => $CONFIG{'DEFAULT_LANG'},);
         if ($sample =~ /$regex/i and my $parsedPattern = $strp->parse_datetime($sample)) {
           $winDTObj->lblDTObjParsedData->Text($parsedPattern->strftime($pattern));
           
@@ -3470,7 +3512,7 @@ sub winDTDB_Resize
   $winDTDB->lblLocalTZ->Top($winDTDB->ScaleHeight()-57);
   $winDTDB->cbLocalTZ->Top($winDTDB->ScaleHeight()-60);
   $winDTDB->lblOutputLang->Top($winDTDB->ScaleHeight()-27);
-  $winDTDB->cbOutputLang->Top($winDTDB->ScaleHeight()-30);
+  $winDTDB->cbDefaultLang->Top($winDTDB->ScaleHeight()-30);
   $winDTDB->lblOutputCharset->Top($winDTDB->ScaleHeight()-27);
   $winDTDB->cbOutputCharset->Top($winDTDB->ScaleHeight()-30);
   $winDTDB->lblDefaultOutput->Top($winDTDB->ScaleHeight()-27);
@@ -5307,7 +5349,7 @@ sub sortingTabFunc
   elsif ($selFunc == 4) {
     my ($sample, $pattern, $regex, $timezone);
     # Input Datetime format
-    my $inputFormat = $win->cbInputDTFormat->GetCurSel();
+    my $inputFormat = $win->cbInputDTFormat->GetString($win->cbInputDTFormat->GetCurSel());
     if ($inputFormat ne $STR{'guessORVar'}) {
       ($sample, $pattern, $regex, $timezone) = &findInputDTFormat($$refList1[0]);
     } else { $sample = $inputFormat; }
@@ -5352,10 +5394,10 @@ sub str2Epoch
     my $after;
     if ($parseContext == 1 or $parseContext == 3) { $before = $`; }
     if ($parseContext == 2 or $parseContext == 3) { $after  = $'; }
-    $strp = DateTime::Format::Strptime->new(pattern => $pattern);
+    $strp = DateTime::Format::Strptime->new(pattern => $pattern, zone_map => \%ZONE_MAP, locale => $CONFIG{'DEFAULT_LANG'},);
     if (my $dt = $strp->parse_datetime($extract)) {
       my $inputTimezone = $dt->time_zone_long_name();
-      $dt->set_time_zone($timezone);
+      if ($timezone and $pattern !~ /%s/) { $dt->set_time_zone($timezone); }
       return($dt->epoch(), $inputTimezone, $pattern, $before, $after);
     } else { return(2); } # Error conversion
   } else { return(1);  } # Invalid input
@@ -5641,7 +5683,6 @@ sub timeTabFunc
   my $noResultOpt       = $winConfig->rbNoResultOpt2->Checked(); 
   my $selInputType      = $win->cbInputTimeType->GetCurSel(); # Possibles value are 0 = 'Datetime', 1 = 'ChromeTime', 2 = 'LDAPTime', 3 = 'Filetime', 4 = 'SystemTime'
   my $localTZ           = $winDTDB->cbLocalTZ->GetString($winDTDB->cbLocalTZ->GetCurSel());
-  my $outputLang        = $winDTDB->cbOutputLang->GetString($winDTDB->cbOutputLang->GetCurSel());
   my $selOutputDTFormat = $win->cbOutputDTFormat->GetCurSel();
   my ($sample, $pattern, $regex, $timezone); # Input
   my ($outPutPattern, $outputTZ);            # Output
@@ -5769,7 +5810,7 @@ sub timeTabFunc
           if (my $dt = DateTime->from_epoch(epoch => $epoch)) {
             if ($sameAsInput) { if ($inputTimezone eq 'floating') { $inputTimezone = $localTZ; } $dt->set_time_zone($inputTimezone); }
             else              { $dt->set_time_zone($outputTZ);      }
-            $dt->set(locale => $outputLang);
+            $dt->set(locale => $CONFIG{'DEFAULT_LANG'});
             my $newItem;
             if ($before)      { $newItem .= $before;                       }
             if ($sameAsInput) { $newItem .= $dt->strftime($pattern);       }
@@ -5895,7 +5936,7 @@ sub timeTabFunc
           my $dt = DateTime->from_epoch(epoch => $epoch);
           if ($sameAsInput) { if ($inputTimezone eq 'floating') { $inputTimezone = $localTZ; } $dt->set_time_zone($inputTimezone); }
           else              { $dt->set_time_zone($outputTZ);      }
-          $dt->set(locale => $outputLang);
+          $dt->set(locale => $CONFIG{'DEFAULT_LANG'});
           if ($selFunc == 2) { $dt->add_duration($offset);      }
           else               { $dt->subtract_duration($offset); }
           # Output
@@ -6080,7 +6121,6 @@ sub utilsTabFunc
       $win->pb->StepIt();
     }
   }
-  
   
   # 4 = 'IP to Arpa'
   elsif ($selFunc == 4) {
@@ -6310,7 +6350,6 @@ sub utilsTabFunc
           $item =~ s/[\r\n]//g;  # Remove any line break
           if ($item) {
             my $newItem;
-            # IPv4
             if ($item =~ /(?:[^0-9]|^)((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))(?:[^0-9\.]|$)/ or $item =~ /($IPv6_re)/) {
               my $ip = $1;
               if    ($item =~ /\./) { $newItem = &checkIP_WhoisDB_IPv4($ip, \$dbh); } # IPv4
@@ -6535,7 +6574,6 @@ sub utilsTabFunc
       } else { Win32::GUI::MessageBox($win, $STR{'selectedCF'}.' '.$STR{'DBnotFound'}.'...', $STR{'error'}, 0x40010); }
     }
   }
-  
 
   # Format results
   my $itemsRes;
@@ -8090,14 +8128,14 @@ sub cbLocalTZ_Change
 }  #--- End cbLocalTZ_Change
 
 #--------------------------#
-sub cbOutputLang_Change
+sub cbDefaultLang_Change
 #--------------------------#
 {
   # Remember
-  $CONFIG{'OUTPUT_LANG'} = $winDTDB->cbOutputLang->GetCurSel();
+  $CONFIG{'DEFAULT_LANG'} = $winDTDB->cbDefaultLang->GetString($winDTDB->cbDefaultLang->GetCurSel());
   &saveConfig(\%CONFIG);
   
-}  #--- End cbOutputLang_Change
+}  #--- End cbDefaultLang_Change
 
 #--------------------------#
 sub cbOutputCharset_Change
@@ -9661,11 +9699,13 @@ sub loadConfig
     $winDTDB->cbLocalTZ->SetCurSel($index);
     $$refConfig{'LOCAL_TIMEZONE'} = $index;
   }
-  if (exists($$refConfig{'OUTPUT_LANG'})) { $winDTDB->cbOutputLang->SetCurSel($$refConfig{'OUTPUT_LANG'}); }
-  else {
-    my $index = $winDTDB->cbOutputLang->FindStringExact('en-US'); # Use default
-    $winDTDB->cbOutputLang->SetCurSel($index);
-    $$refConfig{'OUTPUT_LANG'} = $index;
+  if (exists($$refConfig{'DEFAULT_LANG'})) {
+    my $index = $winDTDB->cbDefaultLang->FindStringExact($$refConfig{'DEFAULT_LANG'});
+    $winDTDB->cbDefaultLang->SetCurSel($index);
+  } else {
+    my $index = $winDTDB->cbDefaultLang->FindStringExact('en-US'); # Use default
+    $winDTDB->cbDefaultLang->SetCurSel($index);
+    $$refConfig{'DEFAULT_LANG'} = $index;
   }
   if (exists($$refConfig{'OUTPUT_CHARSET'}))        { $winDTDB->cbOutputCharset->SetCurSel($winDTDB->cbOutputCharset->FindString($$refConfig{'OUTPUT_CHARSET'})); }
   else                                              { $winDTDB->cbOutputCharset->SetCurSel(0); $$refConfig{'OUTPUT_CHARSET'} = 'cp1252';                          } # Default is cp1252

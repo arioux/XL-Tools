@@ -313,13 +313,16 @@ sub loadDefaultStr
   
   # Datetime database Window
   $$refSTR{'winDTDB'}         = 'Datetime database';
+  $$refSTR{'btnDTAdd'}        = 'Add a new datetime format';
+  $$refSTR{'btnDTEdit'}       = 'Edit the selected datetime format';
+  $$refSTR{'btnDTDel'}        = 'Remove the selected datetime format';
   $$refSTR{'sample'}          = 'Sample';
   $$refSTR{'pattern'}         = 'Pattern';
   $$refSTR{'useAs'}           = 'Use as';
   $$refSTR{'comment'}         = 'Comment';  
   $$refSTR{'timezone'}        = 'Timezone';
   $$refSTR{'localTimezone'}   = 'Local timezone';
-  $$refSTR{'outputLang'}      = 'Output language';
+  $$refSTR{'defaultLang'}     = 'Default language';
   $$refSTR{'outputCharset'}   = 'Output charset';
   $$refSTR{'defaultOutput'}   = 'Default output';
   $$refSTR{'guess'}           = 'Guess';
