@@ -12,7 +12,7 @@ Documentation	: http://le-tools.com/XL-ToolsDoc.html
 Licence
 -------
 
-Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
+Copyright (C) 2015-2017  Alain Rioux (le-tools.com)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

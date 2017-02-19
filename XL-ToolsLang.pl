@@ -7,10 +7,10 @@
 # GitHub				  : https://github.com/arioux/XL-Tools
 # Documentation	  : http://le-tools.com/XL-ToolsDoc.html
 # Creation        : 2015-12-21
-# Modified        : 2016-08-25
+# Modified        : 2017-02-19
 # Author          : Alain Rioux (admin@le-tools.com)
 #
-# Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
+# Copyright (C) 2015-2017  Alain Rioux (le-tools.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -40,12 +40,10 @@ sub loadStr
 {
   # Local variables
   my ($refSTR, $LANG_FILE) = @_;
-  
   # Open and load string values
   open(LANG, "<:encoding(UTF-8)", $LANG_FILE);
   my @tab = <LANG>;
   close(LANG);
-  
   # Store values  
   foreach (@tab) {
     chomp($_);
@@ -74,6 +72,7 @@ sub loadDefaultStr
   $$refSTR{'dbFile'}          = 'Database file';
   $$refSTR{'selectFile'}      = 'Select file';
   $$refSTR{'useFile'}         = 'Use file';
+  $$refSTR{'download'}        = 'Download';
   $$refSTR{'startingProcess'} = 'Starting process';
   $$refSTR{'runningProcess'}  = 'Running process';
   $$refSTR{'connecting'}      = 'Connecting to';
@@ -107,7 +106,7 @@ sub loadDefaultStr
   $$refSTR{'cardType'}        = 'Card Type';
   $$refSTR{'cardCategory'}    = 'Card Category';
   $$refSTR{'countryName'}     = 'Country Name';
-  
+  $$refSTR{'Save'}            = 'Save';
   # Error
   $$refSTR{'error'}           = 'Error';
   $$refSTR{'formatNotFound'}  = 'Format not found';
@@ -139,7 +138,6 @@ sub loadDefaultStr
   $$refSTR{'errRegexReplace'}   = 'Current error in * Replace *';
   $$refSTR{'errRegexReplaceBy'} = 'Current error in * By *';
   $$refSTR{'errNewLine'}        = 'Error creating new line in grid.';
-
   # Main Window
   $$refSTR{'Tab1'}          = 'Lists';
   $$refSTR{'Tab2'}          = 'Sorting';
@@ -173,7 +171,6 @@ sub loadDefaultStr
   $$refSTR{'StopProcess'}   = 'Stop process';
   $$refSTR{'Configuration'} = 'Open Settings Window';
   $$refSTR{'btnHelpTip'}    = 'See Documentation';
-
   # Lists Tab
   $$refSTR{'cbLists1'}      = 'No duplicate';
   $$refSTR{'cbLists2'}      = 'Only duplicates';
@@ -202,7 +199,6 @@ sub loadDefaultStr
   $$refSTR{'all'}           = 'All characters';
   $$refSTR{'firstOnly'}     = 'First only';
   $$refSTR{'firstEachWord'} = 'First of each word';
-  
   # Sort Tab
   $$refSTR{'cbSorts1'}      = 'Alphabetical order';
   $$refSTR{'cbSorts2'}      = 'Numerical order';
@@ -212,7 +208,6 @@ sub loadDefaultStr
   $$refSTR{'cbSorts6'}      = 'Randomize';
   $$refSTR{'Ascending'}     = 'Ascending';
   $$refSTR{'Descending'}    = 'Descending';
-  
   # Conversion Tab
   $$refSTR{'cbConv1'}       = 'Hex to ASCII';
   $$refSTR{'cbConv2'}       = 'ASCII to Hex';
@@ -225,7 +220,6 @@ sub loadDefaultStr
   $$refSTR{'cbConv9'}       = 'Base64 to ASCII';
   $$refSTR{'cbConv10'}      = 'ASCII to Base64';
   $$refSTR{'cbConv11'}      = 'SHA1 - Base32 to Base16';
-  
   # Time Tab
   $$refSTR{'cbTime1'}       = 'Anytime to Anytime';
   $$refSTR{'cbTime2'}       = 'Time difference';
@@ -257,7 +251,6 @@ sub loadDefaultStr
   $$refSTR{'hours'}         = 'hours';
   $$refSTR{'minutes'}       = 'minutes';
   $$refSTR{'seconds'}       = 'seconds';
-  
   # Utils Tab
   $$refSTR{'cbUtils1'}      = 'NSLookup';
   $$refSTR{'cbUtils2'}      = 'CIDR to IP Range';
@@ -270,6 +263,8 @@ sub loadDefaultStr
   $$refSTR{'cbUtils9'}      = 'Resolve ISP';
   $$refSTR{'cbUtils10'}     = 'Resolve User-agent';
   $$refSTR{'cbUtils11'}     = 'Credit Card to Issuing Company';
+  $$refSTR{'cbUtils13'}     = 'Address to GPS coordinates';
+  $$refSTR{'cbUtils14'}     = 'Distance between locations';
   $$refSTR{'cbUtils12'}     = 'Custom functions...';
   $$refSTR{'GeoIPOpt1'}     = 'All available';
   $$refSTR{'GeoIPOpt2'}     = 'Country';
@@ -291,6 +286,10 @@ sub loadDefaultStr
   $$refSTR{'IINLocalDBTip'} = 'Faster, but less accurate.';
   $$refSTR{'BinlistTip'}    = 'Slower, but more accurate, max. 1000 queries per hour.';
   $$refSTR{'cbCFLists'}     = 'Select a function';
+  $$refSTR{'lblAPIKey'}     = 'Your Google API Key';
+  $$refSTR{'reqAPIKey'}     = 'This function requires a Google API Key.';
+  $$refSTR{'chSingleLocation'} = 'Compare to single location';
+  $$refSTR{'reqLocation'}   = 'You must enter a location to compare to.';
   $$refSTR{'btnCFAdd'}      = 'Add a custom function database';
   $$refSTR{'btnCFRem'}      = 'Remove the selected custom function';
   $$refSTR{'btnCFEdit'}     = 'Edit the selected custom function';
@@ -310,7 +309,6 @@ sub loadDefaultStr
   $$refSTR{'CFErrorDupl'}   = 'List 1 must not contain duplicates.';
   $$refSTR{'funcExists2'}   = 'Function already exists. Replace data';
   $$refSTR{'replConfirmT'}  = 'Confirm replacement';
-  
   # Datetime database Window
   $$refSTR{'winDTDB'}         = 'Datetime database';
   $$refSTR{'btnDTAdd'}        = 'Add a new datetime format';
@@ -334,7 +332,6 @@ sub loadDefaultStr
   $$refSTR{'addedDTObj'}      = 'Datetime object has been added!';
   $$refSTR{'updatedDTObj'}    = 'Datetime object has been updated!';
   $$refSTR{'deletedDTObj'}    = 'Datetime object has been deleted!';
-  
   # Datetime object Window
   $$refSTR{'winDTObj'}        = 'Datetime object';
   $$refSTR{'useFirst'}        = 'From List 1';
@@ -371,7 +368,6 @@ sub loadDefaultStr
   $$refSTR{'otherName'}       = 'Other, name';
   $$refSTR{'provideSample'}   = 'You must provide a sample';
   $$refSTR{'providePattern'}  = 'You must provide a pattern';
-
   # Config Window
   $$refSTR{'winConfig'}       = 'Settings';
   $$refSTR{'general'}         = 'General';
@@ -404,6 +400,7 @@ sub loadDefaultStr
   $$refSTR{'NoResultOpt2'}    = 'Show status';
   $$refSTR{'NoResultOpt2Tip'} = 'Write the reason why there is no result (error, no match, etc.).';
   # Database tab
+  $$refSTR{'noDB'}            = 'No database';
   $$refSTR{'OUIDB'}           = 'OUI (MAC Addresses)';
   $$refSTR{'importOUIDB'}     = 'Import OUI Database';
   $$refSTR{'importedOUIDB'}   = 'OUI Database successfully imported !';
@@ -437,7 +434,6 @@ sub loadDefaultStr
   $$refSTR{'downloadDTDB'}    = 'Downloading Datetime database';
   $$refSTR{'DTDBNotExist'}    = 'The Datetime database (DT.db) does not exist, download';
   $$refSTR{'updatedDTDB'}     = 'The Datetime database has been updated';
-  
   # Update Window
   $$refSTR{'winUpdate'}       = 'Update';
   $$refSTR{'update1'}         = 'You have the latest version installed.';
@@ -448,7 +444,6 @@ sub loadDefaultStr
   $$refSTR{'update6'}         = 'is available. Update';
   $$refSTR{'update7'}         = 'Note: Program must be restarted.';
   $$refSTR{'NotNow'}          = 'Not now';
-  
   # About Window
   $$refSTR{'version'}         = 'Version';
   $$refSTR{'author'}          = 'Author';
@@ -456,9 +451,7 @@ sub loadDefaultStr
   $$refSTR{'website'}         = 'Website';
   $$refSTR{'translatorName'}  = '-';
 
-
-}  #--- End loadStrings
-
+}  #--- End loadDefaultStr
 
 #------------------------------------------------------------------------------#
 1;

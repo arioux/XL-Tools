@@ -10,11 +10,11 @@
 #                 for list of strings like sorting, converting, replacing, date
 #                 and time utilities, etc.
 # Creation      : 2015-12-21
-# Modified      : 2016-11-27
-my $VERSION     = "3.3";
+# Modified      : 2017-02-19
+my $VERSION     = "3.4";
 # Author        : Alain Rioux (admin@le-tools.com)
 #
-# Copyright (C) 2015-2016  Alain Rioux (le-tools.com)
+# Copyright (C) 2015-2017  Alain Rioux (le-tools.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -29,8 +29,6 @@ my $VERSION     = "3.3";
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-#------------------------------------------------------------------------------#
-
 #------------------------------------------------------------------------------#
 # Modules
 #------------------------------------------------------------------------------#
@@ -75,6 +73,8 @@ use HTTP::BrowserDetect;
 use HTML::ParseBrowser;
 use Business::CreditCard;
 use REST::Client;
+use JSON qw( decode_json );
+use GIS::Distance::Lite qw(distance);
 use threads;
 use threads::shared;
 require "XL-ToolsGraph.pl";
@@ -83,7 +83,6 @@ require "XL-ToolsLang.pl";
 #------------------------------------------------------------------------------#
 # Global variables
 #------------------------------------------------------------------------------#
-
 my $PROGDIR = $0;                                                              # Program path
 while (chop($PROGDIR) ne "\\") { }                                             # Dir only
 my $USERDIR;                                                                   # User path
@@ -140,7 +139,6 @@ my %ZONE_MAP = ('ADT'    => '-0300', # Atlantic Daylight Time                  #
 #------------------------------------------------------------------------------#
 # Graphic elements
 #------------------------------------------------------------------------------#
-
 my ($winICO, $logoBmp, $logo128Bmp, $fileOpenBmp, $deleteBmp, $viewReportBmp, $downloadBmp,
     $processBmp, $stopBmp, $config32Bmp, $helpBmp, $aboutBmp, $config128Bmp, $fileNewBmp,
     $database16, $import16Bmp, $addCFBmp, $remCFBmp, $editCFBmp, $newCFBmp, $saveCFBmp,
@@ -150,14 +148,12 @@ my ($winICO, $logoBmp, $logo128Bmp, $fileOpenBmp, $deleteBmp, $viewReportBmp, $d
 #------------------------------------------------------------------------------#
 # Strings
 #------------------------------------------------------------------------------#
-
 &loadDefaultStr(\%STR); # Load default language (en)
 if (-e $LANG_FILE and -T $LANG_FILE) { &loadStr(\%STR, $LANG_FILE); } # If language file, load translated strings
 
 #------------------------------------------------------------------------------#
 # Main window
 #------------------------------------------------------------------------------#
-
 my $screen    = Win32::GUI::GetDesktopWindow(); # Screen resolution
 my $scrnX     = Win32::GUI::Width($screen);
 my $scrnY     = Win32::GUI::Height($screen);
@@ -165,10 +161,8 @@ my $winWidth  = 1080;
 my $winHeight = 680;
 my $winPosX   = ($scrnX - $winWidth)  / 2;
 my $winPosY   = ($scrnY - $winHeight) / 2;
-
 # Keyboard shorcut
 my $accel = new Win32::GUI::AcceleratorTable("Ctrl-A" => "selectAll");
-
 # Main Window
 my $win = Win32::GUI::Window->new( -name        => 'winMain'                           ,
                                    -text        => 'XL-Tools'                          ,
@@ -179,7 +173,6 @@ my $win = Win32::GUI::Window->new( -name        => 'winMain'                    
                                    -minwidth    => $winWidth                           ,
                                    -accel       => $accel                              , );
 $win->SetIcon($winICO);
-
 # Fonts
 sub LOGPIXELSX() {88}
 sub getDPI { return(Win32::GUI::DC->new()->GetDeviceCaps(LOGPIXELSX)); }
@@ -192,58 +185,31 @@ my $font10u;
 my $font12;
 # Larger size (125% and 150%)
 if ($DPI >= 120) {
-  $fontGB  = new Win32::GUI::Font(-name      => 'Arial',
-                                  -size      => 10     ,
-                                  -bold      => 1      , );
-  $fontGB2 = new Win32::GUI::Font(-name      => 'Arial',
-                                  -size      => 10     ,
-                                  -bold      => 1      ,
-                                  -underline => 1      , );
-  $font10  = new Win32::GUI::Font(-name      => 'Arial',
-                                  -size      => 8      , );
-  $font10b = new Win32::GUI::Font(-name      => 'Arial',
-                                  -size      => 8      ,
-                                  -bold      => 1      , );
-  $font10u = new Win32::GUI::Font(-name      => 'Arial',
-                                  -size      => 8      ,
-                                  -bold      => 1      ,
-                                  -underline => 1      , );
-  $font12  = new Win32::GUI::Font(-name      => 'Arial',
-                                  -size      => 9      , );
+  $fontGB  = new Win32::GUI::Font(-name => 'Arial', -size => 10, -bold => 1);
+  $fontGB2 = new Win32::GUI::Font(-name => 'Arial', -size => 10, -bold => 1, -underline => 1);
+  $font10  = new Win32::GUI::Font(-name => 'Arial', -size =>  8);
+  $font10b = new Win32::GUI::Font(-name => 'Arial', -size =>  8, -bold => 1);
+  $font10u = new Win32::GUI::Font(-name => 'Arial', -size =>  8, -bold => 1, -underline => 1);
+  $font12  = new Win32::GUI::Font(-name => 'Arial', -size =>  9);
 # Normal size
 } else {
-  $fontGB  = new Win32::GUI::Font(-name      => 'Arial',
-                                  -size      => 12     ,
-                                  -bold      => 1      , );
-  $fontGB2 = new Win32::GUI::Font(-name      => 'Arial',
-                                  -size      => 12     ,
-                                  -bold      => 1      ,
-                                  -underline => 1      , );
-  $font10  = new Win32::GUI::Font(-name      => 'Arial',
-                                  -size      => 10     , );
-  $font10b = new Win32::GUI::Font(-name      => 'Arial',
-                                  -size      => 10     ,
-                                  -bold      => 1      , );
-  $font10u = new Win32::GUI::Font(-name      => 'Arial',
-                                  -size      => 10     ,
-                                  -bold      => 1      ,
-                                  -underline => 1      , );
-  $font12  = new Win32::GUI::Font(-name      => 'Arial',
-                                  -size      => 11     , );  
+  $fontGB  = new Win32::GUI::Font(-name => 'Arial', -size => 12, -bold => 1);
+  $fontGB2 = new Win32::GUI::Font(-name => 'Arial', -size => 12, -bold => 1, -underline => 1);
+  $font10  = new Win32::GUI::Font(-name => 'Arial', -size => 10);
+  $font10b = new Win32::GUI::Font(-name => 'Arial', -size => 10, -bold => 1);
+  $font10u = new Win32::GUI::Font(-name => 'Arial', -size => 10, -bold => 1, -underline => 1);
+  $font12  = new Win32::GUI::Font(-name => 'Arial', -size => 11);  
 }
-
 # Load Pointers
 my $loadImage = new Win32::API('user32', 'LoadImage', ['N','N','I','I','I','I'],'N');
 $HOURGLASS    = $loadImage->Call(0, 32514, 2, 0, 0, 0x8040);
 $ARROW        = $loadImage->Call(0, 32512, 2, 0, 0, 0x8040);
-
 # Header
 $win->AddLabel(       -name        => 'lblLogo'               ,
                       -size        => [310,100]               ,
                       -pos         => [  0,  0]               ,
                       -bitmap      => $logoBmp                ,
                       -background  => [255, 255, 255]         , );
-
 $win->AddTabStrip(      -name         => 'Tab'                 ,
                         -size         => [$winWidth-325,100]   ,
                         -pos          => [310,  0]             ,
@@ -256,7 +222,6 @@ $win->Tab->InsertItem(  -text         => $STR{'Tab3'}          , );
 $win->Tab->InsertItem(  -text         => $STR{'Tab4'}          , );
 $win->Tab->InsertItem(  -text         => $STR{'Tab5'}          , );
 $win->Tab->SetItemSize(116,20);
-
 # Lists tab
 $win->AddCombobox(    -name        => 'cbLists'              ,
                       -size        => [220,100]              ,
@@ -386,7 +351,6 @@ $win->AddRadioButton( -name        => 'rbFirstEachWord'      ,
                       -text        => $STR{'firstEachWord'}  ,
                       -font        => $font10                ,
                       -visible     => 0                      , );
-
 # Sort tab
 $win->AddCombobox(    -name        => 'cbSorts'               ,
                       -size        => [220,100]               ,
@@ -414,7 +378,6 @@ $win->AddRadioButton( -name       => 'rbDsc'                  ,
                       -text       => $STR{'Descending'}       ,
                       -font       => $font10                  ,
                       -visible    => 0                        , );
-
 # Conversion tab
 $win->AddCombobox(    -name        => 'cbConv'                ,
                       -size        => [220,100]               ,
@@ -457,7 +420,6 @@ $win->AddCombobox(    -name        => 'cbDTParser'            ,
 $win->cbDTParser->Add($STR{'none'} , $STR{'before'}  ,
                       $STR{'after'}, $STR{'both'}    , );
 $win->cbDTParser->SetCurSel(0);
-
 # Input format
 $win->AddLabel(       -name        => 'lblInputType'          ,
                       -size        => [ 50, 22]               ,
@@ -510,7 +472,6 @@ $win->AddCombobox(    -name        => 'cbOutputDTFormat'      ,
                       -dropdown    => 1                       ,
                       -vscroll     => 1                       ,
                       -visible     => 0                       , );
-
 # Time difference controls
 $win->AddCheckbox(    -name       => 'chSingleDate'           ,
                       -size       => [130, 22]                ,
@@ -643,7 +604,6 @@ $win->AddUpDown(      -name       => 'upDownDeltaSecondes'    ,
                       -visible    => 0                        , );
 $win->upDownDeltaSecondes->SetRange(0,59);
 $win->upDownDeltaSecondes->SetPos(0);
-
 # Utils tab
 $win->AddCombobox(    -name        => 'cbUtils'               ,
                       -size        => [220,100]               ,
@@ -657,7 +617,21 @@ $win->cbUtils->Add(   $STR{'cbUtils1'}  , $STR{'cbUtils2'}    ,
                       $STR{'cbUtils5'}  , $STR{'cbUtils6'}    ,
                       $STR{'cbUtils7'}  , $STR{'cbUtils8'}    ,
                       $STR{'cbUtils9'}  , $STR{'cbUtils10'}   ,
-                      $STR{'cbUtils11'} , $STR{'cbUtils12'}   , );
+                      $STR{'cbUtils11'} , $STR{'cbUtils13'}   ,
+                      $STR{'cbUtils14'} , $STR{'cbUtils12'}   , );
+# Resolve MAC Address Options
+$win->AddLabel(       -name       => 'lblCurrMACOUIdbDate'    ,
+                      -size       => [220, 22]                ,
+                      -pos        => [315, 65]                ,
+                      -background => [255, 255, 255]          ,
+                      -foreground => [204,   0,  51]          ,
+                      -font       => $font10                  ,
+                      -visible    => 0                        , );
+$win->AddButton(      -name       => 'btnMACOUIdbUpdate'      ,
+                      -size       => [100, 25]                ,
+                      -pos        => [540, 60]                ,
+                      -font       => $font10                  ,
+                      -visible    => 0                        , );
 # GeoIP Options
 $win->AddCombobox(    -name        => 'cbGeoIPOpt'            ,
                       -size        => [150,100]               ,
@@ -703,7 +677,7 @@ $win->AddCheckbox(    -name       => 'chUAAddHeaders'         ,
 # Credit Card to Issuing Company Options
 $win->AddRadioButton( -name       => 'rbIINLocalDB'           ,
                       -size       => [200, 22]                ,
-                      -pos        => [545, 30]                ,
+                      -pos        => [555, 30]                ,
                       -background => [255, 255, 255]          ,
                       -text       => $STR{'IINLocalDB'}       ,
                       -tip        => $STR{'IINLocalDBTip'}    ,
@@ -713,11 +687,42 @@ $win->AddRadioButton( -name       => 'rbIINLocalDB'           ,
                       -visible    => 0                        , );
 $win->AddRadioButton( -name       => 'rbBinlist'              ,
                       -size       => [200, 22]                ,
-                      -pos        => [545, 60]                ,
+                      -pos        => [555, 60]                ,
                       -background => [255, 255, 255]          ,
                       -text       => $STR{'use'}.' binlist.net',
                       -tip        => $STR{'BinlistTip'}       ,
                       -font       => $font10                  ,
+                      -visible    => 0                        , );
+# Address to GPS coordinates
+$win->AddLabel(       -name       => 'lblAPIKey'              ,
+                      -size       => [150, 22]                ,
+                      -pos        => [315, 68]                ,
+                      -background => [255, 255, 255]          ,
+                      -text       => $STR{'lblAPIKey'}.':'    ,
+                      -font       => $font10                  ,
+                      -visible    => 0                        , );
+$win->AddTextfield(   -name       => 'tfAPIKey'               ,
+                      -size       => [300, 24]                ,
+                      -pos        => [470, 65]                ,
+                      -visible    => 0                        , );
+$win->AddButton(      -name       => 'btnSaveAPIKey'          ,
+                      -size       => [ 50, 24]                ,
+                      -pos        => [772, 65]                ,
+                      -text       => $STR{'Save'}             ,
+                      -font       => $font10                  ,
+                      -visible    => 0                        , );
+# Distance between locations
+$win->AddCheckbox(    -name       => 'chSingleLocation'       ,
+                      -size       => [180, 22]                ,
+                      -pos        => [550, 30]                ,
+                      -text       => $STR{'chSingleLocation'}.':',
+                      -font       => $font10                  ,
+                      -background => [255, 255, 255]          ,
+                      -checked    => 0                        ,
+                      -visible    => 0                        , );
+$win->AddTextfield(   -name       => 'tfSingleLocation'       ,
+                      -size       => [300, 24]                ,
+                      -pos        => [735, 30]                ,
                       -visible    => 0                        , );
 # Customs Functions Options
 $win->AddCombobox(    -name        => 'cbCFLists'             ,
@@ -787,7 +792,6 @@ $win->AddButton(      -name        => 'btnCFCancel'           ,
                       -bitmap      => $cancelCFBmp            ,
                       -tip         => $STR{'btnCFCancel'}     ,
                       -visible     => 0                       , );
-
 # Lists
 $win->AddGroupbox(    -name        => 'gbList1'               ,
                       -title       => 'List 1'                ,
@@ -909,7 +913,6 @@ $win->AddTextfield(   -name        => 'tfList3'               ,
                       -multiline   => 1                       ,
                       -hscroll     => 1                       ,
                       -vscroll     => 1                       , );
-
 # Footer
 $win->AddLabel(       -name        => 'lblFooter'             ,
                       -size        => [899, 80]               ,
@@ -982,7 +985,6 @@ $win->AddButton(      -name        => 'btnAbout'              ,
 #------------------------------------------------------------------------------#
 # Datetime database window
 #------------------------------------------------------------------------------#
-
 my $winDTDB = Win32::GUI::Window->new(-name        => 'winDTDB'              ,
                                       -background  => [255, 255, 255]        ,
                                       -parent      => $win                   ,
@@ -994,7 +996,6 @@ my $winDTDB = Win32::GUI::Window->new(-name        => 'winDTDB'              ,
                                       -resizable   => 1                      ,
                                       -dialogui    => 1                      , );
 $winDTDB->SetIcon($winICO);
-
 # Datetime grid
 $winDTDB->AddGrid(        -name         => 'gridDT'                ,
                           -size         => [880,180]               ,
@@ -1080,7 +1081,6 @@ $winDTDB->AddCombobox(    -name         => 'cbDefaultOutput'       ,
 #------------------------------------------------------------------------------#
 # Datetime Object window
 #------------------------------------------------------------------------------#
-
 my $winDTObj = Win32::GUI::Window->new( -name        => 'winDTObj'             ,
                                         -background  => [255, 255, 255]        ,
                                         -parent      => $win                   ,
@@ -1092,7 +1092,6 @@ my $winDTObj = Win32::GUI::Window->new( -name        => 'winDTObj'             ,
                                         -resizable   => 0                      ,
                                         -dialogui    => 1                      , );
 $winDTObj->SetIcon($winICO);
-
 $winDTObj->AddLabel(          -name         => 'lblDTObjSample'        ,
                               -size         => [ 95, 24]               ,
                               -pos          => [  5,  8]               ,
@@ -1304,13 +1303,11 @@ my $winConfig = Win32::GUI::DialogBox->new( -name        => 'winConfig'         
                                             -resizable   => 0                       ,
                                             -dialogui    => 1                       , );
 $winConfig->SetIcon($winICO);
-
 $winConfig->AddLabel(     -name         => 'lblLogo'             ,
                           -size         => [128,128]             ,
                           -pos          => [  0,  5]             ,
                           -bitmap       => $config128Bmp         ,
                           -background   => [255, 255, 255]       , );
-
 # Tabstrip
 $winConfig->AddTabStrip(            -name         => 'configTab'      ,
                                     -size         => [505,285]        ,
@@ -1321,10 +1318,7 @@ $winConfig->AddTabStrip(            -name         => 'configTab'      ,
 $winConfig->configTab->InsertItem(  -text         => $STR{'general'}  , );
 $winConfig->configTab->InsertItem(  -text         => $STR{'database'} , );
 $winConfig->configTab->InsertItem(  -text         => 'XL-ToolKit '.$STR{'database'}, );
-
-# General tab
-
-# Tool Section
+# General tab - Tool Section
 $winConfig->AddLabel(       -name        => 'lblToolShadowT'        ,
                             -size        => [ 80, 22]               ,
                             -pos         => [151, 36]               ,
@@ -1357,8 +1351,7 @@ $winConfig->AddCheckbox(    -name        => 'chAutoUpdate'          ,
                             -font        => $font10                 ,
                             -tabstop     => 1                       ,
                             -checked     => 1                       , );
-
-# Functions section
+# General tab - Functions section
 $winConfig->AddLabel(       -name        => 'lblOptFunctionsShadowT',
                             -size        => [120, 22]               ,
                             -pos         => [151,141]               ,
@@ -1447,10 +1440,7 @@ $winConfig->AddRadioButton( -name        => 'rbNoResultOpt2'        ,
                             -tip         => $STR{'NoResultOpt2Tip'} ,
                             -font        => $font10                 ,
                             -checked     => 0                       , );
-
-# Database tab
-
-# MAC OUI Database section
+# Database tab - MAC OUI Database section
 $winConfig->AddLabel(       -name        => 'lblMACOUIDBShadowT'    ,
                             -size        => [250, 22]               ,
                             -pos         => [151, 36]               ,
@@ -1496,7 +1486,7 @@ $winConfig->AddButton(      -name        => 'btnMACOUIDBImport'     ,
                             -bitmap      => $import16Bmp            ,
                             -tip         => $STR{'importOUIDB'}     ,
                             -visible     => 0                       , );
-# GeoIP Database section
+# Database tab - GeoIP Database section
 $winConfig->AddLabel(       -name        => 'lblGeoIPDBShadowT'     ,
                             -size        => [250, 22]               ,
                             -pos         => [151,104]               ,
@@ -1536,8 +1526,7 @@ $winConfig->AddButton(      -name        => 'btnGeoIPDBUpt'         ,
                             -bitmap      => $downloadBmp            ,
                             -tip         => $STR{'downloadDB'}      ,
                             -visible     => 0                       , );
-
-# Issuer Identification Number (IIN) Database section
+# Database tab - Issuer Identification Number (IIN) Database section
 $winConfig->AddLabel(       -name        => 'lblIINDBShadowT'       ,
                             -size        => [250, 22]               ,
                             -pos         => [151,169]               ,
@@ -1570,10 +1559,7 @@ $winConfig->AddButton(      -name        => 'btnIINDBUpt'           ,
                             -bitmap      => $downloadBmp            ,
                             -tip         => $STR{'downloadDB'}      ,
                             -visible     => 0                       , );
-
-# XL-ToolKit Database tab
-
-# XL-Whois database section
+# XL-ToolKit Database tab - XL-Whois database section
 $winConfig->AddLabel(       -name        => 'lblXLWHOISDBShadowT'   ,
                             -size        => [250, 22]               ,
                             -pos         => [151, 36]               ,
@@ -1600,8 +1586,7 @@ $winConfig->AddButton(      -name        => 'btnXLWHOISDB'          ,
                             -bitmap      => $fileOpenBmp            ,
                             -tip         => $STR{'selectDBFile'}    ,
                             -visible     => 0                       , );
-
-# Datetime database section
+# XL-ToolKit Database tab - Datetime database section
 $winConfig->AddLabel(       -name        => 'lblDTDBShadowT'        ,
                             -size        => [250, 22]               ,
                             -pos         => [151,104]               ,
@@ -1650,7 +1635,6 @@ my $winPb  = Win32::GUI::DialogBox->new(-name        => 'winPb'                 
                                         -resizable   => 0                         ,
                                         -dialogui    => 1                         , );
 $winPb->SetIcon($winICO);
-
 $winPb->AddLabel(       -name        => 'lblLogo2'       ,
                         -size        => [128,128]        ,
                         -pos         => [  0,  5]        ,
@@ -1683,10 +1667,8 @@ $winPb->AddButton(      -name        => 'btnCancel'      ,
 #------------------------------------------------------------------------------#
 # Starting program
 #------------------------------------------------------------------------------#
-
 $win->cbLists->SetCurSel(0);
 &cbLists_Change();
-
 # Set Datetime grid header
 $winDTDB->gridDT->SetCellText(0, 0, $STR{'sample'}  );
 $winDTDB->gridDT->SetCellText(0, 1, $STR{'pattern'} );
@@ -1694,19 +1676,16 @@ $winDTDB->gridDT->SetCellText(0, 2, $STR{'Regex'}   );
 $winDTDB->gridDT->SetCellText(0, 3, $STR{'timezone'});
 $winDTDB->gridDT->SetCellText(0, 4, $STR{'useAs'}   );
 $winDTDB->gridDT->SetCellText(0, 5, $STR{'comment'} );
-
+# List of timezone
+my @listTZ = DateTime::TimeZone->all_names;
+foreach (@listTZ) { $winDTDB->cbLocalTZ->Add($_); $winDTObj->cbDTObjTZName->Add($_); }
+$winDTObj->cbDTObjTZName->SetCurSel(0);
+# List of language
+my @lang = DateTime::Locale->ids();
+foreach (sort @lang) { $winDTDB->cbDefaultLang->Add($_); }
+# Load configuration and databases
 if (-T $CONFIG_FILE) {
-  # List of timezone
-  my @listTZ = DateTime::TimeZone->all_names;
-  foreach (@listTZ) { $winDTDB->cbLocalTZ->Add($_); $winDTObj->cbDTObjTZName->Add($_); }
-  $winDTObj->cbDTObjTZName->SetCurSel(0);
-  
-  # List of language
-  my @lang = DateTime::Locale->ids();
-  foreach (sort @lang) { $winDTDB->cbDefaultLang->Add($_); }
-  
   &loadConfig(\%CONFIG);
-  
   # Load the Datetime Database
   if ($CONFIG{'DT_DB_FILE'} and -f $CONFIG{'DT_DB_FILE'} and &validDTDB($CONFIG{'DT_DB_FILE'})) {
     &loadDTDB;
@@ -1730,26 +1709,21 @@ if (-T $CONFIG_FILE) {
       }
     });
   }
-  
   # Check update for tool and databases ?
   if ($CONFIG{'TOOL_AUTO_UPDATE'} or $CONFIG{'MACOUI_DB_AUTO_UPDATE'} or $CONFIG{'GEOIP_DB_AUTO_UPDATE'}) {
     $THR_UPDATE = threads->create(sub { &updateAll(); });
   }
-  
   # Position the window
   if ($winConfig->chRememberPos->Checked() and exists($CONFIG{'SCREEN_LEFT'}) and exists($CONFIG{'SCREEN_TOP'})) {
     $win->Left($CONFIG{'SCREEN_LEFT'});
     $win->Top($CONFIG{'SCREEN_TOP'});
   }
-  
 } else {
   # Create the Configuration Wizard Window
   my $refWinCW = &createCW();
-  
   # First start of the tool, Load configuration wizard
   $THR_UPDATE = threads->create(sub { &firstStart($refWinCW); });
 }
-
 $START = 1;
 if ($winConfig->chFullScreen->Checked()) { $win->Show(3); }
 else                                     { $win->Show();  }
@@ -1765,7 +1739,6 @@ sub winMain_Terminate
   $CONFIG{'SCREEN_LEFT'} = $winLeft;
   $CONFIG{'SCREEN_TOP'}  = $winTop;
   &saveConfig(\%CONFIG);
-
   # Close program
   -1;
   
@@ -1818,7 +1791,6 @@ sub winMain_Resize
   $win->tfCFTitle->Width($win->ScaleWidth()/4);
   $win->btnCFSave->Left($win->tfCFTitle->Left()+$win->ScaleWidth()/4+4);
   $win->btnCFCancel->Left($win->tfCFTitle->Left()+$win->ScaleWidth()/4+30);
-  
   # Lists
   # Adjusts splitter position
   my $split1Pos;
@@ -1844,7 +1816,6 @@ sub winMain_Resize
   $win->split1->Height($win->ScaleHeight()-150);
   $win->split2->Left($split2Pos);
   $win->split2->Height($win->ScaleHeight()-150);
-  
   # List 1
   if ($LIST2_VISIBLE) {
     $win->gbList1->Resize($split1Pos-6, $win->ScaleHeight()-162);
@@ -1855,7 +1826,6 @@ sub winMain_Resize
     $win->tfList1->Resize($split2Pos-16, $win->ScaleHeight()-212);
     $win->lblList1Count->Left($split2Pos-70);
   }
-
   # List 2
   $win->gbList2->Left($split1Pos+5);
   $win->gbList2->Resize($split2Pos-$split1Pos-7.5, $win->ScaleHeight()-162);
@@ -1864,7 +1834,6 @@ sub winMain_Resize
   $win->lblList2Count->Left($split2Pos-70);
   $win->tfList2->Left($split1Pos+9);
   $win->tfList2->Resize($split2Pos-$split1Pos-16, $win->ScaleHeight()-212);
-
   # List 3
   $win->gbList3->Left($split2Pos+5);
   $win->gbList3->Resize($win->ScaleWidth()-$split2Pos-8, $win->ScaleHeight()-162);
@@ -1873,7 +1842,6 @@ sub winMain_Resize
   $win->lblList3Count->Left($win->ScaleWidth()-70);
   $win->tfList3->Left($split2Pos+9);
   $win->tfList3->Resize($win->ScaleWidth()-$split2Pos-16, $win->ScaleHeight()-212);
-  
   # Footer
   $win->lblFooter->Top($win->ScaleHeight()-55);
   $win->lblFooter->Width($win->ScaleWidth());
@@ -1900,7 +1868,6 @@ sub split1
   my ($s, $left) = @_;
   my $split2Pos  = $win->split2->Left();
   $SPLIT1_CURR_POS = $win->ScaleWidth()/$left;
-
   # Resize and move
   # List 1
   $win->gbList1->Width($left - 6);
@@ -1933,7 +1900,6 @@ sub split1
     $win->tfList2->Left($left+9);
     $win->tfList2->Width($split2Pos-$left-16);
   }
-
   return(1);
 
 }  #--- End split1
@@ -1946,7 +1912,6 @@ sub split2
   my ($s, $left) = @_;
   my $split1Pos  = $win->split1->Left();
   $SPLIT2_CURR_POS = $win->ScaleWidth()/$left;
-
   # Resize and move
   # List 2
   if ($left - $split1Pos < 100) {
@@ -1978,7 +1943,6 @@ sub split2
     $win->tfList1->Width($left-16);
     $win->lblList1Count->Left($left-70);
   }
-  
   # List 3
   $win->gbList3->Width($win->ScaleWidth() - $left - 9);
   $win->gbList3->Left($left + 5);
@@ -1987,7 +1951,6 @@ sub split2
   $win->lblList3Count->Left($win->ScaleWidth()-70);
   $win->tfList3->Left($left+9);
   $win->tfList3->Width($win->ScaleWidth()-$left-16);
-
   return(1);
 
 }  #--- End split2
@@ -2078,8 +2041,15 @@ sub Tab_Click
     $win->cbInputDTFormat->Hide();
     $win->btnOpenDTDB->Hide();
     $win->btnInputFormatGuess->Hide();
+    $win->lblAPIKey->Hide();
+    $win->tfAPIKey->Hide();
+    $win->btnSaveAPIKey->Hide();
+    $win->chSingleLocation->Hide();
+    $win->tfSingleLocation->Hide();
     # Hide Utils tab
     $win->cbUtils->Hide();
+    $win->lblCurrMACOUIdbDate->Hide();
+    $win->btnMACOUIdbUpdate->Hide();
     $win->cbGeoIPOpt->Hide();
     $win->chGeoIPAddHeaders->Hide();
     $win->cbUAOpt->Hide();
@@ -2096,7 +2066,6 @@ sub Tab_Click
     $win->tfCFTitle->Hide();
     $win->btnCFSave->Hide();
     $win->btnCFCancel->Hide();
-    
   # Show Sorting tab
   } elsif ($win->Tab->SelectedItem() == 1) {
     $win->lblInputType->Hide();
@@ -2165,6 +2134,8 @@ sub Tab_Click
     $win->upDownDeltaSecondes->Hide();
     # Hide Utils tab
     $win->cbUtils->Hide();
+    $win->lblCurrMACOUIdbDate->Hide();
+    $win->btnMACOUIdbUpdate->Hide();
     $win->cbGeoIPOpt->Hide();
     $win->chGeoIPAddHeaders->Hide();
     $win->cbUAOpt->Hide();
@@ -2181,7 +2152,11 @@ sub Tab_Click
     $win->tfCFTitle->Hide();
     $win->btnCFSave->Hide();
     $win->btnCFCancel->Hide();
-    
+    $win->lblAPIKey->Hide();
+    $win->tfAPIKey->Hide();
+    $win->btnSaveAPIKey->Hide();
+    $win->chSingleLocation->Hide();
+    $win->tfSingleLocation->Hide();
   # Show Conversion tab
   } elsif ($win->Tab->SelectedItem() == 2) {
     $win->cbConv->Show();
@@ -2247,6 +2222,8 @@ sub Tab_Click
     $win->btnInputFormatGuess->Hide();
     # Hide Utils tab
     $win->cbUtils->Hide();
+    $win->lblCurrMACOUIdbDate->Hide();
+    $win->btnMACOUIdbUpdate->Hide();
     $win->cbGeoIPOpt->Hide();
     $win->chGeoIPAddHeaders->Hide();
     $win->cbUAOpt->Hide();
@@ -2263,7 +2240,11 @@ sub Tab_Click
     $win->tfCFTitle->Hide();
     $win->btnCFSave->Hide();
     $win->btnCFCancel->Hide();
-    
+    $win->lblAPIKey->Hide();
+    $win->tfAPIKey->Hide();
+    $win->btnSaveAPIKey->Hide();
+    $win->chSingleLocation->Hide();
+    $win->tfSingleLocation->Hide();
   # Show Time tab
   } elsif ($win->Tab->SelectedItem() == 3) {
     $win->cbTime->Show();
@@ -2307,6 +2288,8 @@ sub Tab_Click
     $win->cbConv->Hide();
     # Hide Utils tab
     $win->cbUtils->Hide();
+    $win->lblCurrMACOUIdbDate->Hide();
+    $win->btnMACOUIdbUpdate->Hide();
     $win->cbGeoIPOpt->Hide();
     $win->chGeoIPAddHeaders->Hide();
     $win->cbUAOpt->Hide();
@@ -2323,7 +2306,11 @@ sub Tab_Click
     $win->tfCFTitle->Hide();
     $win->btnCFSave->Hide();
     $win->btnCFCancel->Hide();
-    
+    $win->lblAPIKey->Hide();
+    $win->tfAPIKey->Hide();
+    $win->btnSaveAPIKey->Hide();
+    $win->chSingleLocation->Hide();
+    $win->tfSingleLocation->Hide();
   # Show Utils tab
   } elsif ($win->Tab->SelectedItem() == 4) {
     $win->cbUtils->Show();
@@ -2390,7 +2377,6 @@ sub Tab_Click
     $win->btnOpenDTDB->Hide();
     $win->btnInputFormatGuess->Hide();
   }
-  
   &isProcessReady(0);
 
 }  #--- End Tab_Click
@@ -2411,7 +2397,6 @@ sub cbLists_Change
   # Show List 2 ?
   if ($selFunc == 1 or $selFunc == 4 or $selFunc == 8) { &showList2(); }
   else                                                 { &hideList2(); }
-
   # Show Match case option ?
   if ($selFunc < 3 or $selFunc == 4 or $selFunc == 13) {
     $win->chMatchCase->Checked(1);
@@ -2420,23 +2405,18 @@ sub cbLists_Change
     $win->chMatchCase->Checked(0);
     $win->chMatchCase->Hide();
   }
-  
   # Show Regex option
-  if ($selFunc == 9 or $selFunc == 10 or $selFunc == 12 or $selFunc == 13) {
-    $win->chRegex->Show();
-  } else {
+  if ($selFunc == 9 or $selFunc == 10 or $selFunc == 12 or $selFunc == 13) { $win->chRegex->Show(); }
+  else {
     $win->chRegex->Checked(0);
     $win->chRegex->Hide();
   }
-  
   # Show Eval option
-  if ($selFunc == 13) {
-    $win->chEval->Show();
-  } else {
+  if ($selFunc == 13) { $win->chEval->Show(); }
+  else {
     $win->chEval->Checked(0);
     $win->chEval->Hide();
   }
-  
   # Show With textfield ?
   if ($selFunc == 5 or $selFunc == 6 or $selFunc == 8 or $selFunc == 9 or $selFunc == 10 or $selFunc == 12) {
     $win->lblWith->Show();
@@ -2445,7 +2425,6 @@ sub cbLists_Change
     $win->lblWith->Hide();
     $win->tfWith->Hide();
   }
-  
   # Show ColumnsNo textfield ?
   if ($selFunc == 10 or $selFunc == 11 or $selFunc == 12) {
     $win->lblColumnsNo->Show();
@@ -2454,7 +2433,6 @@ sub cbLists_Change
     $win->lblColumnsNo->Hide();
     $win->tfColumnsNo->Hide();
   }
-  
   # Show Replace-By textfields ?
   if ($selFunc == 13 or $selFunc == 15) {
     $win->lblReplace->Show();
@@ -2475,7 +2453,6 @@ sub cbLists_Change
     $win->tfReplBy->Hide();
     $win->tfReplBy->Text('');
   }
-  
   # Show lowercase-uppercase Options
   if ($selFunc == 16 or $selFunc == 17) {
     $win->rbAll->Show();
@@ -2486,7 +2463,6 @@ sub cbLists_Change
     $win->rbFirstOnly->Hide();
     $win->rbFirstEachWord->Hide();
   }
-  
   &isProcessReady(0);
 
 }  #--- End cbLists_Change
@@ -2512,10 +2488,7 @@ sub tfReplace_Change
 #--------------------------#
 {
   # Test Regex if necessary
-  if ($win->chRegex->Checked()) {
-    &showReplaceREStatus;
-  }
-  
+  if ($win->chRegex->Checked()) { &showReplaceREStatus; }
   # Enable By textfield
   if ($win->tfReplace->Text) {
     $win->tfReplBy->Enable();
@@ -2529,7 +2502,6 @@ sub tfReplace_Change
     $win->lblReplaceByREErr->Hide();
     $win->lblReplaceByREWarn->Hide();
   }
-  
   &isProcessReady(0);
 
 }  #--- End tfReplace_Change
@@ -2552,10 +2524,8 @@ sub chRegex_Click
     $win->lblReplaceByREErr->Hide();
     $win->lblReplaceByREWarn->Hide();
   }
-  
   # Revaluate Replacement expression
   if ($win->tfReplBy->Text()) { &showReplaceByREStatus; }
-  
   &isProcessReady(0);
 
 }  #--- End chRegex_Click
@@ -2568,7 +2538,6 @@ sub showReplaceREStatus
   my $regex = $win->tfReplace->Text();
   if ($regex) {
     my ($statusRegex, $msg) = &validRegex($regex);
-    
     # Warning
     if      ($statusRegex == 2) {
       $win->lblReplaceREWarn->Show();
@@ -2599,7 +2568,6 @@ sub validRegex
 {
   # Local variables
   my $regex = shift;
-  
   if ($regex) {
     eval { if ('test' =~ /$regex/) { } };
     if ($@) {
@@ -2619,7 +2587,6 @@ sub tfReplBy_Change
 #--------------------------#
 {
   &showReplaceByREStatus;
-  
   &isProcessReady(0);
 
 }  #--- End tfReplBy_Change
@@ -2647,7 +2614,6 @@ sub showReplaceByREStatus
   my $expr = $win->tfReplBy->Text();
   if ($win->chRegex->Checked() and $expr) {
     my ($status, $msg) = &validReplacement;
-    
     # Warning
     if      ($status and $status == 2) {
       $win->lblReplaceByREWarn->Show();
@@ -2679,7 +2645,6 @@ sub validReplacement
   # Local variables
   my $expr = $win->tfReplBy->Text();
   my $test = 'test';
-  
   if ($expr =~ /\$1/ and !$win->chEval->Checked()) { $expr = '"' . $expr . '"';  } # Capture with Eval not checked
   if ($win->chEval->Checked() or $expr =~ /\$1/)   { $test =~ s/(.+)/$expr/eegi; } # Regex
   else                                             { $test =~ s/(.+)/$expr/gi;   } # Keyword
@@ -2690,7 +2655,6 @@ sub validReplacement
   } else {
     # Warning for illegal characters
     if ($expr =~ /[\<\>\:\"\/\\\|\?\*]/) { return(2, undef); }
-    
     # Replacement ok
     return(0, undef);
   }  
@@ -2707,7 +2671,6 @@ sub cbSorts_Change
   
   # Hide List 2
   &hideList2();
-  
   # Date and time options
   if ($selFunc == 4) {
     $win->lblInputType->Show();
@@ -2722,7 +2685,6 @@ sub cbSorts_Change
     $win->btnOpenDTDB->Hide();
     $win->btnInputFormatGuess->Hide();
   }
-  
   # Random
   if ($selFunc == 5) {
     $win->rbAsc->Hide();
@@ -2731,7 +2693,6 @@ sub cbSorts_Change
     $win->rbAsc->Show();
     $win->rbDsc->Show();
   }
-  
   &isProcessReady(0);
 
 }  #--- End cbSorts_Change
@@ -2774,7 +2735,6 @@ sub findInputDTFormat
 {
   # Local variables
   my $item = shift;
-  
   # Guess format
   for (my $i = 1; $i < $winDTDB->gridDT->GetRows(); $i++) {
     my $regex = $winDTDB->gridDT->GetCellText($i, 2);
@@ -2791,7 +2751,6 @@ sub findInputDTFormat
       }
     }
   }
-  
   return(0);
   
 }  #--- End findInputDTFormat
@@ -2801,8 +2760,7 @@ sub infoDTFormat
 #--------------------------#
 {
   # Local variables
-  my $sample = shift;
-  
+  my $sample = shift;  
   # Guess format
   for (my $i = 1; $i < $winDTDB->gridDT->GetRows(); $i++) {
     my $curSampleRow = $winDTDB->gridDT->GetCellText($i, 0);
@@ -2811,7 +2769,6 @@ sub infoDTFormat
              $winDTDB->gridDT->GetCellText($i, 2), $winDTDB->gridDT->GetCellText($i, 3));
     }
   }
-  
   return(0);
   
 }  #--- End infoDTFormat
@@ -2820,12 +2777,8 @@ sub infoDTFormat
 sub gridDT_Click
 #--------------------------#
 {
-  # Local variables
-  my ($row, $column) = @_;
-  
   $winDTDB->btnDTEdit->Enable();
   $winDTDB->btnDTDel->Enable();
-
   return(1);
 
 }  #--- End gridDT_Click
@@ -2834,11 +2787,7 @@ sub gridDT_Click
 sub gridDT_DblClick
 #--------------------------#
 {
-  # Local variables
-  my ($row, $column) = @_;
-  
   &btnDTEdit_Click();
-
   return(1);
 
 }  #--- End gridDT_DblClick
@@ -2875,14 +2824,12 @@ sub btnDTAdd_Click
   $winDTObj->lblDTObjParsedData->Text('');
   $winDTObj->cbDTObjUseAs->SetCurSel(0);
   $winDTObj->tfDTObjComment->Text('');
-  
   # Update controls
   my $firstItem = $win->tfList1->GetLine(0);
   if ($firstItem) { $winDTObj->btnDTObjUseFirst->Enable();  }
   else            { $winDTObj->btnDTObjUseFirst->Disable(); }
   $winDTObj->btnDTObjAdd->Show();
   $winDTObj->btnDTObjEdit->Hide();
-  
   $winDTObj->Center($win);
   $winDTObj->Show();
   $winDTDB->Disable();
@@ -2896,7 +2843,6 @@ sub btnDTEdit_Click
 {
   # Local variables
   my %useAsInd = ($STR{'input'} => 0, $STR{'output'} => 1, $STR{'both'} => 2, $STR{'none'} => 3);
-  
   # Load the current values
   my $selRow = ($winDTDB->gridDT->GetSelectedCellRange())[0];
   $winDTObj->tfDTObjSample->Text($winDTDB->gridDT->GetCellText($selRow, 0));
@@ -2931,12 +2877,10 @@ sub btnDTEdit_Click
   if (exists($useAsInd{$useAsStr})) { $winDTObj->cbDTObjUseAs->SetCurSel($useAsInd{$useAsStr}); }
   if ($winDTDB->gridDT->GetCellText($selRow, 5)) { $winDTObj->tfDTObjComment->Text($winDTDB->gridDT->GetCellText($selRow, 5)); }
   else                                           { $winDTObj->tfDTObjComment->Text(''); }
-  
   # Update controls
   $winDTObj->btnDTObjUseFirst->Disable();
   $winDTObj->btnDTObjEdit->Show();
   $winDTObj->btnDTObjAdd->Hide();
-
   $winDTObj->Center($win);
   $winDTObj->Show();
   $winDTDB->Disable();
@@ -2957,7 +2901,6 @@ sub btnDTObjUseFirst_Click
 #--------------------------#
 {
   $winDTObj->tfDTObjSample->Text($win->tfList1->GetLine(0));
-  
   &isDTObjReady(0);
   
 }  #--- End btnDTObjUseFirst_Click
@@ -2971,9 +2914,7 @@ sub btnDTObjPatternInsert_Click
   my @patterns = ('%B', '%b', '%D', '%d', '%e', '%F', '%H', '%I', '%M', '%m',
                   '%p', '%R', '%r', '%S', '%T', '%v', '%w', '%Y', '%y', '%Z',
                   '%z', );
-    
   $winDTObj->tfDTObjPattern->Append($patterns[$patternObjSel]);
-    
   &isDTObjReady(0);
 
 }  #--- End btnDTObjPatternInsert_Click
@@ -2984,7 +2925,6 @@ sub patternRE
 {
   # Local variables
   my $formatREStr = shift;
-  
   # Possibles value are:
   my %formatRE = ('%A' => '\w+', # full weekday name, since 3.3 (to fit any language)
                   #'%A' => '(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)', # full weekday name
@@ -3025,12 +2965,10 @@ sub patternRE
                   '%Z' => '[\w\/]+', # time zone name
                   '%z' => '[\-\+]?\d{4}', # time zone offset from UTC
                   );
-  
   # Convert other format string from strftime format (%) to regex
   foreach my $matchRE (keys %formatRE) {
     $formatREStr =~ s/$matchRE/$formatRE{$matchRE}/ge;
   }
-  
   return($formatREStr);
 
 }  #--- End patternRE
@@ -3041,12 +2979,10 @@ sub tfDTObjPattern_Change
 {
   # Local variables
   my $pattern = $winDTObj->tfDTObjPattern->Text();
-  
   if ($pattern =~ /%\w/ and $winDTObj->chDTObjRegexAuto->Checked()) {
     my $regex = patternRE($pattern);
     $winDTObj->tfDTObjRegex->Text($regex);
   }
-  
   &isDTObjReady(0);
   
 }  #--- End tfDTObjPattern_Change
@@ -3055,10 +2991,8 @@ sub tfDTObjPattern_Change
 sub btnDTObjPatternHelp_Click
 #--------------------------#
 {
-  my $url = 'http://strftime.net/';
-  
   # Open Default browser to a help page on Strftime
-  $win->ShellExecute('open', $url,'','',1) or Win32::GUI::MessageBox($win, Win32::FormatMessage(Win32::GetLastError()), $STR{'error'}, 0x40010);
+  $win->ShellExecute('open', 'http://strftime.net/','','',1) or Win32::GUI::MessageBox($win, Win32::FormatMessage(Win32::GetLastError()), $STR{'error'}, 0x40010);
   
 }  #--- End btnDTObjPatternHelp_Click
 
@@ -3076,12 +3010,10 @@ sub chDTObjRegexAuto_Click
 {
   # Local variables
   my $pattern = $winDTObj->tfDTObjPattern->Text();
-  
   if ($pattern =~ /%\w/ and $winDTObj->chDTObjRegexAuto->Checked()) {
     my $regex = patternRE($pattern);
     $winDTObj->tfDTObjRegex->Text($regex);
   }
-  
   &isDTObjReady(0);
   
 }  #--- End chDTObjRegexAuto_Click
@@ -3093,7 +3025,6 @@ sub isDTObjReady
   # Local variables
   my $confirm = shift;
   my $nextStep;
-  
   # Sample provided ?
   my $sample = $winDTObj->tfDTObjSample->Text();
   if (!$sample) {
@@ -3106,17 +3037,14 @@ sub isDTObjReady
     $winDTObj->tfDTObjPattern->Enable();
     $winDTObj->btnDTObjPatternInsert->Enable();
     $winDTObj->cbDTObjPattern->Enable();
-    
     # Pattern provided ?
     my $pattern = $winDTObj->tfDTObjPattern->Text();
     if ($pattern =~ /%\w/) {
       $winDTObj->tfDTObjRegex->Enable();
-    
       # Regex provided ?
       my $regex = $winDTObj->tfDTObjRegex->Text();
       if ($regex) {
         my ($statusRegex, $msg) = &validRegex($regex);
-        
         # Warning
         if      ($statusRegex == 2) {
           $winDTObj->lblDTObjRegexWarn->Show();
@@ -3140,13 +3068,11 @@ sub isDTObjReady
         $winDTObj->lblDTObjRegexWarn->Hide();
         $nextStep = $STR{'errRegex'};
       }
-      
       # Test regex and pattern
       if (!$nextStep) {
         my $strp = DateTime::Format::Strptime->new(pattern => $pattern, zone_map => \%ZONE_MAP, locale => $CONFIG{'DEFAULT_LANG'},);
         if ($sample =~ /$regex/i and my $parsedPattern = $strp->parse_datetime($sample)) {
           $winDTObj->lblDTObjParsedData->Text($parsedPattern->strftime($pattern));
-          
           # Timezone ?
           if ($pattern =~ /%[Zzs]/) {
             $winDTObj->rbDTObjTZLocal->Disable();
@@ -3163,16 +3089,13 @@ sub isDTObjReady
             $winDTObj->rbDTObjTZOtherName->Enable();
             $winDTObj->cbDTObjTZName->Enable();
           }
-
         } else { $winDTObj->lblDTObjParsedData->Text(''); }
       }
-      
     } else {
       $winDTObj->tfDTObjRegex->Disable();
       $nextStep = $STR{'providePattern'};
     }
   }
-  
   # Return an error message or enable the button
   if ($nextStep) {
     $winDTObj->btnDTObjAdd->Disable();
@@ -3211,7 +3134,6 @@ sub btnDTObjAdd_Click
   my @useAsStr = ($STR{'input'}, $STR{'output'}, $STR{'both'}, $STR{'none'});
   my $DTDBFile = $winConfig->tfDTDB->Text();
   my $timezone; # Default timezone, used if not specified in pattern
-  
   # Timezone
   if    ($winDTObj->rbDTObjTZLocal->Checked()) { $timezone = 'local'; } # Local
   elsif ($winDTObj->rbDTObjTZUTC->Checked())   { $timezone = 'UTC';   } # UTC
@@ -3220,17 +3142,14 @@ sub btnDTObjAdd_Click
   } elsif ($winDTObj->rbDTObjTZOtherName->Checked()) {                # Other, name
     $timezone = $winDTObj->cbDTObjTZName->GetString($winDTObj->cbDTObjTZName->GetCurSel());
   } else { $timezone = 'NULL'; }
-  
   # Select or create Datetime database
   if (!-f $DTDBFile or !&validDTDB($DTDBFile)) {
     $DTDBFile = "$USERDIR\\DT.db";
     if (&createDTDB($DTDBFile)) { $winConfig->tfDTDB->Text($DTDBFile); }
   }
-  
   # Connect to DB
   my $dsn = "DBI:SQLite:dbname=$DTDBFile";
   if (my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })) {
-    
     # Add to database
     # Database: table = DT, Fields = sample, pattern, regex, timezone, use_as, comment
     my $sth = $dbh->prepare("insert into DT (sample,pattern,regex,timezone,use_as,comment) values(?,?,?,?,?,?)");
@@ -3247,21 +3166,17 @@ sub btnDTObjAdd_Click
         $winDTDB->gridDT->SetCellText($newLine, 3, $timezone);
         $winDTDB->gridDT->SetCellText($newLine, 4, $useAsStr[$useAs]);
         if ($comment ne 'NULL') { $winDTDB->gridDT->SetCellText($newLine, 5, $comment); }
-        
         # Refresh grid
         $winDTDB->gridDT->SortCells(1, 0, \&sortGridDT);
         $winDTDB->gridDT->AutoSizeColumns();
         $winDTDB->gridDT->ExpandColumnsToFit();
         $winDTDB->gridDT->SetListMode();
-        
         # Add to combobox
         if ($useAs == 0 or $useAs == 2) { $win->cbInputDTFormat->Add($sample);  }
         if ($useAs == 1 or $useAs == 2) { $win->cbOutputDTFormat->Add($sample); $winDTDB->cbDefaultOutput->Add($sample); }
-        
         # Final message
         &winDTObj_Terminate();
         Win32::GUI::MessageBox($winDTDB, $STR{'addedDTObj'}, $STR{'winDTDB'}, 0x40040);
-        
       } else { Win32::GUI::MessageBox($win, $STR{'errNewLine'}, $STR{'error'}, 0x40010); }
     }
   }
@@ -3282,7 +3197,6 @@ sub btnDTObjEdit_Click
   my @useAsStr = ($STR{'input'}, $STR{'output'}, $STR{'both'}, $STR{'none'});
   my $DTDBFile = $winConfig->tfDTDB->Text();
   my $timezone; # Default timezone, used if not specified in pattern
-  
   # Timezone
   if    ($winDTObj->rbDTObjTZLocal->Checked()) { $timezone = 'local'; } # Local
   elsif ($winDTObj->rbDTObjTZUTC->Checked())   { $timezone = 'UTC';   } # UTC
@@ -3291,11 +3205,9 @@ sub btnDTObjEdit_Click
   } elsif ($winDTObj->rbDTObjTZOtherName->Checked()) {                # Other, name
     $timezone = $winDTObj->cbDTObjTZName->GetString($winDTObj->cbDTObjTZName->GetCurSel());
   } else { $timezone = 'NULL'; }
-  
   # Connect to DB
   my $dsn = "DBI:SQLite:dbname=$DTDBFile";
   if (my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })) {
-    
     # Update database
     # Database: table = DT, Fields = sample, pattern, regex, timezone, use_as, comment
     my $sth = $dbh->prepare("UPDATE DT SET pattern = ?, regex = ?, timezone = ?, use_as = ?, comment = ? WHERE ? == sample");
@@ -3313,13 +3225,11 @@ sub btnDTObjEdit_Click
           $winDTDB->gridDT->SetCellText($i, 3, $timezone);
           $winDTDB->gridDT->SetCellText($i, 4, $useAsStr[$useAs]);
           if ($comment ne 'NULL') { $winDTDB->gridDT->SetCellText($i, 5, $comment); }
-
           # Refresh grid
           $winDTDB->gridDT->SortCells(1, 0, \&sortGridDT);
           $winDTDB->gridDT->AutoSizeColumns();
           $winDTDB->gridDT->ExpandColumnsToFit();
           $winDTDB->gridDT->SetListMode();
-          
           # Add to combobox
           if ($useAs == 0 or $useAs == 2) { # Add to input
             if ((my $index = $win->cbInputDTFormat->FindStringExact($sample)) > 1) { # Already in Combobox ?
@@ -3339,7 +3249,6 @@ sub btnDTObjEdit_Click
             my $inComboboxSample = $win->cbOutputDTFormat->GetString($index);
             if ($inComboboxSample eq $sample) { $win->cbOutputDTFormat->DeleteString($index); $winDTDB->cbDefaultOutput->DeleteString($index); }
           }
-          
           # Final message
           &winDTObj_Terminate();
           Win32::GUI::MessageBox($winDTDB, $STR{'updatedDTObj'}, $STR{'winDTDB'}, 0x40040);
@@ -3358,13 +3267,10 @@ sub btnDTDel_Click
 {
   # Local variables
   my $DTDBFile = $winConfig->tfDTDB->Text();
-  
   # Get selected row
   my $selRow = ($winDTDB->gridDT->GetSelectedCellRange())[0];
   my $sample = $winDTDB->gridDT->GetCellText($selRow, 0);
-  
   # Delete in Datetime database
-  # Connect to DB
   my $dsn = "DBI:SQLite:dbname=$DTDBFile";
   if (my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })) {
     my $sth = $dbh->prepare("DELETE from DT where sample == ?");
@@ -3381,11 +3287,9 @@ sub btnDTDel_Click
           $winDTDB->gridDT->AutoSizeColumns();
           $winDTDB->gridDT->ExpandColumnsToFit();
           $winDTDB->gridDT->SetListMode();
-          
           # If entry is in combobox, delete it
           $win->cbInputDTFormat->DeleteString($win->cbInputDTFormat->FindStringExact($sample));
           $win->cbOutputDTFormat->DeleteString($win->cbOutputDTFormat->FindStringExact($sample));
-          
           Win32::GUI::MessageBox($winDTDB, $STR{'deletedDTObj'}, $STR{'winDTDB'}, 0x40040);
           last;
         }
@@ -3401,11 +3305,9 @@ sub createDTDB
 {
   # Local variables
   my $DTDBFile = shift;
-
   # Create a new database
   my $dsn = "DBI:SQLite:dbname=$DTDBFile";
   my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 }) or return(0);
-  
   # Create main table
   my $stmt = qq(CREATE TABLE IF NOT EXISTS DT
                 (sample     VARCHAR(255)  NOT NULL,
@@ -3418,7 +3320,6 @@ sub createDTDB
   my $rv = $dbh->do($stmt);
   if ($rv < 0) { return(0); }
   $dbh->disconnect();
-
   return(1);
   
 }  #--- End createDTDB
@@ -3430,13 +3331,10 @@ sub loadDTDB
   # Local variables
   my $DTDBFile = $winConfig->tfDTDB->Text();
   my @useAsStr = ($STR{'input'}, $STR{'output'}, $STR{'both'}, $STR{'none'});
-  
   if (-f $DTDBFile) {
-    # Connect to DB
     my $dsn = "DBI:SQLite:dbname=$DTDBFile";
     my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })
               or Win32::GUI::MessageBox($win, $STR{'errorConnectDB'}.$DBI::errstr, $STR{'error'}, 0x40010);
-              
     # Check if DT table exists
     my $sth;
     eval { $sth = $dbh->table_info(undef, undef, '%', 'TABLE'); };
@@ -3448,7 +3346,6 @@ sub loadDTDB
     $sth->finish();
     if ($info[2] eq 'DT') { # If table DT exists, than load data
       my $all = $dbh->selectall_arrayref("SELECT * FROM DT ORDER BY sample ASC");
-    
       # Database: table = DT, Fields = sample, pattern, regex, timezone, use_as, comment
       # Feed the grid
       my $i = 1;
@@ -3463,14 +3360,12 @@ sub loadDTDB
         if ($values[5] ne 'NULL') { $winDTDB->gridDT->SetCellText($i, 5, $values[5]); } # Timezone
         $i++;
       }
-      
       # Refresh grid
       $winDTDB->gridDT->SortCells(1, 0, \&sortGridDT);
       $winDTDB->gridDT->AutoSizeColumns();
       $winDTDB->gridDT->ExpandColumnsToFit();
       $winDTDB->gridDT->ScrollPos(1,0);
       $winDTDB->gridDT->SetListMode();
-      
       $dbh->disconnect();
       return(1);
     } else { Win32::GUI::MessageBox($win, $STR{'errorDB'}, $STR{'error'}, 0x40010); return(0); }
@@ -3537,7 +3432,6 @@ sub cbInputDTFormatAddITems
 {
   # Local variables
   my @inputFormats;
-  
   # Browse Datetime grid and list available Datetime object for input
   for (my $i = 1; $i < $winDTDB->gridDT->GetRows(); $i++) {
     my $useAs = $winDTDB->gridDT->GetCellText($i, 4);
@@ -3545,7 +3439,6 @@ sub cbInputDTFormatAddITems
       push(@inputFormats, $winDTDB->gridDT->GetCellText($i, 0));
     }
   }
-  
   # Update the combobox
   if (scalar(@inputFormats)) {
     $win->cbInputDTFormat->Add($STR{'guessORVar'}); # First is "Guess (or variables)"
@@ -3560,7 +3453,6 @@ sub cbOutputDTFormatAddITems
 {
   # Local variables
   my @outputFormats;
-  
   # Browse Datetime grid and list available Datetime object for output
   for (my $i = 1; $i < $winDTDB->gridDT->GetRows(); $i++) {
     my $useAs = $winDTDB->gridDT->GetCellText($i, 4);
@@ -3568,7 +3460,6 @@ sub cbOutputDTFormatAddITems
       push(@outputFormats, $winDTDB->gridDT->GetCellText($i, 0));
     }
   }
-  
   # Update the combobox (Current output and Default output selection)
   if (scalar(@outputFormats)) {
     $win->cbOutputDTFormat->Add($STR{'default'}); # Default
@@ -3582,9 +3473,7 @@ sub cbOutputDTFormatAddITems
 sub cbConv_Change
 #--------------------------#
 {
-  # Hide List 2
   &hideList2();
-  
   &isProcessReady(0);
 
 }  #--- End cbConv_Change
@@ -3611,7 +3500,6 @@ sub cbTime_Change
     $win->lblDTParser->Show(); # Parse context
     $win->cbDTParser->Show();
   }
-  
   # Time difference options
   if ($selFunc == 1) {
     $win->chSingleDate->Show();
@@ -3619,7 +3507,8 @@ sub cbTime_Change
     $win->dtTimeDiffTime->Show();
     $win->lblOutputDTFormat->Hide();
     $win->cbOutputDTFormat->Hide();
-    &showList2();
+    if ($win->chSingleDate->Checked()) { &hideList2(); }
+    else                               { &showList2(); }
   } else {
     $win->chSingleDate->Hide();
     $win->dtTimeDiffDate->Hide();
@@ -3628,7 +3517,6 @@ sub cbTime_Change
     $win->cbOutputDTFormat->Show();
     &hideList2();
   }
-  
   # Show Add or substract time controls
   if ($selFunc == 2 or $selFunc == 3) {
     $win->lblDeltaYears->Show();
@@ -3669,7 +3557,6 @@ sub cbTime_Change
     $win->tfDeltaSecondes->Hide();
     $win->upDownDeltaSecondes->Hide();
   }
-  
   &isProcessReady(0);
 
 }  #--- End cbTime_Change
@@ -3681,7 +3568,6 @@ sub cbInputTimeType_Change
   # Possibles value are 0 = 'Datetime', 1 = 'ChromeTime', 2 = 'LDAPTime', 3 = 'Filetime', 4 = 'SystemTime'
   if (!$win->cbInputTimeType->GetCurSel()) { $win->cbInputDTFormat->Enable();  } # Datetime
   else                                     { $win->cbInputDTFormat->Disable(); } # Else
-  
   &isProcessReady(0);
   
 }  #--- End cbInputTimeType_Change
@@ -3700,7 +3586,6 @@ sub chSingleDate_Click
 {
   if ($win->chSingleDate->Checked()) { &hideList2(); } # Hide List 2
   else                               { &showList2(); } # Show List 2
-  
   &isProcessReady(0);
 
 }  #--- End chSingleDate_Click
@@ -3713,25 +3598,46 @@ sub cbUtils_Change
   my $selFunc  = $win->cbUtils->GetCurSel();
   # Possibles value are 0 = 'NSLookup', 1 = 'CIDR to IP Range', 2 = 'IP Range to CIDR', 3 = 'CIDR to IP list',
   # 4 = 'IP to Arpa', 5 = 'Arpa to IP', 6 = 'Resolve MAC Address', 7 = 'Resolve IPv4 GeoIP', 8 = 'Resolve ISP',
-  # 9 = 'Resolve User-agent', 10 = 'Credit Card to issuing company', 11 = 'Custom functions'
+  # 9 = 'Resolve User-agent', 10 = 'Credit Card to issuing company', 11 = 'Address to GPS coordinates',
+  # 12 = 'Distance between locations', 13 = 'Custom functions'
   
-  # Hide List 2
-  &hideList2();
-  
+  # Show or Hide List 2
+  if    ($selFunc != 12)                    { &hideList2(); }
+  elsif ($win->chSingleLocation->Checked()) { &hideList2(); }
+  else                                      { &showList2(); }
+  # Show Resolve MAC Address options
+  if   ($selFunc == 6) {
+    $win->lblCurrMACOUIdbDate->Show();
+    $win->btnMACOUIdbUpdate->Show();
+    if (!$win->lblCurrMACOUIdbDate->Text()) {
+      my $localMACOUIDB = $winConfig->tfMACOUIDB->Text();
+      if (!$localMACOUIDB or !-f $localMACOUIDB) { # No database
+        $win->lblCurrMACOUIdbDate->Text($STR{'noDB'});
+        $win->btnMACOUIdbUpdate->Text($STR{'download'}.'...');
+      } else { # Show current DB date
+        my $localFileT = DateTime->from_epoch(epoch => (stat($localMACOUIDB))[9]);
+        $win->lblCurrMACOUIdbDate->Text("$STR{'currDBDate'}: ". $localFileT->ymd());
+        $win->btnMACOUIdbUpdate->Text($STR{'winUpdate'}.'...');
+      }
+    }
+  } else { $win->lblCurrMACOUIdbDate->Hide(); $win->btnMACOUIdbUpdate->Hide(); }
   # Show GeoIP options
   if   ($selFunc == 7) { $win->cbGeoIPOpt->Show(); $win->chGeoIPAddHeaders->Show(); }
   else                 { $win->cbGeoIPOpt->Hide(); $win->chGeoIPAddHeaders->Hide(); }
-  
   # Show User-Agent options
   if   ($selFunc == 9) { $win->cbUAOpt->Show(); $win->chUAAddHeaders->Show(); }
   else                 { $win->cbUAOpt->Hide(); $win->chUAAddHeaders->Hide(); }
-  
   # Show Credit Card to Issuing Company options
   if   ($selFunc == 10) { $win->rbIINLocalDB->Show(); $win->rbBinlist->Show(); }
   else                  { $win->rbIINLocalDB->Hide(); $win->rbBinlist->Hide(); }
-  
+  # Show Address to GPS coordinates options
+  if   ($selFunc == 11) { $win->lblAPIKey->Show(); $win->tfAPIKey->Show(); $win->btnSaveAPIKey->Show(); }
+  else                  { $win->lblAPIKey->Hide(); $win->tfAPIKey->Hide(); $win->btnSaveAPIKey->Hide(); }
+  # Distance between locations options
+  if   ($selFunc == 12) { $win->chSingleLocation->Show(); $win->tfSingleLocation->Show(); }
+  else                  { $win->chSingleLocation->Hide(); $win->tfSingleLocation->Hide(); }
   # Custom Functions options
-  if   ($selFunc == 11) {
+  if   ($selFunc == 13) {
     $win->cbCFLists->Show();
     $win->cbCFLists->Enable();
     $win->btnCFAdd->Show();
@@ -3750,10 +3656,17 @@ sub cbUtils_Change
     $win->btnCFSave->Hide();
     $win->btnCFCancel->Hide();
   }
-  
   &isProcessReady(0);
 
 }  #--- End cbUtils_Change
+
+#--------------------------#
+sub btnMACOUIdbUpdate_Click
+#--------------------------#
+{
+  &btnMACOUIDBUpt_Click();
+
+}  #--- End btnMACOUIdbUpdate_Click
 
 #--------------------------#
 sub rbIINLocalDB_Click
@@ -3782,7 +3695,6 @@ sub btnList1File_Click
                                           -defaultfilter => 0                                 ,
                                           -filemustexist => 1                                 ,
                                           -explorer      => 1                                 , );
-
   # Text format only
   if ($file and -T $file) {
     $win->tfList1->Enable();
@@ -3790,7 +3702,6 @@ sub btnList1File_Click
     $win->tfList1->Text("$STR{'useFile'}: \"$file\"");
     &tfList1_Change();
   } elsif ($file) { Win32::GUI::MessageBox($win, $STR{'invalidFile'}, $STR{'error'}, 0x40010); }
-  
   &isProcessReady(0);
 
 }  #--- End btnList1File_Click
@@ -3810,10 +3721,7 @@ sub btnList1Del_Click
 sub btnList1UseRes_Click
 #--------------------------#
 {
-  if ($win->tfList3->Text()) {
-    $win->tfList1->Text($win->tfList3->Text());
-  }
-  
+  if ($win->tfList3->Text()) { $win->tfList1->Text($win->tfList3->Text()); }
   &isProcessReady(0);
 
 }  #--- End btnList1UseRes_Click
@@ -3826,7 +3734,6 @@ sub tfList1_Change
   my $count = 0;
   my $first = $win->tfList1->GetLine(0);
   my $file;
-  
   # Items are in a file ?
   if ($first =~ /^$STR{'useFile'}: \"([^\"]+)\"$/) { $file = $1; }
   if ($file and -T $file) {
@@ -3837,14 +3744,11 @@ sub tfList1_Change
     } else { Win32::GUI::MessageBox($win, "$STR{'errorReading'}: ".$!, $STR{'error'}, 0x40010); }
   # Items are in the textfield
   } else { $count = $win->tfList1->GetLineCount(); }
-
   # Update counter
   if ($count == 1 and $win->tfList1->GetLine(0) eq '') { $count = 0; }
   $win->lblList1Count->Text($count);
-  
   # If New Custom Function
   if ($win->tfCFTitle->IsVisible()) { &validNewFunc(); }
-
   &isProcessReady(0);
 
 }  #--- End tfList1_Change
@@ -3853,8 +3757,7 @@ sub tfList1_Change
 sub tfList1_MaxText
 #--------------------------#
 {
-  # Popup warning
-  Win32::GUI::MessageBox($win, $STR{'maxSizeReached'}, $STR{'warning'}, 0x40030);
+  Win32::GUI::MessageBox($win, $STR{'maxSizeReached'}, $STR{'warning'}, 0x40030); # Popup warning
   
 }  #--- End tfList1_MaxText
 
@@ -3869,7 +3772,6 @@ sub btnList2File_Click
                                           -defaultfilter => 0                                 ,
                                           -filemustexist => 1                                 ,
                                           -explorer      => 1                                 , );
-
   # Text format only
   if ($file and -T $file) {
     $win->tfList2->Enable();
@@ -3877,7 +3779,6 @@ sub btnList2File_Click
     $win->tfList2->Text("$STR{'useFile'}: \"$file\"");
     &tfList2_Change();
   } elsif ($file) { Win32::GUI::MessageBox($win, $STR{'invalidFile'}, $STR{'error'}, 0x40010); }
-  
   &isProcessReady(0);
 
 }  #--- End btnList2File_Click
@@ -3901,7 +3802,6 @@ sub tfList2_Change
   my $count = 0;
   my $first = $win->tfList2->GetLine(0);
   my $file;
-  
   # Items are in a file ?
   if ($first =~ /^$STR{'useFile'}: \"([^\"]+)\"$/) { $file = $1; }
   if ($file and -T $file) {
@@ -3912,14 +3812,11 @@ sub tfList2_Change
     } else { Win32::GUI::MessageBox($win, "$STR{'errorReading'}: ".$!, $STR{'error'}, 0x40010); }
   # Items are in the textfield
   } else { $count = $win->tfList2->GetLineCount(); }
-
   # Update counter
   if ($count == 1 and $win->tfList2->GetLine(0) eq '') { $count = 0; }
   $win->lblList2Count->Text($count);
-  
   # If New Custom Function
   if ($win->tfCFTitle->IsVisible()) { &validNewFunc(); }
-  
   &isProcessReady(0);
 
 }  #--- End tfList2_Change
@@ -3928,8 +3825,7 @@ sub tfList2_Change
 sub tfList2_MaxText
 #--------------------------#
 {
-  # Popup warning
-  Win32::GUI::MessageBox($win, $STR{'maxSizeReached'}, $STR{'warning'}, 0x40030);
+  Win32::GUI::MessageBox($win, $STR{'maxSizeReached'}, $STR{'warning'}, 0x40030); # Popup warning
   
 }  #--- End tfList2_MaxText
 
@@ -3940,7 +3836,6 @@ sub btnList3Open_Click
   # Local variables
   my $file = $win->tfList3->GetLine(0);
   if ($file =~ /^\"([^\"]+)\"$/) { $file = $1; }
-  
   # Open file with default program
   if ($file and -T $file) {
     $win->ShellExecute('open', $file,'','',1) or Win32::GUI::MessageBox($win, "$STR{'errorOpening'}: ".Win32::FormatMessage(Win32::GetLastError()), $STR{'error'}, 0x40010);
@@ -3967,8 +3862,6 @@ sub tfList1_LostFocus { $LISTNO = 0; }
 sub tfList2_LostFocus { $LISTNO = 0; }
 sub tfList3_LostFocus { $LISTNO = 0; }
 
-#--- End tfList3_GotFocus
-
 #--------------------------#
 sub selectAll_Click
 #--------------------------#
@@ -3994,11 +3887,9 @@ sub isProcessReady
   # Local variables
   my $confirm = shift;
   my $nextStep;
-  
   # Status of List1 and List2
   my $nbrList1 = $win->lblList1Count->Text();
   my $nbrList2 = $win->lblList2Count->Text();
-  
   # Every function require items in List1, except some functions in Lists
   if (!$nbrList1 and $win->Tab->SelectedItem() != 0) { $nextStep = $STR{'insertList1'}; }
   else {
@@ -4016,17 +3907,14 @@ sub isProcessReady
         if (!$nbrList1 and !$nbrList2) { $nextStep = $STR{'insertLists'}; }
       # Other require items in List 1 only
       } elsif (!$nbrList1) { $nextStep = $STR{'insertList1'}; }
-        
       # Some functions require a value in With textfield
       if (($selFunc == 9 or $selFunc == 10 or $selFunc == 12) and !$win->tfWith->Text()) {
         $nextStep = $STR{'insertWith'};
       }
-      
       # Some functions require a value in Columns textfield
       if (($selFunc == 10 or $selFunc == 11 or $selFunc == 12) and !$win->tfColumnsNo->Text()) {
         $nextStep = $STR{'insertColumns'};
       }
-      
       # Replace function require value in Replace textfield
       if (($selFunc == 13 or $selFunc == 15) and !$win->tfReplace->Text()) {
         $nextStep = $STR{'insertReplace'};
@@ -4050,15 +3938,10 @@ sub isProcessReady
           }
         }
       }
-    
     # Sorting tab selected
-    } elsif ($win->Tab->SelectedItem() == 1) {
-      # No special condition for now
-      
+    } elsif ($win->Tab->SelectedItem() == 1) { # No special condition for now
     # Conversion tab selected
-    } elsif ($win->Tab->SelectedItem() == 2) {
-      # No special condition for now
-      
+    } elsif ($win->Tab->SelectedItem() == 2) { # No special condition for now
     # Time tab selected
     } elsif ($win->Tab->SelectedItem() == 3) {
       my $selFunc = $win->cbTime->GetCurSel();
@@ -4069,7 +3952,6 @@ sub isProcessReady
       if ($win->cbInputTimeType->GetCurSel() and !$win->cbOutputDTFormat->GetCurSel() and !$winDTDB->cbDefaultOutput->GetCurSel()) {
         $nextStep = $STR{'setOutputFormat'};
       }
-      
       # 'Time difference' can be used with a single date or with items in List 2
       # If so, number of items in List 1 and List 2 must be the same
       if ($selFunc == 1 and !$win->chSingleDate->Checked()) {
@@ -4079,45 +3961,56 @@ sub isProcessReady
           $nextStep = $STR{'insertSameNbr'};
         }
       }
-      
     # Utils tab selected
     } elsif ($win->Tab->SelectedItem() == 4) {
       my $selFunc = $win->cbUtils->GetCurSel();
       # Possibles value are 0 = 'NSLookup', 1 = 'CIDR to IP Range', 2 = 'IP Range to CIDR', 3 = 'CIDR to IP list',
       # 4 = 'IP to Arpa', 5 = 'Arpa to IP', 6 = 'Resolve MAC Address', 7 = 'Resolve IPv4 GeoIP', 8 = 'Resolve ISP',
-      # 9 = 'Resolve User-agent', 10 = 'Credit Card to issuing company', 11 = 'Custom functions'
+      # 9 = 'Resolve User-agent', 10 = 'Credit Card to issuing company', 11 = 'Address to GPS coordinates',
+      # 12 = 'Distance between locations', 13 = 'Custom functions'
       
       # 'Resolve MAC Address' requires MACOUI database
       if    ($selFunc == 6) {
         my $MACOUIDB = $winConfig->tfMACOUIDB->Text();
         if (!-e $MACOUIDB) { $nextStep = $STR{'insertMACOUI'}; }
       }
-      
       # 'Resolve IPv4 GeoIP' requires GeoIP database
       elsif ($selFunc == 7) {
         my $GeoIPDB = $winConfig->tfGeoIPDB->Text();
         if (!-e $GeoIPDB) { $nextStep = $STR{'insertGeoIP'}; }
       }
-      
       # 'Resolve ISP' requires XL-Whois database
       elsif ($selFunc == 8) {
         my $XLWHOISDBFile = $winConfig->tfXLWHOISDB->Text();
         if (!-e $XLWHOISDBFile) { $nextStep = $STR{'insertXLWhois'}; }
       }
-      
       # 'Credit Card to issuing company' requires IIN database if local option is checked
       elsif ($selFunc == 10 and $win->rbIINLocalDB->Checked()) {
         my $IINFile = $winConfig->tfIINDB->Text();
         if (!-e $IINFile) { $nextStep = $STR{'insertIIN'}; }
       }
-      
+      # 'Address to GPS coordinate' requires an API Key to Google
+      elsif ($selFunc == 11) {
+        if (!$win->tfAPIKey->Text()) { $nextStep = $STR{'reqAPIKey'}; }
+      }
+      # Distance between locations
+      elsif ($selFunc == 12) {
+        if ($win->chSingleLocation->Checked()) {
+          if (!$win->tfSingleLocation->Text()) { $nextStep = $STR{'reqLocation'}; }
+        } else { # A list of location in list 1 to compare with list 2, must be the same number of items
+          my $refList1  = &enumItems(\$win->tfList1);
+          my $refList2  = &enumItems(\$win->tfList2);
+          if (scalar(@{$refList1}) != scalar(@{$refList2})) {
+            $nextStep = $STR{'insertSameNbr'};
+          }
+        }
+      }
       # In 'Custom functions', a function must be selected, except if we are adding or modifying a function
-      elsif ($selFunc == 11 and !$win->cbCFLists->GetCurSel() and !$win->tfCFTitle->IsVisible()) {
+      elsif ($selFunc == 13 and !$win->cbCFLists->GetCurSel() and !$win->tfCFTitle->IsVisible()) {
         $nextStep = $STR{'selectFunc'};
       }
     }
   }
-
   # Return an error message or enable the button
   if ($nextStep) {
     $win->btnInputFormatGuess->Disable();
@@ -4153,7 +4046,6 @@ sub btnProcess_Click
         $win->ChangeCursor($ARROW);
         threads->exit();
       };
-      
       # Thread die signal handler
       $SIG{__DIE__} = sub {
         my $errMsg = (split(/ at /, $_[0]))[0];
@@ -4170,20 +4062,14 @@ sub btnProcess_Click
         Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $errMsg", $STR{'error'}, 0x40010);
         threads->exit();
       };
-      
       # Local variables
       my $refList3;
-      
       # Reset list 3
       $win->tfList3->Text('');
       $win->lblList3Count->Text(0);
-      
       # Gather items
       my $refList1  = &enumItems(\$win->tfList1);
       my $refList2  = &enumItems(\$win->tfList2);
-      #my $nbrItems1 = scalar(@{$refList1});
-      #my $nbrItems2 = scalar(@{$refList2});
-      
       # Show progress
       $win->lblPbCurr->Text('');
       $win->pb->SetPos(0);
@@ -4195,7 +4081,6 @@ sub btnProcess_Click
       $win->btnProcess->Hide();
       $win->btnStop->Show();
       $win->ChangeCursor($HOURGLASS);
-      
       # Lists tab selected
       if (!$win->Tab->SelectedItem()) {
         my $selFunc = $win->cbLists->GetCurSel();
@@ -4222,25 +4107,17 @@ sub btnProcess_Click
         elsif ($selFunc == 16) { $refList3 = &lowercase($refList1, $refList2);       }
         elsif ($selFunc == 17) { $refList3 = &uppercase($refList1, $refList2);       }
         elsif ($selFunc == 18) { $refList3 = &addLineNumber($refList1, $refList2);   }
-
       # Sorting tab selected
-      } elsif ($win->Tab->SelectedItem() == 1) {
-        $refList3 = &sortingTabFunc($refList1, $refList2);
-        
+      } elsif ($win->Tab->SelectedItem() == 1) { $refList3 = &sortingTabFunc($refList1, $refList2);
       # Conversion tab selected
-      } elsif ($win->Tab->SelectedItem() == 2) {
-        $refList3 = &conversionTabFunc($refList1, $refList2);
-        
+      } elsif ($win->Tab->SelectedItem() == 2) { $refList3 = &conversionTabFunc($refList1, $refList2);
       # Time tab selected
-      } elsif ($win->Tab->SelectedItem() == 3) {
-        $refList3 = &timeTabFunc($refList1, $refList2);
-        
+      } elsif ($win->Tab->SelectedItem() == 3) { $refList3 = &timeTabFunc($refList1, $refList2);
       # Utils tab selected
       } elsif ($win->Tab->SelectedItem() == 4) {
         my $selFunc = $win->cbUtils->GetCurSel();
         $refList3 = &utilsTabFunc($refList1, $refList2);
       }
-
       # Progress
       $win->lblPbCurr->Text('');
       $win->pb->SetPos(0);
@@ -4251,10 +4128,8 @@ sub btnProcess_Click
       $win->btnProcess->Show();
       $win->btnStop->Hide();      
       $win->ChangeCursor($ARROW);
-      
       # Write resulting list
       &writeResults($refList3);
-      
     });
   }
 
@@ -4296,7 +4171,6 @@ sub btnAbout_Click
                                               -resizable   => 0                         ,
                                               -dialogui    => 1                         , );
   $winAbout->SetIcon($winICO);
-  
   # About tab
   $winAbout->AddLabel(  -name        => 'lblLogo128'            ,
                         -size        => [128,128]               ,
@@ -4322,7 +4196,6 @@ sub btnAbout_Click
                         -font        => $font10                 ,
                         -background  => [255, 255, 255]         ,
                         -text        => '© Copyright 2015-2016 Alain Rioux', );
-  
   $winAbout->Center($win);
   $winAbout->DoModal();
   return(1);
@@ -4336,7 +4209,6 @@ sub enumItems
   # Local variables
   my $refList = shift;
   my @items;
-  
   # Enumerate items
   my $first = $$refList->GetLine(0);
   my $file;
@@ -4349,14 +4221,13 @@ sub enumItems
     } else { Win32::GUI::MessageBox($win, "$STR{'errorReading'}: ".$!, $STR{'error'}, 0x40010); }
   } else {
     # Items are in the textfield
-    #if (length($$refList->GetLine(0)) == 0 and !$$refList->GetLine(1)) { return(\@items); }
     for (my $i = 0; $i < $$refList->GetLineCount(); $i++) {
       my $item = $$refList->GetLine($i);
       chomp($item);
       push(@items, $item);
     }
   }
-  
+  if (!$items[-1]) { pop(@items); }
   return(\@items);
   
 }  #--- End enumItems
@@ -4368,7 +4239,6 @@ sub writeResults
   # Local variables
   my $refItems = shift;
   my $nbrItems = 0;
-  
   if ($$refItems) {
     my $nbrChars = length($$refItems);
     # Max of chars reached or exceeded
@@ -4377,14 +4247,11 @@ sub writeResults
       if (!$win->chList3InFile->Checked()) {
         # Ask to write results in a file
         $answer = Win32::GUI::MessageBox($win, $STR{'saveToFileMsg'}, $STR{'saveToFile'}, 0x40023);
-        
         # Cancel (2)
         if ($answer == 2) { return; }
-        
         # No (7), write truncated text
         elsif ($answer == 7) { $win->tfList3->Text($$refItems); }
       }
-      
       # Yes
       if (($answer and $answer == 6) or $win->chList3InFile->Checked()) {
         # Extract directory of the input file
@@ -4437,14 +4304,12 @@ sub noDuplicates
   my $nbrItems = scalar(@{$refList1});
   my $curr     = 0;
   my %items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # Loop on each item of merged list
   foreach my $item (@{$refList1}) {
     $item =~ s/[\r\n]//g;  # Remove any line break
@@ -4455,17 +4320,14 @@ sub noDuplicates
       # Keep item if doesn't exist already
       if (length($newItem) != 0 and !exists($items{$newItem})) { $items{$newItem} = $item; }
     }
-
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   my $itemsRes;
   foreach (sort values %items) { if ($_) { $itemsRes .= "$_\r\n"; } }
-  
   return(\$itemsRes);  
   
 }  #--- End noDuplicates
@@ -4480,14 +4342,12 @@ sub onlyDuplicates
   my $nbrItems = scalar(@{$refList1});
   my $curr     = 0;
   my %items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # Loop on each item of merged list
   foreach my $item (@{$refList1}) {
     $item =~ s/[\r\n]//g;  # Remove any line break
@@ -4501,13 +4361,11 @@ sub onlyDuplicates
         elsif ($items{$newItem} eq '&1&') { $items{$newItem} = $item; }
       }
     }
-
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   my $itemsRes;
   foreach (keys %items) { if ($_ and $items{$_} ne '&1&') { $itemsRes .= "$_\r\n"; } }
@@ -4525,14 +4383,12 @@ sub countDuplicates
   my $nbrItems = scalar(@{$refList1});
   my $curr     = 0;
   my %items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # Loop on each item of merged list
   foreach my $item (@{$refList1}) {
     $item =~ s/[\r\n]//g;  # Remove any line break
@@ -4549,13 +4405,11 @@ sub countDuplicates
         } else { $items{$newItem} = "$item\|\|\|1"; }
       }
     }
-
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   my $itemsRes;
   foreach (sort values %items) {
@@ -4565,7 +4419,6 @@ sub countDuplicates
     }
     $itemsRes .= "\r\n";
   }
-  
   return(\$itemsRes);  
   
 }  #--- End countDuplicates
@@ -4580,30 +4433,25 @@ sub countChars
   my $nbrItems = scalar(@{$refList1});
   my $curr     = 0;
   my @items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("$curr / $nbrItems");
-  
   # Loop on each item of merged list
   foreach my $item (@{$refList1}) {
     $item =~ s/[\r\n]//g;  # Remove any line break
     my $length = length($item);
     push(@items, $length);
-
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   my $itemsRes;
   foreach (@items) { $itemsRes .= "$_\r\n"; }
-  
   return(\$itemsRes);  
   
 }  #--- End countChars
@@ -4617,14 +4465,12 @@ sub L1_less_L2
   my $nbrItems = scalar(@{$refList1}) + scalar(@{$refList2});
   my $curr     = 0;
   my %items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # Loop on each item of List 1
   foreach my $item (@{$refList1}) {
     $item =~ s/[\r\n]//g;  # Remove any line break
@@ -4635,13 +4481,11 @@ sub L1_less_L2
       # Keep item if doesn't exist already
       if (length($newItem) != 0 and !exists($items{$newItem})) { $items{$newItem} = $item; }
     }
-
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-  
   # Loop on each item of List 2
   foreach my $item (@{$refList2}) {
     $item =~ s/[\r\n]//g;  # Remove any line break
@@ -4652,17 +4496,14 @@ sub L1_less_L2
       # If item exists already, delete it
       if (exists($items{$newItem}) and (length($newItem) != 0)) { delete($items{$newItem}); }
     }
-
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   my $itemsRes;
   foreach (sort values %items) { if ($_) { $itemsRes .= "$_\r\n"; } }
-  
   return(\$itemsRes);  
   
 }  #--- End L1_less_L2
@@ -4678,30 +4519,25 @@ sub col2row
   my $nbrItems  = scalar(@{$refList1});
   my $curr      = 0;
   my $itemsRes;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # Loop on each item of merged list
   foreach my $item (@{$refList1}) {
     $item =~ s/[\r\n]//g;  # Remove any line break
     $itemsRes .= $item;
     if ($separator) { $itemsRes .= $separator }
-
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   if ($separator) { $itemsRes =~ s/$separator$//; }
   $itemsRes .= "\r\n";
-  
   return(\$itemsRes);  
   
 }  #--- End col2row
@@ -4717,14 +4553,12 @@ sub row2col
   my $nbrItems  = scalar(@{$refList1});
   my $curr      = 0;
   my @items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # Loop on each item of merged list
   foreach my $item (@{$refList1}) {
     my @temp;
@@ -4732,17 +4566,14 @@ sub row2col
     if ($item =~ /$separator/) { @temp = split(/$separator/, $item); }
     else                       { push(@temp, $item);                 }
     push(@items, @temp);
-
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   my $itemsRes;
   foreach (@items) { $itemsRes .= "$_\r\n"; }
-  
   return(\$itemsRes);  
   
 }  #--- End row2col
@@ -4757,29 +4588,24 @@ sub list2regex
   my $nbrItems  = scalar(@{$refList1});
   my $curr      = 0;
   my $itemsRes;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # Loop on each item of merged list
   foreach my $item (@{$refList1}) {
     $item =~ s/[\r\n]//g;  # Remove any line break
     if ($item) { $itemsRes .= quotemeta($item)."\|"; }
-
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   while ($itemsRes =~ /(?:[^\\]\|$)/) { chop($itemsRes); }
   $itemsRes .= "\r\n";
-  
   return(\$itemsRes);  
   
 }  #--- End list2regex
@@ -4794,14 +4620,12 @@ sub concatStr
   my $expr     = $win->tfWith->Text();
   my $curr     = 0;
   my @items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # Loop on each item of two lists at the same time
   for (my $i = 0; $i < $nbrItems; $i++) {
     my $resItem = '';
@@ -4814,18 +4638,15 @@ sub concatStr
       $$refList2[$i] =~ s/[\r\n]//g;
       $resItem .= $$refList2[$i];
     }
-    if ($resItem ne $expr) { push(@items, $resItem);     }
-
+    if ($resItem ne $expr) { push(@items, $resItem); }
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   my $itemsRes;
   foreach (@items) { $itemsRes .= "$_\r\n"; }
-  
   return(\$itemsRes);  
   
 }  #--- End concatStr
@@ -4841,14 +4662,12 @@ sub splitStr
   my $nbrItems = scalar(@{$refList1});
   my $curr     = 0;
   my @items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # Loop on each item of merged list
   if (!$win->chRegex->Checked()) { $expr = quotemeta($expr); }
   foreach my $item (@{$refList1}) {
@@ -4858,17 +4677,14 @@ sub splitStr
     foreach (@fields) { $resItem .= "$_\t"; }
     chop($resItem);
     push(@items, $resItem);
-
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   my $itemsRes;
   foreach (@items) { $itemsRes .= "$_\r\n"; }
-  
   return(\$itemsRes);
   
 }  #--- End splitStr
@@ -4885,14 +4701,12 @@ sub splitExtract
   my $curr     = 0;
   my %cols;
   my @items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # Loop on each item of merged list
   foreach (split(/,[ ]?/, $win->tfColumnsNo->Text())) { $cols{$_} = 1; }
   if (!$win->chRegex->Checked()) { $expr = quotemeta($expr); }
@@ -4908,17 +4722,14 @@ sub splitExtract
     if (exists($cols{'-1'})) { $resItem .= pop(@fields)."\t"; } # Last column no matter how many columns there are
     chop($resItem);
     push(@items, $resItem);
-
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   my $itemsRes;
   foreach (@items) { $itemsRes .= "$_\r\n"; }
-  
   return(\$itemsRes);
   
 }  #--- End splitExtract
@@ -4934,14 +4745,12 @@ sub mergeLines
   my $nbrItems   = scalar(@{$refList1});
   my $curr       = 0;
   my @items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # Loop on each item of merged list
   my $count   = 0;
   my $resItem = '';
@@ -4955,17 +4764,14 @@ sub mergeLines
       $count = 0;
       $resItem = '';
     }
-
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   my $itemsRes;
   foreach (@items) { $itemsRes .= "$_\r\n"; }
-  
   return(\$itemsRes);  
   
 }  #--- End mergeLines
@@ -4983,14 +4789,12 @@ sub splitMerge
   my $curr       = 0;
   my $headers;
   my @items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # Loop on each item of merged list
   if (!$win->chRegex->Checked()) { $expr = quotemeta($expr); }
   my $header  = 0;
@@ -5010,17 +4814,14 @@ sub splitMerge
       $count = 0;
       $resItem = '';
     }
-
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   my $itemsRes;
   foreach (@items) { $itemsRes .= "$_\r\n"; }
-  
   return(\$itemsRes);
   
 }  #--- End splitMerge
@@ -5032,27 +4833,23 @@ sub replace
   # Local variables
   my ($refList1, $refList2) = @_;
   push(@{$refList1}, @{$refList2}); # Merge lists
-  my $srcExpr       = $win->tfReplace->Text();
-  my $srcExprCase   = $win->chMatchCase->Checked();
-  my $srcExprRegex  = $win->chRegex->Checked();
-  my $dstExpr       = $win->tfReplBy->Text();
-  my $dstExprEval   = $win->chEval->Checked();
-  
-  my $nbrItems = scalar(@{$refList1});
-  my $curr     = 0;
+  my $srcExpr      = $win->tfReplace->Text();
+  my $srcExprCase  = $win->chMatchCase->Checked();
+  my $srcExprRegex = $win->chRegex->Checked();
+  my $dstExpr      = $win->tfReplBy->Text();
+  my $dstExprEval  = $win->chEval->Checked();
+  my $nbrItems     = scalar(@{$refList1});
+  my $curr         = 0;
   my @items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # Escape replace expresion if not regex
   if    (!$srcExprRegex)                      { $srcExpr = quotemeta($srcExpr);  }
   elsif ($dstExpr =~ /\$1/ and !$dstExprEval) { $dstExpr = '"' . $dstExpr . '"'; }
-  
   # Loop on each item of merged list
   foreach my $item (@{$refList1}) {
     $item =~ s/[\r\n]//g;  # Remove any line break
@@ -5068,17 +4865,14 @@ sub replace
       }
     }
     push(@items, $item);
-
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   my $itemsRes;
   foreach (@items) { $itemsRes .= "$_\r\n"; }
-  
   return(\$itemsRes);
   
 }  #--- End replace
@@ -5093,29 +4887,24 @@ sub reverseStr
   my $nbrItems = scalar(@{$refList1});
   my $curr     = 0;
   my @items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # Loop on each item of merged list
   foreach my $item (@{$refList1}) {
     $item =~ s/[\r\n]//g;  # Remove any line break
     push(@items, scalar reverse($item));
-
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   my $itemsRes;
   foreach (@items) { $itemsRes .= "$_\r\n"; }
-  
   return(\$itemsRes);  
   
 }  #--- End reverseStr
@@ -5132,14 +4921,12 @@ sub transliterate
   my $nbrItems = scalar(@{$refList1});
   my $curr     = 0;
   my @items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # Loop on each item of merged list
   foreach my $item (@{$refList1}) {
     $item =~ s/[\r\n]//g;  # Remove any line break
@@ -5147,17 +4934,14 @@ sub transliterate
     eval "tr/\Q$srcExpr\E/\Q$dstExpr\E/";
     $item = $_;
     push(@items, $item);
-
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   my $itemsRes;
   foreach (@items) { $itemsRes .= "$_\r\n"; }
-  
   return(\$itemsRes);
   
 }  #--- End transliterate
@@ -5172,18 +4956,15 @@ sub lowercase
   my $nbrItems = scalar(@{$refList1});
   my $curr     = 0;
   my @items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # Loop on each item of merged list
   foreach my $item (@{$refList1}) {
     $item =~ s/[\r\n]//g;  # Remove any line break
-    
     # Lowercase all characters
     if    ($win->rbAll->Checked())       { push(@items, lc($item));      }
     # Lowercase first character only
@@ -5198,17 +4979,14 @@ sub lowercase
       chop($newItem);
       push(@items, $newItem);
     }
-
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   my $itemsRes;
   foreach (@items) { $itemsRes .= "$_\r\n"; }
-  
   return(\$itemsRes);  
   
 }  #--- End lowercase
@@ -5223,18 +5001,15 @@ sub uppercase
   my $nbrItems = scalar(@{$refList1});
   my $curr     = 0;
   my @items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # Loop on each item of merged list
   foreach my $item (@{$refList1}) {
     $item =~ s/[\r\n]//g;  # Remove any line break
-    
     # Uppercase all characters
     if    ($win->rbAll->Checked())       { push(@items, uc($item));      }
     # Uppercase first character only
@@ -5249,17 +5024,14 @@ sub uppercase
       chop($newItem);
       push(@items, $newItem);
     }
-
     # Progress
     $curr++;
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   my $itemsRes;
   foreach (@items) { $itemsRes .= "$_\r\n"; }
-  
   return(\$itemsRes);  
   
 }  #--- End uppercase
@@ -5274,29 +5046,24 @@ sub addLineNumber
   my $nbrItems = scalar(@{$refList1});
   my $curr     = 0;
   my @items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # Loop on each item of merged list
   foreach my $item (@{$refList1}) {
     $item =~ s/[\r\n]//g;  # Remove any line break
     $curr++;
     push(@items, $curr."\t".$item);
-
     # Progress
     $win->lblPbCount->Text("$curr / $nbrItems");
     $win->pb->StepIt();
   }
-
   # Format results
   my $itemsRes;
   foreach (@items) { $itemsRes .= "$_\r\n"; }
-  
   return(\$itemsRes);  
   
 }  #--- End addLineNumber
@@ -5315,11 +5082,10 @@ sub sortingTabFunc
   if ($win->rbAsc->Checked()) { $order = 0; } # Ascending
   else                        { $order = 1; } # Descending
   my @items;
-  
   # Sort items
   # Alphabetical
-  if    (!$selFunc     and !$order) { @items = sort {lc $a cmp lc $b} @{$refList1}; } # Ascending
-  elsif (!$selFunc     and  $order) { @items = sort {lc $b cmp lc $a} @{$refList1}; } # Descending
+  if    (!$selFunc and !$order) { @items = sort {lc $a cmp lc $b} @{$refList1}; } # Ascending
+  elsif (!$selFunc and  $order) { @items = sort {lc $b cmp lc $a} @{$refList1}; } # Descending
   # Numerical
   elsif ($selFunc == 1 and !$order) { # Ascending
     @items = map $_->[0],
@@ -5367,11 +5133,9 @@ sub sortingTabFunc
   } elsif ($selFunc == 5) {
     for (my $i = $nbrItems; $i > 0; $i--) { push(@items, splice(@{$refList1}, rand($i), 1)); }
   }
-
   # Format results
   my $itemsRes;
   foreach (@items) { s/[\r\n]//g; $itemsRes .= "$_\r\n"; }
-  
   return(\$itemsRes);  
   
 }  #--- End sortingTabFunc
@@ -5383,10 +5147,8 @@ sub str2Epoch
   # Local variables
   my ($str, $sample, $pattern, $regex, $parseContext, $timezone) = @_;
   my $strp;
-  
   # Guess Input Datetime format if not unique
   if ($sample eq $STR{'guessORVar'}) { ($sample, $pattern, $regex, $timezone) = &findInputDTFormat($str); }
-
   # Format
   if ($pattern and $str =~ /($regex)/) {
     my $extract = $1;
@@ -5401,7 +5163,8 @@ sub str2Epoch
       return($dt->epoch(), $inputTimezone, $pattern, $before, $after);
     } else { return(2); } # Error conversion
   } else { return(1);  } # Invalid input
-}
+  
+}  #--- End str2Epoch
 
 #--------------------------#
 sub conversionTabFunc
@@ -5417,14 +5180,12 @@ sub conversionTabFunc
   # 5 = 'URI Encode', 6 = 'HTML Decode', 7 = 'HTML Encode', 8 = 'Base64 to ASCII', 9 = 'ASCII to Base64', 10 = 'SHA1 - Base32 to Base16'
   my $curr = 0;
   my @items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # 0 = 'Hex to ASCII'
   if ($selFunc == 0) {
     foreach my $item (@{$refList1}) {
@@ -5439,14 +5200,12 @@ sub conversionTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-  
   # 1 = 'ASCII to Hex'
   elsif ($selFunc == 1) {
     foreach my $item (@{$refList1}) {
@@ -5458,14 +5217,12 @@ sub conversionTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-  
   # 2 = 'Hex to Base10'
   elsif ($selFunc == 2) {
     foreach my $item (@{$refList1}) {
@@ -5486,14 +5243,12 @@ sub conversionTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-      
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-  
   # 3 = 'Base10 to ASCII'
   elsif ($selFunc == 3) {
     foreach my $item (@{$refList1}) {
@@ -5508,7 +5263,6 @@ sub conversionTabFunc
           my $offset    = $pos+$long;
           $item         = substr($item,$offset,$longLigne-$offset);
         }
-  
         my $newItem;
         foreach (@tab) { $newItem .= chr($_).' '; }
         push(@items, $newItem);
@@ -5516,14 +5270,12 @@ sub conversionTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-      
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-  
   # 4 = 'URI Decode'
   elsif ($selFunc == 4) {
     foreach my $item (@{$refList1}) {
@@ -5542,14 +5294,12 @@ sub conversionTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-      
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-  
   # 5 = 'URI Encode'
   elsif ($selFunc == 5) {
     foreach my $item (@{$refList1}) {
@@ -5561,14 +5311,12 @@ sub conversionTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-      
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-
   # 6 = 'HTML Decode'
   elsif ($selFunc == 6) {
     foreach my $item (@{$refList1}) {
@@ -5580,14 +5328,12 @@ sub conversionTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-      
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-  
   # 7 = 'HTML Encode'
   elsif ($selFunc == 7) {
     foreach my $item (@{$refList1}) {
@@ -5599,14 +5345,12 @@ sub conversionTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-      
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-  
   # 8 = 'Base64 to ASCII'
   elsif ($selFunc == 8) {
     foreach my $item (@{$refList1}) {
@@ -5619,14 +5363,12 @@ sub conversionTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-      
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-  
   # 9 = 'ASCII to Base64'
   elsif ($selFunc == 9) {
     foreach my $item (@{$refList1}) {
@@ -5638,14 +5380,12 @@ sub conversionTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-      
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-  
   # 10 = 'SHA1 - Base32 to Base16'
   elsif ($selFunc == 10) {
     foreach my $item (@{$refList1}) {
@@ -5657,18 +5397,15 @@ sub conversionTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-      
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-
   # Format results
   my $itemsRes;
   foreach (@items) { if ($_) { $itemsRes .= $_; } $itemsRes .= "\r\n"; }
-  
   return(\$itemsRes);
   
 }  #--- End conversionTabFunc
@@ -5690,10 +5427,8 @@ sub timeTabFunc
   my $parseContext      = $win->cbDTParser->GetCurSel(); # Possibles value are 0 = None, 1 = Before, 2 = After, 3 = Both
   my $curr = 0;
   my @items;
-  
   # Merge lists (except time difference)
   if ($selFunc != 1) { push(@{$refList1}, @{$refList2}); }
-  
   # Input Datetime format
   if (!$selInputType) {
     my $inputFormat = $win->cbInputDTFormat->GetString($win->cbInputDTFormat->GetCurSel());
@@ -5701,7 +5436,6 @@ sub timeTabFunc
       ($sample, $pattern, $regex, $timezone) = &findInputDTFormat($$refList1[0]);
     } else { $sample = $inputFormat; }
   }
-  
   # Output format
   if (!$selOutputDTFormat) { # Default selected
     my $index = $winDTDB->cbDefaultOutput->GetCurSel();
@@ -5718,7 +5452,6 @@ sub timeTabFunc
     ($outPutPattern, $outputTZ) = (&infoDTFormat($win->cbOutputDTFormat->GetString($win->cbOutputDTFormat->GetCurSel())))[1,3];
     if ($outputTZ eq 'local') { $outputTZ = $localTZ; }
   }
-  
   # Progress
   my $nbrItems = scalar(@{$refList1});
   $win->pb->SetRange(0, $nbrItems);
@@ -5726,19 +5459,16 @@ sub timeTabFunc
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # 0 = 'Anytime to Anytime'
   if (!$selFunc) {
     foreach my $item (@{$refList1}) {
       $item =~ s/[\r\n]//g;  # Remove any line break
       if ($item) {
         my ($epoch, $inputTimezone, $before, $after);
-        
         # Datetime Input
         if (!$selInputType) {
           if ($pattern) { ($epoch, $inputTimezone, $pattern, $before, $after) = &str2Epoch($item, $sample, $pattern, $regex, $parseContext, $timezone); }
           else          { ($epoch, $inputTimezone, $pattern, $before, $after) = &str2Epoch($item, $sample, undef   , undef , $parseContext, undef    ); }
-          
         # ChromeTime Input
         } elsif ($selInputType == 1) {
           if ($item =~ /([0-9]{17})/) {
@@ -5746,7 +5476,6 @@ sub timeTabFunc
             if ($parseContext == 1 or $parseContext == 3) { $before = $`; }
             if ($parseContext == 2 or $parseContext == 3) { $after  = $'; }
           } else { $epoch  = 1;  } # Invalid input
-          
         # LDAPTime Input
         } elsif ($selInputType == 2) {
           if ($item =~ /([0-9]{18})/) {
@@ -5754,7 +5483,6 @@ sub timeTabFunc
             if      ($parseContext == 1 or $parseContext == 3) { $before = $`; }
             if      ($parseContext == 2 or $parseContext == 3) { $after  = $'; }
           } else { $epoch  = 1;  } # Invalid input
-        
         # Windows FILETIME (64 bits hexadecimal) (Ex.: 88 33 9d cb 38 36 d0 01)
         } elsif ($selInputType == 3) {
           my $extract;
@@ -5763,13 +5491,11 @@ sub timeTabFunc
             if ($parseContext == 1 or $parseContext == 3) { $before = $`; }
             if ($parseContext == 2 or $parseContext == 3) { $after  = $'; }
           } else { $epoch  = 1;  } # Invalid input
-          
           if ($extract) {
             $extract =~ s/ //g; # Remove space
             my $int64bits = string_to_int64(join('', reverse(split(/([0-9a-fA-F]{2})/, $extract))), 16); # All-in-one!
             $epoch = int(($int64bits-116444736000000000)/10000000); # Convert to unixtime
           }
-        
         # Windows SYSTEMTIME (128 bits hexadecimal, ex.: D9070B00010002000600090013000000)
         } elsif ($selInputType == 4) {
           my $extract;
@@ -5778,7 +5504,6 @@ sub timeTabFunc
             if ($parseContext == 1 or $parseContext == 3) { $before = $`; }
             if ($parseContext == 2 or $parseContext == 3) { $after  = $'; }
           } else { $epoch  = 1;  } # Invalid input
-          
           if ($extract) {
             $extract =~ s/ //g; # Remove space
             my @parts = split(/([0-9a-fA-F]{4} ?)/, $extract);
@@ -5798,7 +5523,6 @@ sub timeTabFunc
             $epoch = $dt->epoch; # Convert to unixtime
           }
         }
-        
         # Convert to output
         if      ($epoch == 1) {
           if ($noResultOpt) { push(@items, $STR{'invalidInput'}); }
@@ -5809,7 +5533,7 @@ sub timeTabFunc
         } else {
           if (my $dt = DateTime->from_epoch(epoch => $epoch)) {
             if ($sameAsInput) { if ($inputTimezone eq 'floating') { $inputTimezone = $localTZ; } $dt->set_time_zone($inputTimezone); }
-            else              { $dt->set_time_zone($outputTZ);      }
+            else              { $dt->set_time_zone($outputTZ); }
             $dt->set(locale => $CONFIG{'DEFAULT_LANG'});
             my $newItem;
             if ($before)      { $newItem .= $before;                       }
@@ -5826,14 +5550,12 @@ sub timeTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-  
   # 1 = 'Time difference'
   elsif ($selFunc == 1) {
     my $timeDiff;
@@ -5854,7 +5576,6 @@ sub timeTabFunc
                                         time_zone  => $outputTZ, );
       push(@{$refList1}, @{$refList2}); # Merge lists
     }
-
     foreach my $item (@{$refList1}) {
       $item =~ s/[\r\n]//g;  # Remove any line break
       if ($item) {
@@ -5881,7 +5602,6 @@ sub timeTabFunc
             $dt1 = DateTime->from_epoch(epoch => $epoch);
             $dt1->set_time_zone($outputTZ);
           }
-          
           if ($dt1 and $dt2) {
             my $oldestDT = $dt1->epoch < $dt2->epoch ? $dt1 : $dt2;
             my $d = DateTime::Format::Duration->new(pattern   => "%Y $STR{'years'}, %m $STR{'months'}, %e $STR{'days'}, %H $STR{'hours'}, %M $STR{'minutes'}, %S $STR{'seconds'}",
@@ -5898,7 +5618,6 @@ sub timeTabFunc
           else { push(@items, undef); }
         }
       }
-
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
@@ -5957,11 +5676,9 @@ sub timeTabFunc
       $win->pb->StepIt();
     }
   }
-
   # Format results
   my $itemsRes;
   foreach (@items) { if ($_) { $itemsRes .= $_; } $itemsRes .= "\r\n"; }
-  
   return(\$itemsRes);
   
 }  #--- End timeTabFunc
@@ -5972,23 +5689,24 @@ sub utilsTabFunc
 {
   # Local variables
   my ($refList1, $refList2) = @_;
-  push(@{$refList1}, @{$refList2}); # Merge lists
-  my $noResultOpt = $winConfig->rbNoResultOpt2->Checked();
-  my $nbrItems    = scalar(@{$refList1});
   my $selFunc     = $win->cbUtils->GetCurSel();
   # Possibles value are 0 = 'NSLookup', 1 = 'CIDR to IP Range', 2 = 'IP Range to CIDR', 3 = 'CIDR to IP list',
   # 4 = 'IP to Arpa', 5 = 'Arpa to IP', 6 = 'Resolve MAC Address', 7 = 'Resolve IPv4 GeoIP', 8 = 'Resolve ISP',
-  # 9 = 'Resolve User-agent', 10 = 'Credit Card to issuing company', 11 = 'Custom functions'
+  # 9 = 'Resolve User-agent', 10 = 'Credit Card to issuing company', 11 = 'Address to GPS coordinates',
+  # 12 = 'Distance between locations', 13 = 'Custom functions'
+  
+  # Merge lists (except time difference)
+  if ($selFunc != 12) { push(@{$refList1}, @{$refList2}); }
+  my $noResultOpt = $winConfig->rbNoResultOpt2->Checked();
+  my $nbrItems    = scalar(@{$refList1});
   my $curr = 0;
   my @items;
-  
   # Progress
   $win->pb->SetRange(0, $nbrItems);
   $win->pb->SetPos(0);
   $win->pb->SetStep(1);
   $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
   $win->lblPbCount->Text("0 / $nbrItems");
-  
   # 0 = 'NSLookup'
   if ($selFunc == 0) {
     foreach my $item (@{$refList1}) {
@@ -6004,14 +5722,12 @@ sub utilsTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-
   # 1 = 'CIDR to IP Range'
   elsif ($selFunc == 1) {
     foreach my $item (@{$refList1}) {
@@ -6044,14 +5760,12 @@ sub utilsTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-  
   # 2 = 'IP Range to CIDR'
   elsif ($selFunc == 2) {
     foreach my $item (@{$refList1}) {
@@ -6078,14 +5792,12 @@ sub utilsTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-  
   # 3 = 'CIDR to IP list'
   elsif ($selFunc == 3) {
     foreach my $item (@{$refList1}) {
@@ -6114,14 +5826,12 @@ sub utilsTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-  
   # 4 = 'IP to Arpa'
   elsif ($selFunc == 4) {
     foreach my $item (@{$refList1}) {
@@ -6148,14 +5858,12 @@ sub utilsTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-  
   # 5 = 'Arpa to IP'
   elsif ($selFunc == 5) {
     foreach my $item (@{$refList1}) {
@@ -6190,24 +5898,20 @@ sub utilsTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-  
   # 6 = 'Resolve MAC Address'
   elsif ($selFunc == 6) {
     my $MACOUIDB = $winConfig->tfMACOUIDB->Text();
-    
     if (-f $MACOUIDB) {
       # Load MACOUI database
       my $dsn = "DBI:SQLite:dbname=$MACOUIDB";
       if (my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })) {
         my $sth = $dbh->prepare("SELECT org from MACOUI WHERE prefix == ?");
-        
         foreach my $item (@{$refList1}) {
           $item =~ s/[\r\n]//g;  # Remove any line break
           if ($item) {
@@ -6221,7 +5925,6 @@ sub utilsTabFunc
                 my @fields = $sth->fetchrow_array();
                 if (scalar(@fields) > 0) { $newItem = join('',@fields); }
               }
-              
               if ($newItem) { push(@items, $newItem); }
               else {
                 if ($noResultOpt) { push(@items, $STR{'noMatch'}); }
@@ -6235,19 +5938,16 @@ sub utilsTabFunc
             if ($noResultOpt) { push(@items, $STR{'noInput'}); }
             else { push(@items, undef); }
           }
-    
           # Progress
           $curr++;
           $win->lblPbCount->Text("$curr / $nbrItems");
           $win->pb->StepIt();
         }
-        
         $sth->finish();
         $dbh->disconnect();
       } else { Win32::GUI::MessageBox($win, $STR{'errorConnectDB'}, $STR{'error'}, 0x40010); }
     } else { Win32::GUI::MessageBox($win, 'MACOUI '.$STR{'DBnotFound'}.'...', $STR{'error'}, 0x40010); }
   }
-  
   # 7 = 'Resolve IPv4 GeoIP'
   elsif ($selFunc == 7) {
     my $geoIPDB = $winConfig->tfGeoIPDB->Text();
@@ -6272,7 +5972,6 @@ sub utilsTabFunc
       elsif ($selOpt == 9) { $headers = $STR{'tzOffset'};    }
       push(@items, $headers);
     }
-    
     foreach my $item (@{$refList1}) {
       $item =~ s/[\r\n]//g;  # Remove any line break
       if ($item) {
@@ -6316,7 +6015,6 @@ sub utilsTabFunc
               }
             }
           }
-          
           if ($newItem) { push(@items, $newItem); }
           else {
             if ($noResultOpt) { push(@items, $STR{'noMatch'}); }
@@ -6330,18 +6028,15 @@ sub utilsTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-  
   # 8 = 'Resolve ISP'
   elsif ($selFunc == 8) {
     my $XLWHOISDBFile = $winConfig->tfXLWHOISDB->Text();
-
     if (-f $XLWHOISDBFile) {
       # Load XL-Whois database
       my $dsn = "DBI:SQLite:dbname=$XLWHOISDBFile";
@@ -6354,7 +6049,6 @@ sub utilsTabFunc
               my $ip = $1;
               if    ($item =~ /\./) { $newItem = &checkIP_WhoisDB_IPv4($ip, \$dbh); } # IPv4
               elsif ($item =~ /\:/) { $newItem = &checkIP_WhoisDB_IPv6($ip, \$dbh); } # IPv6
-              
               if ($newItem) { push(@items, $newItem); }
               else {
                 if ($noResultOpt) { push(@items, $STR{'noMatch'}); }
@@ -6368,23 +6062,18 @@ sub utilsTabFunc
             if ($noResultOpt) { push(@items, $STR{'noInput'}); }
             else { push(@items, undef); }
           }
-    
           # Progress
           $curr++;
           $win->lblPbCount->Text("$curr / $nbrItems");
           $win->pb->StepIt();
         }
-        
         $dbh->disconnect();
       } else { Win32::GUI::MessageBox($win, $STR{'errorConnectDB'}, $STR{'error'}, 0x40010); }
     } else { Win32::GUI::MessageBox($win, 'XL-Whois '.$STR{'DBnotFound'}.'...', $STR{'error'}, 0x40010); }
   }
-  
   # 9 = 'Resolve User-agent'
   elsif ($selFunc == 9) {
-    my $selOpt = $win->cbUAOpt->GetCurSel();
-    # Possible values are 0 = 'All', 1 = 'Type', 1 = 'OS', 2 = 'Browser', 3 = 'Device', 4 = 'Lang'
-    
+    my $selOpt = $win->cbUAOpt->GetCurSel(); # Possible values are 0 = 'All', 1 = 'Type', 1 = 'OS', 2 = 'Browser', 3 = 'Device', 4 = 'Lang'
     # Add headers
     if ($win->chUAAddHeaders->Checked()) {
       my $headers;
@@ -6396,12 +6085,10 @@ sub utilsTabFunc
       elsif ($selOpt == 5) { $headers = $STR{'uaLang'};    }
       push(@items, $headers);
     }
-    
     foreach my $item (@{$refList1}) {
       $item =~ s/[\r\n]//g;  # Remove any line break
       if ($item) {
         my $newItem = &parseUA($item, $selOpt);
-
         if ($newItem) { push(@items, $newItem); }
         else {
           if ($noResultOpt) { push(@items, $STR{'noMatch'}); }
@@ -6411,21 +6098,18 @@ sub utilsTabFunc
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
         else { push(@items, undef); }
       }
-
       # Progress
       $curr++;
       $win->lblPbCount->Text("$curr / $nbrItems");
       $win->pb->StepIt();
     }
   }
-  
   # 10 = 'Credit Card to issuing company'
   elsif ($selFunc == 10) {
     # Search in local IIN Database
     if ($win->rbIINLocalDB->Checked()) {
       my $IINFile = $winConfig->tfIINDB->Text();
       my %listIIN;
-  
       if (-f $IINFile) {
         # Load IIN database
         my $dsn = "DBI:SQLite:dbname=$IINFile";
@@ -6435,9 +6119,7 @@ sub utilsTabFunc
             my @values = @$row;
             if ($values[0] =~ /(^[0-9]{2})/) { push(@{$listIIN{$1}}, "$values[0]=$values[1]"); }
           }
-          
           $dbh->disconnect();
-    
           foreach my $item (@{$refList1}) {
             $item =~ s/[\r\n]//g;  # Remove any line break
             if ($item) {
@@ -6450,7 +6132,6 @@ sub utilsTabFunc
                 my $cc   =  $1;
                 $cc      =~ s/[\s\-]//g;
                 $newItem =  &checkCC_IINDB($cc, \%listIIN);
-                
                 if ($newItem) { push(@items, $newItem); }
                 else {
                   if ($noResultOpt) { push(@items, $STR{'noMatch'}); }
@@ -6464,7 +6145,6 @@ sub utilsTabFunc
               if ($noResultOpt) { push(@items, $STR{'noInput'}); }
               else { push(@items, undef); }
             }
-      
             # Progress
             $curr++;
             $win->lblPbCount->Text("$curr / $nbrItems");
@@ -6472,13 +6152,11 @@ sub utilsTabFunc
           }
         } else { Win32::GUI::MessageBox($win, $STR{'errorConnectDB'}, $STR{'error'}, 0x40010); }
       } else { Win32::GUI::MessageBox($win, 'IIN '.$STR{'DBnotFound'}.'...', $STR{'error'}, 0x40010); }
-    
     # Send queries to www.binlist.net
     } else {
       # Set headers
       my $headers = "$STR{'brand'}\t$STR{'subBrand'}\t$STR{'bank'}\t$STR{'cardType'}\t$STR{'cardCategory'}\t$STR{'countryName'}";
       push(@items, $headers);
-      
       foreach my $item (@{$refList1}) {
         $item =~ s/[\r\n]//g;  # Remove any line break
         if ($item) {
@@ -6491,7 +6169,6 @@ sub utilsTabFunc
             my $cc   =  $1;
             $cc      =~ s/[\s\-]//g;
             $newItem =  &checkCC_BinList($cc);
-            
             if ($newItem) { push(@items, $newItem); }
             else {
               if ($noResultOpt) { push(@items, $STR{'noMatch'}); }
@@ -6505,7 +6182,6 @@ sub utilsTabFunc
           if ($noResultOpt) { push(@items, $STR{'noInput'}); }
           else { push(@items, undef); }
         }
-  
         # Progress
         $curr++;
         $win->lblPbCount->Text("$curr / $nbrItems");
@@ -6513,12 +6189,91 @@ sub utilsTabFunc
       }
     }
   }
-  
-  # 11 = 'Custom functions'
+  # 11 = 'Address to GPS coordinates'
   elsif ($selFunc == 11) {
+    my $ua = new LWP::UserAgent;
+    $ua->agent($CONFIG{'USERAGENT'});
+    $ua->default_header('Accept-Language' => 'en');
+    my $APIKey = $win->tfAPIKey->Text();
+    foreach my $item (@{$refList1}) {
+      $item =~ s/[\r\n]//g;  # Remove any line break
+      if ($item) {
+        $item =~ s/ /+/g; # Replace spaces by + sign
+        my $encItem = uri_escape_utf8($item); # Address must be uri encoded
+        my $req  = new HTTP::Request GET => "https://maps.googleapis.com/maps/api/geocode/json?address=$encItem&key=$APIKey";
+        if (my $json = $ua->request($req)) {
+          if (my $d_json = decode_json($json->content)) {
+            if (my $lat = $d_json->{results}->[0]->{geometry}->{location}->{lat} and 
+                my $lng = $d_json->{results}->[0]->{geometry}->{location}->{lng}) {
+              push(@items, "$lat, $lng");
+            } else {
+              my $msg = $STR{'noMatch'};
+              if (my $status = $d_json->{status}) { $msg = $status; }
+              if ($noResultOpt) { push(@items, $msg); }
+              else { push(@items, undef); }
+            }
+          } else {
+            print $json->content . "- 2\n";
+            if ($noResultOpt) { push(@items, $STR{'noMatch'}); }
+            else { push(@items, undef); }
+          }
+        } else {
+          if ($noResultOpt) { push(@items, $STR{'errorConnection'}); }
+          else { push(@items, undef); }
+        }
+      } else {
+        if ($noResultOpt) { push(@items, $STR{'noInput'}); }
+        else { push(@items, undef); }
+      }
+      # Progress
+      $curr++;
+      $win->lblPbCount->Text("$curr / $nbrItems");
+      $win->pb->StepIt();
+    }
+  }
+  # 12 = 'Distance between locations'
+  elsif ($selFunc == 12) {
+    my $loc2;
+    # If "Compare to single location" option is checked
+    if ($win->chSingleLocation->Checked()) {
+      $loc2 = $win->tfSingleLocation->Text();
+      push(@{$refList1}, @{$refList2}); # Merge lists
+    }
+    # Browse location and calculate distance
+    foreach my $item (@{$refList1}) {
+      $item =~ s/[\r\n]//g;  # Remove any line break
+      if ($item) {
+        # Gather date in list 2
+        if (!$win->chSingleLocation->Checked() and my $item2 = $$refList2[$curr]) {
+          $item2 =~ s/[\r\n]//g;  # Remove any line break
+          if ($item2) { $loc2 = $item2; }
+        }
+        # Gather date in list 1 and calculate difference
+        if ($loc2 and $item) {
+          my ($lat1, $lon1) = split(/, /, $item);
+          my ($lat2, $lon2) = split(/, /, $loc2);
+          if ($lat1 and $lon1 and $lat2 and $lon2) {
+            my $distanceInKM = int(distance($lat1, $lon1 => $lat2, $lon2))/1000;
+            push(@items, $distanceInKM);
+          } else {
+            if ($noResultOpt) { push(@items, $STR{'invalidInput'}); }
+            else { push(@items, undef); }
+          }
+        } else {
+          if ($noResultOpt) { push(@items, $STR{'invalidInput'}); }
+          else { push(@items, undef); }
+        }
+      }
+      # Progress
+      $curr++;
+      $win->lblPbCount->Text("$curr / $nbrItems");
+      $win->pb->StepIt();
+    }
+  }
+  # 13 = 'Custom functions'
+  elsif ($selFunc == 13) {
     my $selFuncStr = $win->cbCFLists->GetString($win->cbCFLists->GetCurSel());
     my ($title, $dbFile);
-    
     # Gather path to database
     if ($selFuncStr and $selFuncStr ne $STR{'cbCFLists'}.'...') {
       my $j = 1;
@@ -6531,17 +6286,14 @@ sub utilsTabFunc
         }
         $j++;
       }
-    
       if (-f $dbFile) {
         # Load CF database
         my $dsn = "DBI:SQLite:dbname=$dbFile";
         if (my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })) {
           my $sth;
-          
           # Match case ?
           if ($win->chCFMatchCase->Checked()) { $sth = $dbh->prepare("SELECT value from DATA WHERE key == ?");                }
           else                                { $sth = $dbh->prepare("SELECT value from DATA WHERE key == ? COLLATE NOCASE"); }
-          
           foreach my $item (@{$refList1}) {
             $item =~ s/[\r\n]//g;  # Remove any line break
             if ($item) {
@@ -6551,7 +6303,6 @@ sub utilsTabFunc
                 my @fields = $sth->fetchrow_array();
                 if (scalar(@fields) > 0) { $newItem = join('',@fields); }
               }
-              
               if ($newItem) { push(@items, $newItem); }
               else {
                 if ($noResultOpt) { push(@items, $STR{'noMatch'}); }
@@ -6561,24 +6312,20 @@ sub utilsTabFunc
               if ($noResultOpt) { push(@items, $STR{'noInput'}); }
               else { push(@items, undef); }
             }
-      
             # Progress
             $curr++;
             $win->lblPbCount->Text("$curr / $nbrItems");
             $win->pb->StepIt();
           }
-          
           $sth->finish();
           $dbh->disconnect();
         } else { Win32::GUI::MessageBox($win, $STR{'errorConnectDB'}, $STR{'error'}, 0x40010); }
       } else { Win32::GUI::MessageBox($win, $STR{'selectedCF'}.' '.$STR{'DBnotFound'}.'...', $STR{'error'}, 0x40010); }
     }
   }
-
   # Format results
   my $itemsRes;
   foreach (@items) { if ($_) { $itemsRes .= $_; } $itemsRes .= "\r\n"; }
-  
   return(\$itemsRes);
   
 }  #--- End utilsTabFunc
@@ -6589,7 +6336,6 @@ sub nsLookup
 {
   # Local variables
   my $item = shift;
-  
   # $item is an IP address
   if ($item =~ /(?:[^0-9]|^)((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))(?:[^0-9\.]|$)/ or $item =~ /($IPv6_re)/) {
     my $res = Net::DNS::Resolver->new;
@@ -6636,10 +6382,8 @@ sub parseUA
   my ($uaStr, $opt) = @_;
   # Possible values for $opt are 0 = 'All', 1 = 'Type', 1 = 'OS', 2 = 'Browser', 3 = 'Device', 4 = 'Lang'
   my $UAInfos;
-  
   # Parse User-Agent String
   my $refUA = Woothee->parse($uaStr); # Ex.: {'name'=>"Internet Explorer", 'category'=>"pc", 'os'=>"Windows 7", 'version'=>"8.0", 'vendor'=>"Microsoft"}
-  
   # Detect type
   if (!$opt or $opt == 1) {
     # Not detected, use another parser
@@ -6653,10 +6397,8 @@ sub parseUA
     } elsif ($$refUA{'category'}) { $UAInfos .= $$refUA{'category'}; }
     if (!$opt) { $UAInfos .= "\t"; }
   }
-  
   # Robot
   if ($$refUA{'category'} eq 'crawler') {
-
   # pc or smartphone
   } else {
     # Detect OS
@@ -6665,7 +6407,6 @@ sub parseUA
       if ($os  ) { $UAInfos .= $os;  }
       if (!$opt) { $UAInfos .= "\t"; }
     }
-    
     # Detect browser
     if ($opt == 0 or $opt == 3) {
       my $browser;
@@ -6678,29 +6419,24 @@ sub parseUA
       if ($browser) { $UAInfos .= $browser; }
       if (!$opt   ) { $UAInfos .= "\t";     }
     }
-    
     # Detect Device
     if (!$opt or $opt == 4) {
       my $device;
       my $uaDevice = HTTP::BrowserDetect->new($uaStr);
       if ($uaDevice->device_name()) { $device = $uaDevice->device_name(); }
-
       if ($device) { $UAInfos .= $device; }
       if (!$opt  ) { $UAInfos .= "\t";     }
     }
-    
     # Detect Lang
     if (!$opt or $opt == 5) {
       my $lang;
       my $uaLang = HTML::ParseBrowser->new($uaStr);
       if ($uaLang->language) { $lang = $uaLang->language; }
       # See https://msdn.microsoft.com/en-us/library/ms533052%28v=vs.85%29.aspx
-
       if ($lang) { $UAInfos .= $lang; }
       if (!$opt) { $UAInfos .= "\t";  }
     }
   }
-  
   if ($UAInfos) {
     if ($UAInfos =~ /\t$/) { chop($UAInfos); }
     return($UAInfos);
@@ -6715,7 +6451,6 @@ sub parseUAOS
   # Local variables
   my ($uaStr, $refUA) = @_;
   my $os;
-  
   # Some particulars
   if    ($uaStr =~ /Windows NT 5.2/i) { $os = 'Windows XP Professional x64'; }
   elsif ($uaStr =~ /Ubuntu/i        ) { $os = 'Linux Ubuntu'; }
@@ -6732,7 +6467,6 @@ sub parseUAOS
       $os .= " $$refUA{'os_version'}";
     }
   }
-  
   return($os);
 
 }  #--- End parseUAOS
@@ -6744,10 +6478,8 @@ sub checkCC_IINDB
   # Local variables
   my ($cc, $refListIIN) = @_;
   my $issuer;
-
   # Check the card number with Business::CreditCard (Luhn Algorithm)
   my $genIssuer = &cardtype($cc);
-  
   # If number valid, check in the IIN Database for a more precise result
   if ($genIssuer and $genIssuer ne 'Not a credit card') {
     my $exactIssuer;
@@ -6759,11 +6491,9 @@ sub checkCC_IINDB
         }
       }
     }
-  
     if ($exactIssuer) { $issuer = $exactIssuer; }
     else              { $issuer = $genIssuer;   }
   }
-  
   if ($issuer and $issuer !~ /Unknown/i) { return($issuer); }
   else                                   { return(undef);   }
 
@@ -6776,15 +6506,12 @@ sub checkCC_BinList
   # Local variables
   my ($cc) = @_;
   my $issuer;
-
   # Check the card number with Business::CreditCard (Luhn Algorithm)
   my $genIssuer = &cardtype($cc);
-  
   # If number valid, send a query to Binlist.net
   if ($genIssuer and $genIssuer ne 'Not a credit card') {
     my $exactIssuer;
     my %data;
-    
     if ($cc =~ /^([0-9]{6})/) { # Need only the first 6 digits
       my $ua = new LWP::UserAgent;
       $ua->agent($CONFIG{'USERAGENT'});
@@ -6817,10 +6544,8 @@ sub checkCC_BinList
         if ($data{country_name})  { $exactIssuer .= "$data{country_name}";   }
       }
     }
-  
     if ($exactIssuer) { $issuer = $exactIssuer; }
   }
-  
   if ($issuer) { return($issuer); }
   else         { return(undef);   }
 
@@ -6832,7 +6557,6 @@ sub cbCFLists_Change
 {
   # Local variables
   my $selFuncStr = $win->cbCFLists->GetString($win->cbCFLists->GetCurSel());
-  
   if ($selFuncStr and $selFuncStr ne $STR{'cbCFLists'}.'...') {
     $win->chCFMatchCase->Show();
     $win->btnCFRem->Enable();
@@ -6842,10 +6566,50 @@ sub cbCFLists_Change
     $win->btnCFRem->Disable();
     $win->btnCFEdit->Disable();
   }
-  
   &isProcessReady(0);
 
 }  #--- End cbCFLists_Change
+
+#--------------------------#
+sub tfAPIKey_Change
+#--------------------------#
+{
+  &isProcessReady(0);
+
+}  #--- End tfAPIKey_Change
+
+#--------------------------#
+sub chSingleLocation_Click
+#--------------------------#
+{
+  if ($win->chSingleLocation->Checked()) { &hideList2(); } # Hide List 2
+  else                                   { &showList2(); } # Show List 2
+  &isProcessReady(0);
+
+}  #--- End chSingleLocation_Click
+
+#--------------------------#
+sub tfSingleLocation_Change
+#--------------------------#
+{
+  &isProcessReady(0);
+
+}  #--- End tfSingleLocation_Change
+
+#--------------------------#
+sub btnSaveAPIKey_Click
+#--------------------------#
+{
+  # Save the API key
+  if (my $APIKey = $win->tfAPIKey->Text()) {
+    $CONFIG{'GOOGLE_API_KEY'} = $APIKey;
+    &saveConfig(\%CONFIG);
+  } else {
+    delete($CONFIG{'GOOGLE_API_KEY'});
+    &saveConfig(\%CONFIG);
+  }
+
+}  #--- End btnSaveAPIKey_Click
 
 #--------------------------#
 sub btnCFAdd_Click
@@ -6869,7 +6633,6 @@ sub btnCFAdd_Click
           my $title = join('',@fields);
           $sth->finish();
           $dbh->disconnect();
-          
           # Copy to the Customs folder
           my $pathQuoted = quotemeta($USERDIR);
           if ($CFDBFile !~ /$pathQuoted\\Customs/) {
@@ -6882,7 +6645,6 @@ sub btnCFAdd_Click
               }
             }
           }
-          
           # Verify that the title doesn't already exist
           if (&validUniqueCFName($title)) {
             # Update window and config
@@ -6892,7 +6654,6 @@ sub btnCFAdd_Click
             &saveConfig(\%CONFIG);
             $win->cbCFLists->Add($title);
             Win32::GUI::MessageBox($win, $STR{'funcAdded'}, "XL-Tools $VERSION", 0x40040);
-            
           # Function must be modified
           } else {
             Win32::GUI::MessageBox($win, $STR{'funcExists'}, $STR{'warning'}, 0x40030);
@@ -6913,7 +6674,6 @@ sub validCFDB
   my $CFDBFile = shift;
   my $titleTableExists;
   my $dataTableExists;
-  
   if (-f $CFDBFile) {
     # Connect to DB
     my $dsn = "DBI:SQLite:dbname=$CFDBFile";
@@ -6927,14 +6687,11 @@ sub validCFDB
         if    ($$refRow[2] eq 'TITLE') { $titleTableExists = 1; }
         elsif ($$refRow[2] eq 'DATA' ) { $dataTableExists  = 1; }
       }
-
       $sth->finish();
       $dbh->disconnect();
-
       if ($titleTableExists and $dataTableExists) { return(1); }
     }
   }
-  
   return(0);
   
 }  #--- End validCFDB
@@ -6945,12 +6702,10 @@ sub validUniqueCFName
 {
   # Local variables
   my $title = shift;
-  
   for (my $i = 0; $i < $win->cbCFLists->Count(); $i++) {
     my $currSelStr = $win->cbCFLists->GetString($i);
     if ($currSelStr eq $title) { return(0); }
   }
-  
   return(1); # Not found  
   
 }  #--- End validUniqueCFName
@@ -6962,10 +6717,8 @@ sub btnCFRem_Click
   # Local variables
   my $selFuncStr = $win->cbCFLists->GetString($win->cbCFLists->GetCurSel());
   my ($title, $dbFile, $index);
-  
   # Ask a confirmation
   my $answer = Win32::GUI::MessageBox($win, "$STR{'remConfirm'} \"$selFuncStr\" $STR{'func'} ?", $STR{'remConfirmT'}, 0x40024);
-
   if ($answer == 6) {
     # Gather path to database
     if ($selFuncStr and $selFuncStr ne $STR{'cbCFLists'}.'...') {
@@ -6992,13 +6745,10 @@ sub btnCFRem_Click
       delete($CONFIG{'CF'.$j}); # Remove the last one
       &saveConfig(\%CONFIG);
     }
-    
     # Remove function from list
     if ($index) { $win->cbCFLists->DeleteString($index); }
-    
     # Ask confirmation to delete the file
     $answer = Win32::GUI::MessageBox($win, "$STR{'delConfirm'} ?", $STR{'delConfirmT'}, 0x40024);
-    
     # Delete the file
     if ($answer == 6) {
       if (-e $dbFile) { unlink($dbFile); }
@@ -7006,7 +6756,6 @@ sub btnCFRem_Click
         Win32::GUI::MessageBox($win, $STR{'funcDeleted'}, "XL-Tools $VERSION", 0x40040);
       }
     }
-    
     $win->cbCFLists->SetCurSel(0);
   }
 
@@ -7019,7 +6768,6 @@ sub btnCFEdit_Click
   # Local variables
   my $selFuncStr = $win->cbCFLists->GetString($win->cbCFLists->GetCurSel());
   my ($title, $dbFile);
-  
   # Gather path to database
   if ($selFuncStr and $selFuncStr ne $STR{'cbCFLists'}.'...') {
     my $j = 1;
@@ -7031,7 +6779,6 @@ sub btnCFEdit_Click
       }
       $j++;
     }
-
     &editCF($title, $dbFile);
   }
 
@@ -7049,7 +6796,6 @@ sub btnCFNew_Click
   $win->chCFMatchCase->Hide();
   $win->cbCFLists->Disable();
   $win->btnProcess->Disable();
-  
   # Show List 2
   &showList2();
 
@@ -7059,7 +6805,6 @@ sub btnCFNew_Click
 sub tfCFTitle_Change
 #--------------------------#
 {
-  # Valid New Function
   &validNewFunc();
 
 }  #--- End tfCFTitle_Change
@@ -7076,12 +6821,8 @@ sub validNewFunc
   my $refList2  = &enumItems(\$win->tfList2);
   my $nbrItems1 = scalar(@{$refList1});
   my $nbrItems2 = scalar(@{$refList2});
-  
-  if ($title and $nbrItems1 > 0 and $nbrItems2 > 0 and $nbrItems1 == $nbrItems2) {
-    $win->btnCFSave->Enable();
-  } else {
-    $win->btnCFSave->Disable();
-  }
+  if ($title and $nbrItems1 > 0 and $nbrItems2 > 0 and $nbrItems1 == $nbrItems2) { $win->btnCFSave->Enable();  }
+  else                                                                           { $win->btnCFSave->Disable(); }
 
 }  #--- End validNewFunc
 
@@ -7098,7 +6839,6 @@ sub btnCFSave_Click
     my $nbrItems2 = scalar(@{$refList2});
     my $dbFile;
     my $indexCF;
-    
     # Verify if function already exists
     my $j = 1;
     while (exists($CONFIG{'CF'.$j})) {
@@ -7110,7 +6850,6 @@ sub btnCFSave_Click
       }
       $j++;
     }
-    
     # List 1 must not contain duplicates
     my %items;
     my $containsDuplicate;
@@ -7118,7 +6857,6 @@ sub btnCFSave_Click
       if (exists($items{$item})) { $containsDuplicate = 1; last; }
       else { $items{$item} = 1; }
     }
-    
     # Error duplicates
     if ($containsDuplicate) { Win32::GUI::MessageBox($win, $STR{'CFErrorDupl'}, $STR{'error'}, 0x40010); }
     else {
@@ -7130,10 +6868,8 @@ sub btnCFSave_Click
           &modCF($title, $dbFile, $indexCF, $refList1, $refList2, $nbrItems1, $nbrItems2);
         # Cancel
         } else { return(); }
-        
       # If function doesn't exist, we create a new one
       } else { &newCF($title, $refList1, $refList2, $nbrItems1, $nbrItems2); }
-    
       # Clean Lists and Hide control
       $win->tfCFTitle->Text('');
       $win->tfList1->Text('');
@@ -7147,7 +6883,6 @@ sub btnCFSave_Click
       if ($win->cbCFLists->GetCurSel() > 0) { $win->chCFMatchCase->Show(); }
       &tfList1_Change();
       &tfList2_Change();
-      
       # Hide List 2
       &hideList2();
     }
@@ -7172,7 +6907,6 @@ sub btnCFCancel_Click
   if ($win->cbCFLists->GetCurSel() > 0) { $win->chCFMatchCase->Show(); }
   &tfList1_Change();
   &tfList2_Change();
-  
   # Hide List 2
   &hideList2();
   
@@ -7184,7 +6918,6 @@ sub editCF
 {
   # Local variables
   my ($title, $dbFile) = @_;
-  
   # Show options and message
   $win->lblCFTitle->Show();
   $win->tfCFTitle->Show();
@@ -7193,14 +6926,11 @@ sub editCF
   $win->chCFMatchCase->Hide();
   $win->cbCFLists->Disable();
   $win->btnProcess->Disable();
-  
   # Clean Lists
   $win->tfList1->Text('');
   $win->tfList2->Text('');
-  
   # Show List 2
   &showList2();
-  
   # Connect to database
   if ($dbFile) {
     threads->create(sub {
@@ -7209,7 +6939,6 @@ sub editCF
       my $dsn = "DBI:SQLite:dbname=$dbFile";
       if (my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })) {
         $win->ChangeCursor($HOURGLASS);
-        
         # Write title
         $win->tfCFTitle->Text($title);
         # Write the data
@@ -7221,7 +6950,6 @@ sub editCF
             $list2 .= "$values[1]\r\n";
           }
         }
-        
         $dbh->disconnect();
         chomp($list1); chomp($list1);
         chomp($list2); chomp($list2);
@@ -7242,11 +6970,9 @@ sub modCF
 {
   # Local variables
   my ($title, $dbFile, $indexCF, $refList1, $refList2, $nbrItems1, $nbrItems2) = @_;
-  
   # Connect to database
   my $dsn = "DBI:SQLite:dbname=$dbFile";
   if (my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })) {
-    
     # Show progress
     $win->lblPbCurr->Text('');
     $win->pb->SetPos(0);
@@ -7261,7 +6987,6 @@ sub modCF
     $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
     $win->lblPbCount->Text("0 / $nbrItems1");
     my $curr = 0;
-  
     # Drop the existing table
     $dbh->do("DROP TABLE DATA");
     # Create a new DATA table
@@ -7275,16 +7000,13 @@ sub modCF
       my $sthData = $dbh->prepare("insert into DATA (key, value) values(?,?)");
       for (my $i = 0; $i < $nbrItems1; $i++) {
         if ($$refList1[$i] and $$refList2[$i]) { $sthData->execute($$refList1[$i], $$refList2[$i]); }
-        
         # Progress
         $curr++;
         $win->lblPbCount->Text("$curr / $nbrItems1");
         $win->pb->StepIt();
       }
     }
-    
     $dbh->disconnect();
-
     # Progress
     $win->lblPbCurr->Text('');
     $win->pb->SetPos(0);
@@ -7303,11 +7025,9 @@ sub newCF
 {
   # Local variables
   my ($title, $refList1, $refList2, $nbrItems1, $nbrItems2) = @_;
-  
   # Create default directory
   my $defCFDir = "$USERDIR\\Customs";
-  if (!-d $defCFDir) { mkdir($defCFDir); }  
-  
+  if (!-d $defCFDir) { mkdir($defCFDir); }
   # Show SaveFileWindow for database path
   my $tempName = $title;
   $tempName =~ s/[\<\>\:\"\/\\\|\?\*]/_/g; # Remove invalid char for a Windows filename
@@ -7335,7 +7055,6 @@ sub newCF
       $win->lblPbCurr->Text($STR{'runningProcess'}.'...');
       $win->lblPbCount->Text("0 / $nbrItems1");
       my $curr = 0;
-    
       $dbh->{sqlite_unicode} = 1;
       # Create the TITLE table
       my $stmt = qq(CREATE TABLE IF NOT EXISTS TITLE
@@ -7356,7 +7075,6 @@ sub newCF
           my $sthData = $dbh->prepare("insert into DATA (key, value) values(?,?)");
           for (my $i = 0; $i < $nbrItems1; $i++) {
             if ($$refList1[$i] and $$refList2[$i]) { $sthData->execute($$refList1[$i], $$refList2[$i]); }
-            
             # Progress
             $curr++;
             $win->lblPbCount->Text("$curr / $nbrItems1");
@@ -7364,16 +7082,13 @@ sub newCF
           }
         }
       }
-      
       $dbh->disconnect();
-      
       # Update window and config
       my $j = 1;
       while (exists($CONFIG{'CF'.$j})) { $j++; }
       $CONFIG{'CF'.$j} = $title.'|'.$CFDBFile;
       &saveConfig(\%CONFIG);
       $win->cbCFLists->Add($title);
-      
       # Progress
       $win->lblPbCurr->Text('');
       $win->pb->SetPos(0);
@@ -7417,7 +7132,6 @@ sub updateAll
     $winPb->Hide();
     threads->exit();
   };
-  
   # Thread 'die' signal handler
   $SIG{__DIE__} = sub {
     # Delete temp files if converting was in progress
@@ -7437,7 +7151,6 @@ sub updateAll
     $winPb->Hide();
     Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $errMsg", $STR{'error'}, 0x40010);
   };
-  
   # Update Tool ?
   sleep(1);
   if ($CONFIG{'TOOL_AUTO_UPDATE'})      { &updateTool(0);     }
@@ -7445,8 +7158,6 @@ sub updateAll
   if ($CONFIG{'GEOIP_DB_AUTO_UPDATE'})  { &updateGeoIPDB(0);  }
   # Update MACOUI DB ?
   if ($CONFIG{'MACOUI_DB_AUTO_UPDATE'}) { &updateMACOUIDB(0); }
-  
-  
   
 }  #--- End updateAll
 
@@ -7467,7 +7178,6 @@ sub createCW
                                           -resizable   => 0                         ,
                                           -dialogui    => 1                         , );
   $winCW->SetIcon($winICO);
-  
   $winCW->AddLabel(     -name        => 'lblConfigLogo'       ,
                         -size        => [128,128]             ,
                         -pos         => [  0,  5]             ,
@@ -7586,7 +7296,6 @@ sub createCW
                         -bitmap      => $errorBmp             ,
                         -background  => [255, 255, 255]       ,
                         -visible     => 0                     , );
-  
   return(\$winCW);
 
 }  #--- End createCW
@@ -7597,7 +7306,6 @@ sub firstStart
 {
   # Local variables
   my $refWinCW = shift;
-  
   # Thread 'cancellation' signal handler
   $SIG{'KILL'} = sub {
     # Delete temp files if converting was in progress
@@ -7616,7 +7324,6 @@ sub firstStart
     Win32::GUI::MessageBox($win, $STR{'configSetPart'}, "XL-Tools $VERSION", 0x40040);
     threads->exit();
   };
-  
   # Thread 'die' signal handler
   $SIG{__DIE__} = sub {
     # Delete temp files if converting was in progress
@@ -7637,16 +7344,12 @@ sub firstStart
     $$refWinCW->Hide();
     Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $errMsg", $STR{'error'}, 0x40010);
   };
-
   # Yes (6), No (7)
   my $answer = Win32::GUI::MessageBox($win, $STR{'firstStart'}, $STR{'winConfig'}, 0x1024);
-  
   if ($answer == 6) {
     my $dir;
-    
     # Use default directory ? (program directory)
     $answer = Win32::GUI::MessageBox($win, $STR{'defaultDir'}.'('.$USERDIR.') ?', $STR{'winConfig'}, 0x1024);
-    
     # Answer is no, open popup to let user choose a different location
     if ($answer == 7) {
       # Select a folder
@@ -7657,13 +7360,11 @@ sub firstStart
                                           -directory  => $USERDIR                 , );
     # Answer is yes, use default dir
     } else { $dir = $USERDIR; }
-    
     # Selected folder
     if ($dir and -d $dir) {
       $$refWinCW->Top($win->Top()+5);
       $$refWinCW->Left($win->Left()+310);
       $$refWinCW->Show();
-      
       # Set General options
       $$refWinCW->lblSetGenOpt->Show();
       # Tool
@@ -7684,7 +7385,6 @@ sub firstStart
       $CONFIG{'MACOUI_DB_AUTO_UPDATE'} = 0;
       &saveConfig(\%CONFIG);
       $$refWinCW->lblSetGenOptDone->Show();
-
       # Select the XL-Whois DB
       my $defaultPath = "$ENV{'APPDATA'}\\XL-Toolkit\\XL-Whois\\Whois.db";
       my $XLWHOISDBFile;
@@ -7702,10 +7402,8 @@ sub firstStart
         $CONFIG{'XLWHOIS_DB_FILE'} = $XLWHOISDBFile;
         $$refWinCW->lblLocXLWhoisDBDone->Show();
       } else { $$refWinCW->lblLocXLWhoisDBError->Show(); }
-      
       # Download or select Database files
       my $return = 0;
-      
       # Download IINDB Database
       $$refWinCW->lblDLIINDB->Show();
       $return = &downloadIINDB("$dir\\IIN.db"); # $return contains error msg if any
@@ -7714,7 +7412,6 @@ sub firstStart
         Win32::GUI::MessageBox($win, $return, $STR{'error'}, 0x40010);
       } else { $$refWinCW->lblDLIINDBDone->Show(); }
       &saveConfig(\%CONFIG);
-      
       # Download DTDB Database
       $$refWinCW->lblDLDTDB->Show();
       $return = &downloadDTDB("$dir\\DT.db"); # $return contains error msg if any
@@ -7722,8 +7419,13 @@ sub firstStart
         $$refWinCW->lblDLDTDBError->Show();
         Win32::GUI::MessageBox($win, $return, $STR{'error'}, 0x40010);
       } else { $$refWinCW->lblDLDTDBDone->Show(); }
+      $winDTDB->cbDefaultLang->SetCurSel($winDTDB->cbDefaultLang->FindStringExact('en-US')); # Set default language to en-US
+      $CONFIG{'DEFAULT_LANG'}   = 'en-US';
+      $winDTDB->cbOutputCharset->SetCurSel(0); # Set default charset to cp1252
+      $CONFIG{'OUTPUT_CHARSET'} = 'cp1252';
+      $winDTDB->cbLocalTZ->SetCurSel(107); # Set default timezone name to America/New York
+      $CONFIG{'LOCAL_TIMEZONE'} = 107;
       &saveConfig(\%CONFIG);
-      
       # Download GeoIP Database
       $$refWinCW->lblDLGeoIPDB->Show();
       $return = &downloadGeoIPDB("$dir\\GeoLiteCity.dat"); # $return contains error msg if any
@@ -7732,7 +7434,6 @@ sub firstStart
         Win32::GUI::MessageBox($win, $return, $STR{'error'}, 0x40010);
       } else { $$refWinCW->lblDLGeoIPDBDone->Show(); }
       &saveConfig(\%CONFIG);
-      
       # Download MACOUI Database
       $$refWinCW->lblDLMACOUIDB->Show();
       $return = &downloadMACOUIDB("$dir\\oui.db");
@@ -7741,7 +7442,6 @@ sub firstStart
         Win32::GUI::MessageBox($win, $return, $STR{'error'}, 0x40010);
       } else { $$refWinCW->lblDLMACOUIDBDone->Show(); }
       &saveConfig(\%CONFIG);
-      
       # Close Configuration Wizard
       $$refWinCW->Hide();
       $win->ChangeCursor($ARROW);
@@ -7758,7 +7458,6 @@ sub btnWinConfig_Click
   # Show Config window with General Tab
   $winConfig->configTab->SetCurSel(0);
   &configTab_Click;
-  
   $winConfig->Center();
   $winConfig->DoModal();
 
@@ -7791,7 +7490,6 @@ sub configTab_Click
     $winConfig->lblNoResultOpt->Show();
     $winConfig->rbNoResultOpt1->Show();
     $winConfig->rbNoResultOpt2->Show();
-    
     # Databases tab
     $winConfig->lblMACOUIDBShadowT->Hide();
     $winConfig->lblMACOUIDBT->Hide();
@@ -7811,7 +7509,6 @@ sub configTab_Click
     $winConfig->tfIINDB->Hide();
     $winConfig->btnIINDB->Hide();
     $winConfig->btnIINDBUpt->Hide();
-    
     # XL-Toolkit databases tab
     $winConfig->lblXLWHOISDBShadowT->Hide();
     $winConfig->lblXLWHOISDBT->Hide();
@@ -7822,7 +7519,6 @@ sub configTab_Click
     $winConfig->tfDTDB->Hide();
     $winConfig->btnDTDB->Hide();
     $winConfig->btnDTDBUpt->Hide();
-  
   # Show Databases tab
   } elsif ($winConfig->configTab->SelectedItem() == 1) {
     # Databases tab
@@ -7844,7 +7540,6 @@ sub configTab_Click
     $winConfig->tfIINDB->Show();
     $winConfig->btnIINDB->Show();
     $winConfig->btnIINDBUpt->Show();
-    
     # General tab
     $winConfig->lblToolShadowT->Hide();
     $winConfig->lblToolT->Hide();
@@ -7866,7 +7561,6 @@ sub configTab_Click
     $winConfig->lblNoResultOpt->Hide();
     $winConfig->rbNoResultOpt1->Hide();
     $winConfig->rbNoResultOpt2->Hide();
-    
     # XL-Toolkit databases tab
     $winConfig->lblXLWHOISDBShadowT->Hide();
     $winConfig->lblXLWHOISDBT->Hide();
@@ -7877,7 +7571,6 @@ sub configTab_Click
     $winConfig->tfDTDB->Hide();
     $winConfig->btnDTDB->Hide();
     $winConfig->btnDTDBUpt->Hide();
-
   # Show XL-Toolkit databases tab
   } elsif ($winConfig->configTab->SelectedItem() == 2) {
     # XL-Toolkit databases tab
@@ -7890,7 +7583,6 @@ sub configTab_Click
     $winConfig->tfDTDB->Show();
     $winConfig->btnDTDB->Show();
     $winConfig->btnDTDBUpt->Show();
-    
     # General tab
     $winConfig->lblToolShadowT->Hide();
     $winConfig->lblToolT->Hide();
@@ -7912,7 +7604,6 @@ sub configTab_Click
     $winConfig->lblNoResultOpt->Hide();
     $winConfig->rbNoResultOpt1->Hide();
     $winConfig->rbNoResultOpt2->Hide();
-    
     # Databases tab
     $winConfig->lblMACOUIDBShadowT->Hide();
     $winConfig->lblMACOUIDBT->Hide();
@@ -7950,7 +7641,6 @@ sub updateTool
 {
   # Local variables
   my $confirm = shift;
-  
   # Download the version file  
   my $ua = new LWP::UserAgent;
   $ua->agent("XL-Tools Update $VERSION");
@@ -7977,9 +7667,7 @@ sub updateTool
     }
   }
   # Error 
-  else {
-    if ($confirm) { Win32::GUI::MessageBox($winConfig, $STR{'errorConnection'}.': '.$res->status_line, "$STR{'update3'} XL-Tools", 0x40010); }
-  }
+  elsif ($confirm) { Win32::GUI::MessageBox($winConfig, $STR{'errorConnection'}.': '.$res->status_line, "$STR{'update3'} XL-Tools", 0x40010); }
 
 }  #--- End updateTool
 
@@ -8046,13 +7734,10 @@ sub chRememberPos_Click
 sub tfMaxSize_Change
 #--------------------------#
 {
-  # Local variables
-  my $maxSize = $winConfig->tfMaxSize->Text();
-  
   # Remember
-  if ($maxSize) {
-      $CONFIG{'MAX_SIZE_LIST'} = $maxSize;
-      &saveConfig(\%CONFIG);
+  if (my $maxSize = $winConfig->tfMaxSize->Text()) {
+    $CONFIG{'MAX_SIZE_LIST'} = $maxSize;
+    &saveConfig(\%CONFIG);
   }
 
 }  #--- End tfMaxSize_Change
@@ -8063,7 +7748,6 @@ sub tfLookupTO_Change
 {
   # Local variables
   my $lookupTO = $winConfig->tfLookupTO->Text();
-  
   # Remember
   if ($lookupTO) {
     $CONFIG{'NSLOOKUP_TIMEOUT'} = $lookupTO;
@@ -8106,11 +7790,8 @@ sub rbNoResultOpt2_Click
 sub tfUserAgent_Change
 #--------------------------#
 {
-  # Local variables
-  my $userAgent = $winConfig->tfUserAgent->Text();
-  
   # Remember
-  if ($userAgent) {
+  if (my $userAgent = $winConfig->tfUserAgent->Text()) {
     $CONFIG{'USERAGENT'} = $userAgent;
     &saveConfig(\%CONFIG);
   }
@@ -8178,7 +7859,6 @@ sub tfMACOUIDB_Change
 {
   # Local variables
   my $MACOUIDBFile = $winConfig->tfMACOUIDB->Text();
-  
   # Remember
   if ($MACOUIDBFile and -f $MACOUIDBFile and &validMACOUIDB($MACOUIDBFile)) {
     $CONFIG{'MACOUI_DB_FILE'} = $MACOUIDBFile;
@@ -8200,7 +7880,6 @@ sub validMACOUIDB
 {
   # Local variables
   my $MACOUIDBFile = shift;
-  
   if (-f $MACOUIDBFile) {
     # Connect to DB
     my $dsn = "DBI:SQLite:dbname=$MACOUIDBFile";
@@ -8214,7 +7893,6 @@ sub validMACOUIDB
       if ($info[2] eq 'MACOUI') { return(1); }
     }
   }
-  
   return(0);
   
 }  #--- End validMACOUIDB
@@ -8226,7 +7904,6 @@ sub btnMACOUIDB_Click
   # Local variables
   my $lastDir = $winConfig->tfMACOUIDB->Text();
   my $MACOUIDBFile;
-
   # Show OpenFile dialog window
   if ($lastDir) {
     my(@parts) = split(/\\/, $lastDir);
@@ -8248,7 +7925,6 @@ sub btnMACOUIDB_Click
                                                 -file          => 'OUI.db'                  ,
                                                 -explorer      => 1                         , );
   }
-
   # Selected file
   if ($MACOUIDBFile and -f $MACOUIDBFile) { $winConfig->tfMACOUIDB->Text($MACOUIDBFile); }
 
@@ -8278,7 +7954,6 @@ sub btnMACOUIDBUpt_Click
         $winPb->Hide();
         threads->exit();
       };
-      
       # Thread 'die' signal handler
       $SIG{__DIE__} = sub {
         # Delete temp files if converting was in progress
@@ -8298,7 +7973,6 @@ sub btnMACOUIDBUpt_Click
         $winPb->Hide();
         Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $errMsg", $STR{'error'}, 0x40010);
       };
-      
       &updateMACOUIDB(1);
     });
   }
@@ -8316,7 +7990,6 @@ sub btnMACOUIDBImport_Click
     # Local variables
     my $lastDir = $winConfig->tfMACOUIDB->Text();
     my $MACOUIFile;
-  
     # Show OpenFile dialog window for the oui.txt file
     if ($lastDir) {
       my(@parts) = split(/\\/, $lastDir);
@@ -8336,7 +8009,6 @@ sub btnMACOUIDBImport_Click
                                                 -filemustexist => 1                                 ,
                                                 -explorer      => 1                                 , );
     }
-  
     # Selected file
     if ($MACOUIFile and -T $MACOUIFile) {
       # Show SaveFileWindow for database
@@ -8363,7 +8035,6 @@ sub btnMACOUIDBImport_Click
             $winPb->Hide();
             threads->exit();
           };
-          
           # Thread 'die' signal handler
           $SIG{__DIE__} = sub {
             # Delete temp files
@@ -8383,7 +8054,6 @@ sub btnMACOUIDBImport_Click
             $winPb->Hide();
             Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $errMsg", $STR{'error'}, 0x40010);
           };
-          
           my $return = &importMACOUIDatabase(0, $localMACOUIDB, $MACOUIFile); # $return contains error msg if any
         if ($return) { Win32::GUI::MessageBox($win, $return, $STR{'error'}, 0x40010);                     }
         else         { Win32::GUI::MessageBox($win, $STR{'importedOUIDB'}, "XL-Tools $VERSION", 0x40040); }
@@ -8405,7 +8075,6 @@ sub updateMACOUIDB
   
   # Local variables
 	my $confirm = shift;
-  
   my ($upToDate, $return, $dateLocalFile, $dateRemoteFile) = &checkDateMACOUIDB($confirm);
   # Values for $upToDate
   # 0: MAC OUI Database doesn't exist
@@ -8421,26 +8090,24 @@ sub updateMACOUIDB
       Encode::from_to($dateRemoteFile, 'utf8', 'iso-8859-1');
       $msg = "$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} ieee.org: $dateRemoteFile\n\n$STR{'updateAvailable'} ?";
     } else { $msg = "$STR{'MACOUINotExist'} ?"; }
-    
     # Yes (6), No (7)
     my $answer = Win32::GUI::MessageBox($win, $msg, $STR{'uptMACOUI'}, 0x1024);
-    
     # Answer is No
     if ($answer == 7) { return(0); }
-    
     # Answer is Yes, download the update
     else {
       my $return = &downloadMACOUIDB($winConfig->tfMACOUIDB->Text()); # $return contains error msg if any
+      $win->lblCurrMACOUIdbDate->Text("$STR{'currDBDate'}: ". $dateRemoteFile);
+      $win->btnMACOUIdbUpdate->Text($STR{'winUpdate'}.'...');
       if ($return) { Win32::GUI::MessageBox($win, $return, $STR{'error'}, 0x40010);                     }
-      else         { Win32::GUI::MessageBox($win, $STR{'updatedMACOUI'}, "XL-Tools $VERSION", 0x40040); }
+      else         { Win32::GUI::MessageBox($win, $STR{'updatedMACOUI'}.'!', "XL-Tools $VERSION", 0x40040); }
     }
-    
   # MAC OUI is up to date, show message if $confirm == 1
   } elsif ($upToDate == 1) {
     if ($confirm) {
       Encode::from_to($dateRemoteFile, 'utf8', 'iso-8859-1');
-      Win32::GUI::MessageBox($win,  "$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} ieee.org: ".
-                                    "$dateRemoteFile\n\n$STR{'DBUpToDate'} !", $STR{'uptMACOUI'}, 0x40040);
+      Win32::GUI::MessageBox($win, "$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} ieee.org: ".
+                                   "$dateRemoteFile\n\n$STR{'DBUpToDate'} !", $STR{'uptMACOUI'}, 0x40040);
     }
   # Connection error, show message if $confirm == 1
   } elsif (($upToDate == 3 or $upToDate == 4) and $confirm) {
@@ -8458,15 +8125,10 @@ sub checkDateMACOUIDB
   my ($confirm)      = @_;
   my $localMACOUIDB  = $winConfig->tfMACOUIDB->Text();
   my $lastModifDate;
-  
   # MAC OUI Database doesn't exist or invalid file
   if (!$localMACOUIDB or !-f $localMACOUIDB) { return(0, undef, undef, undef); }
-  
   # Check date of local file
-  my $dateMACOUIDB  = (stat($localMACOUIDB))[9];
-  my $strp          = DateTime::Format::Strptime->new(pattern => '%s');
-  my $localFileT    = $strp->parse_datetime($dateMACOUIDB);
-
+  my $localFileT  = DateTime->from_epoch(epoch => (stat($localMACOUIDB))[9]);
   # Check date of the remote file
   my $ua = new LWP::UserAgent;
   $ua->agent($CONFIG{'USERAGENT'});
@@ -8478,7 +8140,6 @@ sub checkDateMACOUIDB
     $lastModifDate = $res->header('last-modified');
     $TOTAL_SIZE    = $res->header('content_length');
   } else { return(3, $return, undef, undef); } # Error connection
-  
   # Compare local et remote file date
   my $strp2 = DateTime::Format::Strptime->new(pattern => '%a, %d %b %Y %T %Z');
   if (my $lastModifT = $strp2->parse_datetime($lastModifDate)) {
@@ -8496,12 +8157,10 @@ sub downloadMACOUIDB
   # Local variables
   my $localMACOUIDB = shift; # Local filepath
   if (!$localMACOUIDB) { $localMACOUIDB = "$USERDIR\\oui.db"; } # Default location
-  
   # Start an agent
   my $ua = new LWP::UserAgent;
   $ua->agent($CONFIG{'USERAGENT'});
   $ua->default_header('Accept-Language' => 'en');
-  
   # Set the progress bar
   $win->ChangeCursor($HOURGLASS);
   $winPb->Text($STR{'downloadMACOUI'});
@@ -8512,7 +8171,6 @@ sub downloadMACOUIDB
   $winPb->pbWinPb->SetStep(1);
   $winPb->Center($win);
   $winPb->Show();
-  
   # Check size of the remote file
   if (!$TOTAL_SIZE) {
     my $req    = new HTTP::Request HEAD => $MACOUIDB_URL;
@@ -8529,17 +8187,14 @@ sub downloadMACOUIDB
       return("$STR{'errorMsg'}: $STR{'errorConRemote'}...");
     }
   }
-  
   # Download the file
   if ($TOTAL_SIZE) {
     my $downloadData;
-    
     # Download the file
     $winPb->lblPbCurr->Text("$STR{'downloadMACOUI'}. $STR{'downloadWarning'}...");
     my $response = $ua->get($MACOUIDB_URL, ':content_cb' => sub {
       # Local variables
       my ($data, $response, $protocol) = @_;
-      
       $downloadData       .= $data;                                     # Downloaded data
       my $totalDownloaded  = length($downloadData);                     # Size of downloaded data
       my $completed        = int($totalDownloaded / $TOTAL_SIZE * 100); # Pourcentage of download completed
@@ -8547,7 +8202,6 @@ sub downloadMACOUIDB
       $winPb->pbWinPb->SetPos($completed);    # Set the progress bar
       $winPb->lblCount->Text("$completed %"); # Indicate purcentage
     }, ':read_size_hint' => 32768);
-    
     # Save data in a temp file
     my $ouiFileTemp = $localMACOUIDB . '.txt';
     if ($response and $response->is_success) {
@@ -8556,13 +8210,11 @@ sub downloadMACOUIDB
       close(OUI_TEMP);
     }
     $downloadData = undef;
-    
     # Convert the downloaded data into a SQLite database
     if (-T $ouiFileTemp) {
       $TOTAL_SIZE = 0;
       return(&importMACOUIDatabase(1, $localMACOUIDB, $ouiFileTemp));
     }
-
   } else {
     # Turn off progress bar
     $win->ChangeCursor($ARROW);
@@ -8572,7 +8224,6 @@ sub downloadMACOUIDB
     $winPb->Hide();
     return("$STR{'errorMsg'}: $STR{'errorDownload'}...");
   }
-  
   $TOTAL_SIZE = 0;
   
 }  #--- End downloadMACOUIDB
@@ -8584,7 +8235,6 @@ sub importMACOUIDatabase
   # This function may be called in 2 ways
   # 1. User click on the import button using a local oui.txt
   # 2. Database is downloaded
-  
   # Return error or return 0 if successful
   
   # Local variables
@@ -8592,22 +8242,18 @@ sub importMACOUIDatabase
   my $localMACOUIDB = shift; # Destination file
   my $ouiFileTemp   = shift; # oui.txt file
   my %oui;
-  
   # Show Progress Window
   if (!$winPbStatus) {
     $winPb->Center($win);
     $winPb->Show();
   }
-  
   # Set Progress Bar
   $winPb->Text($STR{'convertMACOUI'});
   $winPb->lblPbCurr->Text('');
   $winPb->lblCount->Text('');
   $winPb->pbWinPb->SetPos(0);
-  
   # If the database exists, delete it
   if (-e $localMACOUIDB) { unlink($localMACOUIDB); }
-  
   # Open the oui file and store prefix and minimal info about organization
   open my $ouiFH, '<', $ouiFileTemp;
   while (<$ouiFH>) {
@@ -8619,7 +8265,6 @@ sub importMACOUIDatabase
     }
   }
   close($ouiFH);
-  
   # Create the database and the table
   my $nbrOUI = scalar(keys %oui);
   if ($nbrOUI) {
@@ -8641,26 +8286,20 @@ sub importMACOUIDatabase
         my $sth = $dbh->prepare("insert into MACOUI (prefix,org) values(?,?)");
         foreach my $prefix (keys %oui) {
           $winPb->lblPbCurr->Text("$STR{'inserting'} $prefix...");
-          
           my $rv = $sth->execute($prefix, $oui{$prefix});
-          #if ($rv < 0) { Win32::GUI::MessageBox($win, "Error adding $1 in the database: $DBI::errstr", $STR{'error'}, 0x40010); }
-          
           # Update progress bar
           $curr++;
           $winPb->lblCount->Text("$curr / $nbrOUI");
           $winPb->pbWinPb->StepIt();
         }
       }
-      
       $dbh->disconnect();
-      
       # Turn off progress bar
       $win->ChangeCursor($ARROW);
       $winPb->lblPbCurr->Text('');
       $winPb->lblCount->Text('');
       $winPb->pbWinPb->SetPos(0);
       $winPb->Hide();
-      
       # Final message
       if (&validMACOUIDB($localMACOUIDB)) {
         unlink($ouiFileTemp);
@@ -8669,9 +8308,7 @@ sub importMACOUIDatabase
         &saveConfig(\%CONFIG);
         $winConfig->tfMACOUIDB->Text($localMACOUIDB);
         return(0);
-        #Win32::GUI::MessageBox($win, $STR{'updatedMACOUI'}, "XL-Tools $VERSION", 0x40040);
       } else { return("$STR{'errorMsg'}: $STR{'errorCreatingDB'}..."); }
-      
     } else {
       # Turn off progress bar
       $win->ChangeCursor($ARROW);
@@ -8714,7 +8351,6 @@ sub tfGeoIPDB_Change
 {
   # Local variables
   my $GeoIPDBFile = $winConfig->tfGeoIPDB->Text();
-  
   # Remember
   if ($GeoIPDBFile and -f $GeoIPDBFile and &validGeoIPDB($GeoIPDBFile)) {
     $CONFIG{'GEOIP_DB_FILE'} = $GeoIPDBFile;
@@ -8736,11 +8372,9 @@ sub validGeoIPDB
 {
   # Local variables
   my $GeoIPDBFile = shift;
-  
   if (-f $GeoIPDBFile and my $gi = Geo::IP->open($GeoIPDBFile)) {
     if (my $info = $gi->database_info) { return(1); }
   }
-  
   return(0);
   
 }  #--- End validGeoIPDB
@@ -8752,7 +8386,6 @@ sub btnGeoIPDB_Click
   # Local variables
   my $lastDir = $winConfig->tfGeoIPDB->Text();
   my $GeoIPDBFile;
-
   # Show OpenFile dialog window
   if ($lastDir) {
     my(@parts) = split(/\\/, $lastDir);
@@ -8774,7 +8407,6 @@ sub btnGeoIPDB_Click
                                                 -file          => 'GeoLiteCity.dat'         ,
                                                 -explorer      => 1                         , );
   }
-
   # Selected file
   if ($GeoIPDBFile and -f $GeoIPDBFile) { $winConfig->tfGeoIPDB->Text($GeoIPDBFile); }
 
@@ -8798,7 +8430,6 @@ sub btnGeoIPDBUpt_Click
         $winPb->Hide();
         threads->exit();
       };
-      
       # Thread 'die' signal handler
       $SIG{__DIE__} = sub {
         my $errMsg = (split(/ at /,$_[0]))[0];
@@ -8812,7 +8443,6 @@ sub btnGeoIPDBUpt_Click
         $winPb->Hide();
         Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $errMsg", $STR{'error'}, 0x40010);
       };
-      
       &updateGeoIPDB(1);
     });
   }
@@ -8830,7 +8460,6 @@ sub updateGeoIPDB
   
   # Local variables
 	my $confirm  = shift;
-  
   my ($upToDate, $return, $dateLocalFile, $dateRemoteFile) = &checkDateGeoIPDB($confirm);
   # Values for $upToDate
   # 0: GeoIP Database doesn't exist  
@@ -8846,20 +8475,16 @@ sub updateGeoIPDB
       Encode::from_to($dateRemoteFile, 'utf8', 'iso-8859-1');
       $msg = "$STR{'currDBDate'}: $dateLocalFile\n$STR{'remoteDBDate'} Maxmind: $dateRemoteFile\n\n$STR{'updateAvailable'} ?";
     } else { $msg = "$STR{'GeoIPNotExist'} ?"; }
-    
     # Yes (6), No (7)
     my $answer = Win32::GUI::MessageBox($win, $msg, $STR{'uptGeoIP'}, 0x1024);
-    
     # Answer is No
     if ($answer == 7) { return(0); }
-    
     # Answer is Yes, download the update
     else {
       my $return = &downloadGeoIPDB($winConfig->tfGeoIPDB->Text()); # $return contains error msg if any
       if ($return) { Win32::GUI::MessageBox($win, $return, $STR{'error'}, 0x40010);                    }
       else         { Win32::GUI::MessageBox($win, $STR{'updatedGeoIP'}, "XL-Tools $VERSION", 0x40040); }
     }
-    
   # GeoIP is up to date, show message if $confirm == 1
   } elsif ($upToDate == 1) {
     if ($confirm) {
@@ -8883,15 +8508,10 @@ sub checkDateGeoIPDB
   my ($confirm)      = @_;
   my $localGeoIPDB   = $winConfig->tfGeoIPDB->Text();
   my $lastModifDate;
-  
   # MAC OUI Database doesn't exist or invalid file
   if (!$localGeoIPDB or !-f $localGeoIPDB) { return(0, undef, undef, undef); }
-  
   # Check date of local file
-  my $dateGeoIPDB   = (stat($localGeoIPDB))[9];
-  my $strp          = DateTime::Format::Strptime->new(pattern => '%s');
-  my $localFileT    = $strp->parse_datetime($dateGeoIPDB);
-  
+  my $localFileT  = DateTime->from_epoch(epoch => (stat($localGeoIPDB))[9]);
   # Check date of the remote file
   my $ua = new LWP::UserAgent;
   $ua->agent($CONFIG{'USERAGENT'});
@@ -8903,7 +8523,6 @@ sub checkDateGeoIPDB
     $lastModifDate = $res->header('last-modified');
     $TOTAL_SIZE    = $res->header('content_length');
   } else { return(3, $return, undef, undef); } # Error connection
-  
   # Compare local et remote file date
   my $strp2 = DateTime::Format::Strptime->new(pattern => '%a, %d %b %Y %T %Z');
   if (my $lastModifT = $strp2->parse_datetime($lastModifDate)) {
@@ -8921,12 +8540,10 @@ sub downloadGeoIPDB
   # Local variables
   my $localGeoIPDB = shift; # Local filepath
   if (!$localGeoIPDB) { $localGeoIPDB = "$USERDIR\\GeoLiteCity.dat"; } # Default location
-  
   # Start an agent
   my $ua = new LWP::UserAgent;
   $ua->agent($CONFIG{'USERAGENT'});
   $ua->default_header('Accept-Language' => 'en');
-  
   # Set the progress bar
   $win->ChangeCursor($HOURGLASS);
   $winPb->Text($STR{'downloadGeoIP'});
@@ -8937,7 +8554,6 @@ sub downloadGeoIPDB
   $winPb->pbWinPb->SetStep(1);
   $winPb->Center($win);
   $winPb->Show();
-  
   # Check size of the remote file
   if (!$TOTAL_SIZE) {
     my $req    = new HTTP::Request HEAD => $GEOIPDB_URL;
@@ -8954,7 +8570,6 @@ sub downloadGeoIPDB
       return("$STR{'errorMsg'}: $STR{'errorConRemote'}...");
     }
   }
-  
   # Download the file
   if ($TOTAL_SIZE) {
     my $downloadData;
@@ -8963,15 +8578,12 @@ sub downloadGeoIPDB
     my $response = $ua->get($GEOIPDB_URL, ':content_cb' => sub {
       # Local variables
       my ($data, $response, $protocol) = @_;
-      
       $downloadData       .= $data;                                     # Downloaded data
       my $totalDownloaded  = length($downloadData);                     # Size of downloaded data
       my $completed        = int($totalDownloaded / $TOTAL_SIZE * 100); # Pourcentage of download completed
-      
       $winPb->pbWinPb->SetPos($completed);    # Set the progress bar
       $winPb->lblCount->Text("$completed %"); # Indicate purcentage
     });
-    
     # Save data in a temp file
     my $GeoIPGZIP = $localGeoIPDB . '.gz';
     if ($response and $response->is_success) {
@@ -8981,7 +8593,6 @@ sub downloadGeoIPDB
       close(GEOIPGZ);
     }
     $downloadData = undef;
-    
     # Uncompress GEOIP GZIP
     my ($error, $msg);
     if (-e $GeoIPGZIP) {
@@ -8995,18 +8606,15 @@ sub downloadGeoIPDB
         } else { $error = 1; $msg = "$STR{'errorMsg'}: $STR{'invalidFile'}"; }
       } else { $error = 1; $msg = "$STR{'errorMsg'}: $GunzipError"; }
     } else { $error = 1; $msg = "$STR{'errorMsg'}: $STR{'errorDownload'}..."; }
-    
     # Turn off progress bar
     $win->ChangeCursor($ARROW);
     $winPb->lblPbCurr->Text('');
     $winPb->lblCount->Text('');
     $winPb->pbWinPb->SetPos(0);
     $winPb->Hide();
-    
     # Final message
     if ($error) { return($msg); } # Error
     else        { return(0);    }
-
   } else {
     # Turn off progress bar
     $win->ChangeCursor($ARROW);
@@ -9016,7 +8624,6 @@ sub downloadGeoIPDB
     $winPb->Hide();
     return("$STR{'errorMsg'}: $STR{'errorDownload'}...");
   }
-  
   $TOTAL_SIZE = 0;
   
 }  #--- End downloadGeoIPDB
@@ -9027,7 +8634,6 @@ sub tfXLWHOISDB_Change
 {
   # Local variables
   my $XLWHOISDBFile = $winConfig->tfXLWHOISDB->Text();
-  
   # Remember
   if ($XLWHOISDBFile and -f $XLWHOISDBFile and &validXLWHOISDB($XLWHOISDBFile)) {
     $CONFIG{'XLWHOIS_DB_FILE'} = $XLWHOISDBFile;
@@ -9049,7 +8655,6 @@ sub validXLWHOISDB
 {
   # Local variables
   my $XLWHOISDBFile = shift;
-  
   if (-f $XLWHOISDBFile) {
     # Connect to DB
     my $dsn = "DBI:SQLite:dbname=$XLWHOISDBFile";
@@ -9063,7 +8668,6 @@ sub validXLWHOISDB
       if ($info[2] eq 'WHOIS_DB') { return(1); }
     }
   }
-  
   return(0);
   
 }  #--- End validXLWHOISDB
@@ -9075,7 +8679,6 @@ sub btnXLWHOISDB_Click
   # Local variables
   my $lastDir = $winConfig->tfXLWHOISDB->Text();
   my $XLWHOISDBFile;
-
   # Show OpenFile dialog window
   if ($lastDir) {
     my(@parts) = split(/\\/, $lastDir);
@@ -9097,7 +8700,6 @@ sub btnXLWHOISDB_Click
                                                   -file          => 'Whois.db'                 ,
                                                   -explorer      => 1                          , );
   }
-
   # Selected file
   if ($XLWHOISDBFile and -f $XLWHOISDBFile) { $winConfig->tfXLWHOISDB->Text($XLWHOISDBFile); }
 
@@ -9114,13 +8716,11 @@ sub checkIP_WhoisDB_IPv4
   my $country;
   my $date;
   my $interMin = 4294967295;
-  
   # Check if IP address fit any range in database
   my $sth = $$refDbh->prepare("SELECT range_s,range_e,isp,country,date from WHOIS_DB
                               WHERE $ipInt >= range_s AND $ipInt <= range_e");
   my $rv  = $sth->execute();
   if ($rv < 0) { Win32::GUI::MessageBox($win, $STR{'errDB'}.$DBI::errstr, $STR{'error'}, 0x40010); }
-  
   # Select the best answer (smaller range)
   my $refAllRows = $sth->fetchall_arrayref();
   foreach my $refRow (@{$refAllRows}) {
@@ -9131,7 +8731,6 @@ sub checkIP_WhoisDB_IPv4
       $country = $$refRow[3];
     }
   }
-  
   if ($isp and $country) { return("$isp, $country"); }
   else                   { return(undef);            }
 
@@ -9143,7 +8742,6 @@ sub checkIP_WhoisDB_IPv6
 {
   # Local variables
   my ($ip, $refDbh) = @_;
-  
   # Check if IP address fit any range in database
   my $all = $$refDbh->selectall_arrayref("SELECT * FROM WHOIS_DB_6");
   foreach my $row (@$all) {
@@ -9161,7 +8759,6 @@ sub tfIINDB_Change
 {
   # Local variables
   my $IINDBFile = $winConfig->tfIINDB->Text();
-  
   # Remember
   if ($IINDBFile and -f $IINDBFile and &validIINDB($IINDBFile)) {
     $CONFIG{'IIN_DB_FILE'} = $IINDBFile;
@@ -9183,7 +8780,6 @@ sub validIINDB
 {
   # Local variables
   my $IINDBFile = shift;
-  
   if (-f $IINDBFile) {
     # Connect to DB
     my $dsn = "DBI:SQLite:dbname=$IINDBFile";
@@ -9197,7 +8793,6 @@ sub validIINDB
       if ($info[2] eq 'IIN') { return(1); }
     }
   }
-  
   return(0);
   
 }  #--- End validIINDB
@@ -9209,7 +8804,6 @@ sub btnIINDB_Click
   # Local variables
   my $lastDir = $winConfig->tfIINDB->Text();
   my $IINDBFile;
-
   # Show OpenFile dialog window
   if ($lastDir) {
     my(@parts) = split(/\\/, $lastDir);
@@ -9231,7 +8825,6 @@ sub btnIINDB_Click
                                               -file          => 'IIN.db'                   ,
                                               -explorer      => 1                          , );
   }
-
   # Selected file
   if ($IINDBFile and -f $IINDBFile) {
     $winConfig->tfIINDB->Text($IINDBFile);
@@ -9258,7 +8851,6 @@ sub btnIINDBUpt_Click
         $winPb->Hide();
         threads->exit();
       };
-      
       # Thread 'die' signal handler
       $SIG{__DIE__} = sub {
         my $errMsg = (split(/ at /,$_[0]))[0];
@@ -9272,9 +8864,7 @@ sub btnIINDBUpt_Click
         $winPb->Hide();
         Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $errMsg", $STR{'error'}, 0x40010);
       };
-
       my $errMsg = &downloadIINDB("$USERDIR\\IIN.db");
-
       if ($errMsg) { Win32::GUI::MessageBox($win, "$errMsg"           , $STR{'error'}      , 0x40010); }
       else         { Win32::GUI::MessageBox($win, $STR{'updatedIINDB'}, "XL-Tools $VERSION", 0x40040); }
     });
@@ -9289,7 +8879,6 @@ sub downloadIINDB
 {
   # Local variables
   my $localIINDB = shift; # Default location
-  
   # Show progress window
   $win->ChangeCursor($HOURGLASS);
   $winPb->Text($STR{'downloadIINDB'});
@@ -9300,12 +8889,10 @@ sub downloadIINDB
   $winPb->pbWinPb->SetStep(1);
   $winPb->Center($win);
   $winPb->Show();
-  
   # Start an agent
   my $ua = new LWP::UserAgent;
   $ua->agent($CONFIG{'USERAGENT'});
   $ua->default_header('Accept-Language' => 'en');
-  
   # Check size of the remote file
   my $req    = new HTTP::Request HEAD => $IINDB_URL;
   my $res    = $ua->request($req);
@@ -9320,7 +8907,6 @@ sub downloadIINDB
     $winPb->Hide();
     return("$STR{'errorMsg'}: $STR{'errorConRemote'}...");
   }
-  
   # Download the file
   if ($TOTAL_SIZE) {
     my $downloadData;
@@ -9329,15 +8915,12 @@ sub downloadIINDB
     my $response = $ua->get($IINDB_URL, ':content_cb' => sub {
       # Local variables
       my ($data, $response, $protocol) = @_;
-      
       $downloadData       .= $data;                                     # Downloaded data
       my $totalDownloaded  = length($downloadData);                     # Size of downloaded data
       my $completed        = int($totalDownloaded / $TOTAL_SIZE * 100); # Pourcentage of download completed
-      
       $winPb->pbWinPb->SetPos($completed);    # Set the progress bar
       $winPb->lblCount->Text("$completed %"); # Indicate purcentage
     });
-    
     # Save data in a temp file
     my $IINDB_ZIP = $localIINDB."\.zip";
     if ($response and $response->is_success) {
@@ -9354,7 +8937,6 @@ sub downloadIINDB
       $winPb->Hide();
       return("$STR{'errorMsg'}: $STR{'errorConRemote'}...");
     }
-    
     # Uncompress IINDB ZIP
     my ($error, $msg);
     if (-e $IINDB_ZIP) {
@@ -9368,18 +8950,15 @@ sub downloadIINDB
         } else { $error = 1; $msg = "$STR{'errorMsg'}: $STR{'invalidFile'}"; }
       } else { $error = 1; $msg = "$STR{'errorMsg'}: $UnzipError"; }
     } else { $error = 1; $msg = "$STR{'errorMsg'}: $STR{'errorDownload'}..."; }
-    
     # Turn off progress bar
     $win->ChangeCursor($ARROW);
     $winPb->lblPbCurr->Text('');
     $winPb->lblCount->Text('');
     $winPb->pbWinPb->SetPos(0);
     $winPb->Hide();
-    
     # Final message
     if ($error) { return($msg); } # Error
     else        { return(0);    }
-    
   } else {
     # Hide progress window
     $win->ChangeCursor($ARROW);
@@ -9398,7 +8977,6 @@ sub tfDTDB_Change
 {
   # Local variables
   my $DTDBFile = $winConfig->tfDTDB->Text();
-  
   # Remember
   if ($DTDBFile and -f $DTDBFile and &validDTDB($DTDBFile)) {
     $CONFIG{'DT_DB_FILE'} = $DTDBFile;
@@ -9420,7 +8998,6 @@ sub validDTDB
 {
   # Local variables
   my $DTDBFile = shift;
-  
   if (-f $DTDBFile) {
     # Connect to DB
     my $dsn = "DBI:SQLite:dbname=$DTDBFile";
@@ -9434,7 +9011,6 @@ sub validDTDB
       if ($info[2] eq 'DT') { return(1); }
     }
   }
-  
   return(0);
   
 }  #--- End validDTDB
@@ -9446,7 +9022,6 @@ sub btnDTDB_Click
   # Local variables
   my $lastDir = $winConfig->tfDTDB->Text();
   my $DTDBFile;
-
   # Show OpenFile dialog window
   if ($lastDir) {
     my(@parts) = split(/\\/, $lastDir);
@@ -9468,7 +9043,6 @@ sub btnDTDB_Click
                                               -file          => 'DT.db'                   ,
                                               -explorer      => 1                          , );
   }
-
   # Selected file
   if ($DTDBFile and -f $DTDBFile) {
     $winConfig->tfDTDB->Text($DTDBFile);
@@ -9495,7 +9069,6 @@ sub btnDTDBUpt_Click
         $winPb->Hide();
         threads->exit();
       };
-      
       # Thread 'die' signal handler
       $SIG{__DIE__} = sub {
         my $errMsg = (split(/ at /,$_[0]))[0];
@@ -9509,7 +9082,6 @@ sub btnDTDBUpt_Click
         $winPb->Hide();
         Win32::GUI::MessageBox($win, "$STR{'errorMsg'}: $errMsg", $STR{'error'}, 0x40010);
       };
-
       my $errMsg = &downloadDTDB("$USERDIR\\DT.db");
       if ($errMsg) { Win32::GUI::MessageBox($win, "$errMsg"          , $STR{'error'}      , 0x40010); }
       else         { Win32::GUI::MessageBox($win, $STR{'updatedDTDB'}, "XL-Tools $VERSION", 0x40040); }
@@ -9525,7 +9097,6 @@ sub downloadDTDB
 {
   # Local variables
   my $localDTDB = shift; # Default location
-  
   # Show progress window
   $win->ChangeCursor($HOURGLASS);
   $winPb->Text($STR{'downloadDTDB'});
@@ -9536,12 +9107,10 @@ sub downloadDTDB
   $winPb->pbWinPb->SetStep(1);
   $winPb->Center($win);
   $winPb->Show();
-  
   # Start an agent
   my $ua = new LWP::UserAgent;
   $ua->agent($CONFIG{'USERAGENT'});
   $ua->default_header('Accept-Language' => 'en');
-  
   # Check size of the remote file
   my $req    = new HTTP::Request HEAD => $DTDB_URL;
   my $res    = $ua->request($req);
@@ -9556,7 +9125,6 @@ sub downloadDTDB
     $winPb->Hide();
     return("$STR{'errorMsg'}: $STR{'errorConRemote'}...");
   }
-  
   # Download the file
   if ($TOTAL_SIZE) {
     my $downloadData;
@@ -9565,15 +9133,12 @@ sub downloadDTDB
     my $response = $ua->get($DTDB_URL, ':content_cb' => sub {
       # Local variables
       my ($data, $response, $protocol) = @_;
-      
       $downloadData       .= $data;                                     # Downloaded data
       my $totalDownloaded  = length($downloadData);                     # Size of downloaded data
       my $completed        = int($totalDownloaded / $TOTAL_SIZE * 100); # Pourcentage of download completed
-      
       $winPb->pbWinPb->SetPos($completed);    # Set the progress bar
       $winPb->lblCount->Text("$completed %"); # Indicate purcentage
     });
-    
     # Save data in a temp file
     my $DTDB_ZIP = $localDTDB."\.zip";
     if ($response and $response->is_success) {
@@ -9590,7 +9155,6 @@ sub downloadDTDB
       $winPb->Hide();
       return("$STR{'errorMsg'}: $STR{'errorConRemote'}...");
     }
-    
     # Uncompress DTDB ZIP
     my ($error, $msg);
     if (-e $DTDB_ZIP) {
@@ -9601,7 +9165,6 @@ sub downloadDTDB
           $winConfig->tfDTDB->Text($localDTDB);
           $CONFIG{'DT_DB_FILE'} = $localDTDB;
           &saveConfig(\%CONFIG);
-          
           # Load the Datetime database
           &loadDTDB;
           &cbInputDTFormatAddITems();
@@ -9614,18 +9177,15 @@ sub downloadDTDB
         } else { $error = 1; $msg = "$STR{'errorMsg'}: $STR{'invalidFile'}"; }
       } else { $error = 1; $msg = "$STR{'errorMsg'}: $UnzipError"; }
     } else { $error = 1; $msg = "$STR{'errorMsg'}: $STR{'errorDownload'}..."; }
-    
     # Turn off progress bar
     $win->ChangeCursor($ARROW);
     $winPb->lblPbCurr->Text('');
     $winPb->lblCount->Text('');
     $winPb->pbWinPb->SetPos(0);
     $winPb->Hide();
-    
     # Final message
     if ($error) { return($msg); } # Error
     else        { return(0);    }
-    
   } else {
     # Hide progress window
     $win->ChangeCursor($ARROW);
@@ -9644,7 +9204,6 @@ sub saveConfig
 {
   # Local variables
   my $refConfig = shift;
-  
   # Save configuration hash values
   open(CONFIG,">$CONFIG_FILE");
   flock(CONFIG, 2);
@@ -9659,22 +9218,18 @@ sub loadConfig
 {
   # Local variables
   my $refConfig = shift;
-  
   # Open and load config values
   open(CONFIG, $CONFIG_FILE);
   my @tab = <CONFIG>;
   close(CONFIG);
-  
   foreach (@tab) {
     chomp($_);
     my ($key, $value) = split(/ = /, $_);
     if ($key) { $$refConfig{$key}  = $value; }
   }
-
   # General tab
   if (exists($$refConfig{'TOOL_AUTO_UPDATE'}))      { $winConfig->chAutoUpdate->Checked($$refConfig{'TOOL_AUTO_UPDATE'});           }
   else                                              { $winConfig->chAutoUpdate->Checked(1);                                         } # Default checked
-  
   # Function options
   if (exists($$refConfig{'FULL_SCREEN'}))           { $winConfig->chFullScreen->Checked($$refConfig{'FULL_SCREEN'});                }
   else                                              { $winConfig->chFullScreen->Checked(0);                                         } # Default is not checked
@@ -9689,10 +9244,10 @@ sub loadConfig
   else                                              { $winConfig->tfLookupTO->Text(10); $$refConfig{'NSLOOKUP_TIMEOUT'} = 10;       } # Default is 10 seconds
   if (exists($$refConfig{'USERAGENT'}))             { $winConfig->tfUserAgent->Text($$refConfig{'USERAGENT'});                      }
   else                                              { $winConfig->tfUserAgent->Text('XL-Tools (http://www.le-tools.com)');
-                                                     $$refConfig{'USERAGENT'} = 'XL-Tools (http://www.le-tools.com)';               } # Use Default
+                                                      $$refConfig{'USERAGENT'} = 'XL-Tools (http://www.le-tools.com)';              } # Use default
   if (exists($$refConfig{'LOCAL_TIMEZONE'}))        { $winDTDB->cbLocalTZ->SetCurSel($$refConfig{'LOCAL_TIMEZONE'}); }
-  else { # Try to find local timezone, if not found, set to first visible in list
-    my $index = 0;
+  else { # Try to find local timezone, if not found, set to America/New York
+    my $index = 107;
     my $localTZ;
     eval { $localTZ = DateTime::TimeZone->new(name => 'local'); };
     if (!$@) { $index = $winDTDB->cbLocalTZ->FindStringExact($localTZ->{name}); }
@@ -9703,9 +9258,8 @@ sub loadConfig
     my $index = $winDTDB->cbDefaultLang->FindStringExact($$refConfig{'DEFAULT_LANG'});
     $winDTDB->cbDefaultLang->SetCurSel($index);
   } else {
-    my $index = $winDTDB->cbDefaultLang->FindStringExact('en-US'); # Use default
-    $winDTDB->cbDefaultLang->SetCurSel($index);
-    $$refConfig{'DEFAULT_LANG'} = $index;
+    $winDTDB->cbDefaultLang->SetCurSel($winDTDB->cbDefaultLang->FindStringExact('en-US')); # Use default
+    $$refConfig{'DEFAULT_LANG'} = 'en-US';
   }
   if (exists($$refConfig{'OUTPUT_CHARSET'}))        { $winDTDB->cbOutputCharset->SetCurSel($winDTDB->cbOutputCharset->FindString($$refConfig{'OUTPUT_CHARSET'})); }
   else                                              { $winDTDB->cbOutputCharset->SetCurSel(0); $$refConfig{'OUTPUT_CHARSET'} = 'cp1252';                          } # Default is cp1252
@@ -9713,31 +9267,27 @@ sub loadConfig
     if ($$refConfig{'NO_RESULT_OPT'} == 1)          { $winConfig->rbNoResultOpt1->Checked(1); $winConfig->rbNoResultOpt2->Checked(0); }
     else                                            { $winConfig->rbNoResultOpt2->Checked(1); $winConfig->rbNoResultOpt1->Checked(0); }
   } else                                            { $winConfig->rbNoResultOpt1->Checked(1);                                         } # Default is Opt1 : Leave a blank
-  
   # MACOUIDB Database location
   if (exists($$refConfig{'MACOUI_DB_AUTO_UPDATE'})) { $winConfig->chMACOUIDBAutoUpt->Checked($$refConfig{'MACOUI_DB_AUTO_UPDATE'}); }
   else                                              { $winConfig->chMACOUIDBAutoUpt->Checked(0);                                    } # Default is not checked
   if (exists($$refConfig{'MACOUI_DB_FILE'}) and
       -f $$refConfig{'MACOUI_DB_FILE'})             { $winConfig->tfMACOUIDB->Text($$refConfig{'MACOUI_DB_FILE'});                  }
-  
   # GeoIPDB Database location
   if (exists($$refConfig{'GEOIP_DB_AUTO_UPDATE'}))  { $winConfig->chGeoIPDBAutoUpt->Checked($$refConfig{'GEOIP_DB_AUTO_UPDATE'});   }
   else                                              { $winConfig->chGeoIPDBAutoUpt->Checked(1);                                     } # Default is checked
   if (exists($$refConfig{'GEOIP_DB_FILE'}) and
       -f $$refConfig{'GEOIP_DB_FILE'})              { $winConfig->tfGeoIPDB->Text($$refConfig{'GEOIP_DB_FILE'});                    }
-  
   # IIN Database location
   if (exists($$refConfig{'IIN_DB_FILE'}) and
       -f $$refConfig{'IIN_DB_FILE'})                { $winConfig->tfIINDB->Text($$refConfig{'IIN_DB_FILE'});                        }
-  
   # XL-Whois Database location
   if (exists($$refConfig{'XLWHOIS_DB_FILE'}) and
       -f $$refConfig{'XLWHOIS_DB_FILE'})            { $winConfig->tfXLWHOISDB->Text($$refConfig{'XLWHOIS_DB_FILE'});                }
-  
   # Datetime Database location
   if (exists($$refConfig{'DT_DB_FILE'}) and
       -f $$refConfig{'DT_DB_FILE'})                { $winConfig->tfDTDB->Text($$refConfig{'DT_DB_FILE'});                           }
-  
+  # Datetime Database location
+  if (exists($$refConfig{'GOOGLE_API_KEY'}))       { $win->tfAPIKey->Text($$refConfig{'GOOGLE_API_KEY'});                           }
   # Custom Functions
   my $j = 1;
   while (exists($CONFIG{'CF'.$j})) {

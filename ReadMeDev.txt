@@ -48,6 +48,8 @@ following modules installed:
 - HTTP-BrowserDetect (v2.07)
 - Business-CreditCard (v0.33)
 - REST-Client (v273)
+- JSON (v2.90)
+- GIS-Distance-Lite (v1.0)
 
 
 To do
