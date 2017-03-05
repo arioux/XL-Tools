@@ -7,7 +7,7 @@
 # GitHub				  : https://github.com/arioux/XL-Tools
 # Documentation	  : http://le-tools.com/XL-ToolsDoc.html
 # Creation        : 2015-12-21
-# Modified        : 2017-02-19
+# Modified        : 2017-03-04
 # Author          : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2017  Alain Rioux (le-tools.com)
@@ -245,9 +245,11 @@ sub loadDefaultStr
   $$refSTR{'Other'}         = 'Other';
   $$refSTR{'SingleDate'}    = 'Use a single date';  
   $$refSTR{'Dur'}           = 'Dur';
+  $$refSTR{'string'}        = 'string';
   $$refSTR{'years'}         = 'years';
   $$refSTR{'months'}        = 'months';
   $$refSTR{'days'}          = 'days';
+  $$refSTR{'weeks'}         = 'weeks';
   $$refSTR{'hours'}         = 'hours';
   $$refSTR{'minutes'}       = 'minutes';
   $$refSTR{'seconds'}       = 'seconds';
