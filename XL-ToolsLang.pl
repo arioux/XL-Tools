@@ -3,11 +3,11 @@
 #------------------------------------------------------------------------------#
 # XL-ToolsLang.pl : Strings for XL-Tools
 # WebSite				  : http://le-tools.com/XL-Tools.html
-# CodePlex			  : https://xltools2.codeplex.com/
+# CodePlex			  : https://xltools2.codeplex.com
 # GitHub				  : https://github.com/arioux/XL-Tools
 # Documentation	  : http://le-tools.com/XL-ToolsDoc.html
 # Creation        : 2015-12-21
-# Modified        : 2017-03-04
+# Modified        : 2017-07-02
 # Author          : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2017  Alain Rioux (le-tools.com)
@@ -30,7 +30,6 @@
 #------------------------------------------------------------------------------#
 # Modules
 #------------------------------------------------------------------------------#
-
 use strict;
 use warnings;
 
@@ -49,8 +48,8 @@ sub loadStr
     chomp($_);
     s/[^\w\=\s\.\!\,\-\)\(\']//g;
     my ($key, $value) = split(/ = /, $_);
-    $value = encode("iso-8859-1", $value); # Revaluate with different language encoding
-    if ($key) { $$refSTR{$key}  = $value; }
+    $value         = encode("iso-8859-1", $value); # Revaluate with different language encoding
+    $$refSTR{$key} = $value if $key;
   }
   
 }  #--- End loadStr
@@ -236,6 +235,8 @@ sub loadDefaultStr
   $$refSTR{'LDAPTime'}      = 'LDAPTime';
   $$refSTR{'Filetime'}      = 'Filetime';
   $$refSTR{'SystemTime'}    = 'SystemTime';
+  $$refSTR{'MacAbsTime'}    = 'Mac Absolute time';
+  $$refSTR{'MacHFS'}        = 'Mac HFS+';
   $$refSTR{'btnInputFormatGuessTip'} = 'Use the first item to guess the format';
   $$refSTR{'unique'}        = 'Unique';
   $$refSTR{'output'}        = 'Output';
@@ -268,7 +269,7 @@ sub loadDefaultStr
   $$refSTR{'cbUtils13'}     = 'Address to GPS coordinates';
   $$refSTR{'cbUtils14'}     = 'Distance between locations';
   $$refSTR{'cbUtils12'}     = 'Custom functions...';
-  $$refSTR{'GeoIPOpt1'}     = 'All available';
+  $$refSTR{'AllDetails'}    = 'All details';
   $$refSTR{'GeoIPOpt2'}     = 'Country';
   $$refSTR{'GeoIPOpt3'}     = 'Country code';
   $$refSTR{'GeoIPOpt4'}     = 'Region';
@@ -279,7 +280,7 @@ sub loadDefaultStr
   $$refSTR{'GeoIPOpt9'}     = 'Timezone name';
   $$refSTR{'GeoIPOpt10'}    = 'Timezone offset';
   $$refSTR{'Addheaders'}    = 'Add headers';
-  $$refSTR{'UAOpt1'}        = 'All available';
+  $$refSTR{'checkOpt'}      = 'You must check at least one detail';
   $$refSTR{'UAOpt3'}        = 'OS';
   $$refSTR{'UAOpt4'}        = 'Browser';
   $$refSTR{'UAOpt5'}        = 'Device';
@@ -383,6 +384,7 @@ sub loadDefaultStr
   $$refSTR{'SetGenOpt'}       = 'Set General Options';
   $$refSTR{'winPb'}           = 'Progress';
   $$refSTR{'winCW'}           = 'Configuration Wizard';
+  $$refSTR{'XLWhoisExists'}   = 'Is XL-Whois installed on this system';
   $$refSTR{'configSet'}       = 'XL-Tool has been configured !';
   $$refSTR{'configSetPart'}   = 'Aborted ! XL-Tool has been partially configured.';
   # General tab
@@ -424,16 +426,20 @@ sub loadDefaultStr
   $$refSTR{'checkMACOUIUpt'}  = 'Check update for the MAC OUI Database';
   $$refSTR{'MACOUINotExist'}  = 'The MAC OUI database (oui.db) does not exist, download';
   $$refSTR{'downloadMACOUI'}  = 'Downloading MAC OUI Database';
+  $$refSTR{'locateMACOUI'}    = 'Locate MAC OUI Database';
   $$refSTR{'convertMACOUI'}   = 'Convert MAC OUI Database';
   $$refSTR{'uptGeoIP'}        = 'Update GeoIP Database';
   $$refSTR{'updatedGeoIP'}    = 'The GeoIP database has been updated';
   $$refSTR{'checkGeoIPUpt'}   = 'Check update for the GeoIP Database';
   $$refSTR{'GeoIPNotExist'}   = 'The GeoIP database (GeoLiteCity.dat) does not exist, download';
   $$refSTR{'downloadGeoIP'}   = 'Downloading GeoIP Database';
+  $$refSTR{'locateGeoIP'}     = 'Locate GeoIP Database';
   $$refSTR{'downloadWarning'} = 'It may take a few minutes';
   $$refSTR{'downloadIINDB'}   = 'Downloading IIN database';
+  $$refSTR{'locateIINDB'}     = 'Locate IIN database';
   $$refSTR{'updatedIINDB'}    = 'The IIN database has been updated';
   $$refSTR{'downloadDTDB'}    = 'Downloading Datetime database';
+  $$refSTR{'locateDTDB'}      = 'Locate Datetime database';
   $$refSTR{'DTDBNotExist'}    = 'The Datetime database (DT.db) does not exist, download';
   $$refSTR{'updatedDTDB'}     = 'The Datetime database has been updated';
   # Update Window

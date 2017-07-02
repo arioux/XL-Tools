@@ -34,7 +34,7 @@ following modules installed:
 - MIME-Base64 (v3.14)
 - Convert-Base32 (v0.06)
 - DateTime (v1.28)
-- DateTime-TimeZone (v1.97)
+- DateTime-TimeZone (v2.00)
 - DateTime-Format-Duration (v1.04)
 - DateTime-Format-Strptime (v1.68)
 - Math-Int64 (v0.54)

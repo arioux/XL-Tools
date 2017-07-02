@@ -2,13 +2,13 @@
 # Perl - v: 5.16.3
 #------------------------------------------------------------------------------#
 # XL-ToolsGraph.pl  : Graphic elements for XL-Tools
-# Website           : http://le-tools.com/
+# Website           : http://le-tools.com
 # GitHub		        : https://github.com/arioux/XL-Tools
 # Creation          : 2015-12-21
-# Modified          : 2015-12-21
+# Modified          : 2017-07-02
 # Author            : Alain Rioux (admin@le-tools.com)
 #
-# Copyright (C) 2015  Alain Rioux (le-tools.com)
+# Copyright (C) 2015-2017  Alain Rioux (le-tools.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,7 +28,6 @@
 #------------------------------------------------------------------------------#
 # Modules
 #------------------------------------------------------------------------------#
-
 use strict;
 use warnings;
 use Win32::GUI::BitmapInline();
