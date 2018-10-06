@@ -1,14 +1,14 @@
 #!/usr/bin/perl
 # Perl - v: 5.16.3
 #------------------------------------------------------------------------------#
-# XL-ToolsConfig.pl : Configuration functions for XL-Tools
-# WebSite				    : http://le-tools.com/XL-Tools.html
-# CodePlex			    : https://xltools2.codeplex.com
-# GitHub				    : https://github.com/arioux/XL-Tools
-# Documentation	    : http://le-tools.com/XL-ToolsDoc.html
-# Creation          : 2015-12-21
-# Modified          : 2017-07-02
-# Author            : Alain Rioux (admin@le-tools.com)
+# XL-ToolsConfig.pl	: Configuration functions for XL-Tools
+# WebSite						: http://le-tools.com/XL-Tools.html
+# SourceForge   		: https://sourceforge.net/p/xl-tools
+# GitHub						: https://github.com/arioux/XL-Tools
+# Documentation			: http://le-tools.com/XL-ToolsDoc.html
+# Creation					: 2015-12-21
+# Modified					: 2017-07-02
+# Author						: Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2017  Alain Rioux (le-tools.com)
 #
@@ -224,7 +224,7 @@ sub updateTool
       # Download with browser
       my $answer = Win32::GUI::MessageBox($$refWinConfig, "$$refSTR{'update4'} $currVer $$refSTR{'update5'} ?", $$refSTR{'update3'}, 0x40024);
       if ($answer == 6) {
-        # Open Firefox to XL-Tools page
+        # Open XL-Tools page with default browser
         $$refWin->ShellExecute('open', $URL_TOOL,'','',1) or
         Win32::GUI::MessageBox($$refWinConfig, Win32::FormatMessage(Win32::GetLastError()), "$$refSTR{'update3'} XL-Tools", 0x40010);
       }
@@ -602,7 +602,7 @@ sub checkDateGeoIPDB
   my ($refWinConfig, $refConfig) = @_;
   my $localGeoIPDB = $$refWinConfig->tfGeoIPDB->Text();
   my $lastModifDate;
-  # MAC OUI Database doesn't exist or invalid file
+  # GeoIP Database doesn't exist or invalid file
   return(0, undef, undef, undef) if !$localGeoIPDB or !-f $localGeoIPDB;
   # Check date of local file
   my $localFileT  = DateTime->from_epoch(epoch => (stat($localGeoIPDB))[9]);

@@ -4,7 +4,7 @@ Description		: Part of the XL-Toolkit, XL-Tools provides a bunch of functions
                 and time utilities, etc.
 Author				: Alain Rioux (admin@le-tools.com)
 WebSite				: http://le-tools.com/XL-Tools.html
-CodePlex			: https://xltools2.codeplex.com/
+SourceForge   : https://sourceforge.net/p/xl-tools
 GitHub				: https://github.com/arioux/XL-Tools
 Documentation	: http://le-tools.com/XL-ToolsDoc.html
 
@@ -12,7 +12,7 @@ Documentation	: http://le-tools.com/XL-ToolsDoc.html
 Licence
 -------
 
-Copyright (C) 2015-2017  Alain Rioux (le-tools.com)
+Copyright (C) 2015-2018  Alain Rioux (le-tools.com)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

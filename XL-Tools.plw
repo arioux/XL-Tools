@@ -2,19 +2,19 @@
 # Perl - v: 5.16.3
 #------------------------------------------------------------------------------#
 # Tool name     : XL-Tools
-# WebSite				: http://le-tools.com/XL-Tools.html
-# CodePlex			: https://xltools2.codeplex.com
-# GitHub				: https://github.com/arioux/XL-Tools
-# Documentation	: http://le-tools.com/XL-ToolsDoc.html
+# WebSite       : http://le-tools.com/XL-Tools.html
+# SourceForge   : https://sourceforge.net/p/xl-tools
+# GitHub        : https://github.com/arioux/XL-Tools
+# Documentation : http://le-tools.com/XL-ToolsDoc.html
 # Description   : Part of the XL-Toolkit, XL-Tools provides a bunch of functions
 #                 for list of strings like sorting, converting, replacing, date
 #                 and time utilities, etc.
 # Creation      : 2015-12-21
-# Modified      : 2017-07-02
-my $VERSION     = "3.6";
+# Modified      : 2018-10-06
+my $VERSION     = "3.6.1";
 # Author        : Alain Rioux (admin@le-tools.com)
 #
-# Copyright (C) 2015-2017  Alain Rioux (le-tools.com)
+# Copyright (C) 2015-2018  Alain Rioux (le-tools.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -760,14 +760,6 @@ $win->AddCheckbox(    -name        => 'chUAOpt6'              ,
                       -background  => [255, 255, 255]         ,
                       -checked     => 1                       ,
                       -visible     => 0                       , );
-
-#$win->AddCombobox(    -name         => 'cbUAOpt'              ,
-#                      -size         => [100,100]              ,
-#                      -pos          => [545, 30]              ,
-#                      -font         => $font10                ,
-#                      -dropdownlist => 1                      ,
-#                      -vscroll      => 1                      ,
-#                      -visible      => 0                      , );
 # Credit Card to Issuing Company Options
 $win->AddRadioButton( -name       => 'rbIINLocalDB'           ,
                       -size       => [200, 22]                ,
@@ -2999,7 +2991,7 @@ sub patternRE
                   '%w' => '[0-6]', # weekday (Sunday as the first day of the week) as a decimal number (0-6).
                   '%Y' => '\d{4}', # year with century as a decimal number
                   '%y' => '\d{2}', # year without century as a decimal number (00-99)
-                  '%Z' => '[\w\/]+', # time zone name
+                  '%Z' => '[a-zA-Z\/]+', # time zone name
                   '%z' => '[\-\+]?\d{4}', # time zone offset from UTC
                   );
   # Convert other format string from strftime format (%) to regex
@@ -3598,6 +3590,8 @@ sub cbUtils_Change
     $win->chGeoIPOpt9->Hide();
     $win->chGeoIPOpt10->Hide();
   }
+  # Valid XL-Whois Database
+  &tfXLWHOISDB_Change() if $selFunc == 8;
   # Show User-Agent options
   if   ($selFunc == 9) {
     $win->chUAOptAll->Show();
@@ -4108,7 +4102,7 @@ sub btnStop_Click
 sub btnHelp_Click
 #--------------------------#
 {
-  # Open Firefox to XL-Tools page
+  # Open XL-Tools documentation page with default browser
   $win->ShellExecute('open', $URL_DOC,'','',1) or Win32::GUI::MessageBox($win, Win32::FormatMessage(Win32::GetLastError()), $STR{'error'}, 0x40010);
 
 }  #--- End btnHelp_Click
@@ -4154,7 +4148,7 @@ sub btnAbout_Click
                         -pos         => [140, 80]               ,
                         -font        => $font10                 ,
                         -background  => [255, 255, 255]         ,
-                        -text        => '© Copyright 2015-2016 Alain Rioux', );
+                        -text        => '© Copyright 2015-2018 Alain Rioux', );
   $winAbout->Center($win);
   $winAbout->DoModal();
   return(1);
@@ -4677,13 +4671,8 @@ sub timeTabFunc
     if ($win->chSingleDate->Checked()) {
       my ($d, $m, $y)   = $win->dtTimeDiffDate->GetDate();
       my ($h, $min, $s) = $win->dtTimeDiffTime->GetTime();
-      $dt2              = DateTime->new(year       => $y    ,
-                                        month      => $m    ,
-                                        day        => $d    ,
-                                        hour       => $h    ,
-                                        minute     => $min  ,
-                                        second     => $s    ,
-                                        time_zone  => $outputTZ, );
+      $dt2              = DateTime->new(year => $y, month  => $m  , day   => $d,
+                                        hour => $h, minute => $min, second => $s, time_zone => $outputTZ);
       push(@{$refList1}, @{$refList2}); # Merge lists
     }
     my $outputFormat = $win->cbOutputDTDiff->GetCurSel(); # Formats : 0 = string, 1 = years, 2 = months, 3 = weeks, 4 = days,  5 = hours, 6 = minutes, 7 = seconds
@@ -5452,7 +5441,7 @@ sub firstStart
         $win->cbOutputDTFormat->SetCurSel(0);
         $$refWinCW->lblDLDTDBDone->Show();
       } else { # No DTDB, download it
-        $$refWinCW->lblDLTLDDB->Text($STR{'downloadDTDB'});
+        $$refWinCW->lblDLDTDB->Text($STR{'downloadDTDB'});
         $return = &downloadDTDB("$dir\\DT.db", \$HOURGLASS, \$ARROW, \$winDTDB, \$winConfig, \%CONFIG,
                                 $CONFIG_FILE, \$winPb, \$win, \%STR); # $return contains error msg if any
         if ($return) { 
@@ -6218,7 +6207,7 @@ sub btnXLWHOISDB_Click
                                                   -explorer      => 1                          , );
   }
   # Selected file
-  $winConfig->tfXLWHOISDB->Text($XLWHOISDBFile) if $XLWHOISDBFile and -f $XLWHOISDBFile;
+  $winConfig->tfXLWHOISDB->Text($XLWHOISDBFile);
   return(1);
 
 }  #--- End btnXLWHOISDB_Click

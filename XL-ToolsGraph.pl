@@ -2,8 +2,9 @@
 # Perl - v: 5.16.3
 #------------------------------------------------------------------------------#
 # XL-ToolsGraph.pl  : Graphic elements for XL-Tools
-# Website           : http://le-tools.com
-# GitHub		        : https://github.com/arioux/XL-Tools
+# WebSite				    : http://le-tools.com/XL-Tools.html
+# SourceForge       : https://sourceforge.net/p/xl-tools
+# GitHub            : https://github.com/arioux/XL-Tools
 # Creation          : 2015-12-21
 # Modified          : 2017-07-02
 # Author            : Alain Rioux (admin@le-tools.com)

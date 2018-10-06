@@ -2,10 +2,10 @@
 # Perl - v: 5.16.3
 #------------------------------------------------------------------------------#
 # XL-ToolsLang.pl : Strings for XL-Tools
-# WebSite				  : http://le-tools.com/XL-Tools.html
-# CodePlex			  : https://xltools2.codeplex.com
-# GitHub				  : https://github.com/arioux/XL-Tools
-# Documentation	  : http://le-tools.com/XL-ToolsDoc.html
+# WebSite         : http://le-tools.com/XL-Tools.html
+# SourceForge     : https://sourceforge.net/p/xl-tools
+# GitHub          : https://github.com/arioux/XL-Tools
+# Documentation   : http://le-tools.com/XL-ToolsDoc.html
 # Creation        : 2015-12-21
 # Modified        : 2017-07-02
 # Author          : Alain Rioux (admin@le-tools.com)
@@ -48,8 +48,8 @@ sub loadStr
     chomp($_);
     s/[^\w\=\s\.\!\,\-\)\(\']//g;
     my ($key, $value) = split(/ = /, $_);
-    $value         = encode("iso-8859-1", $value); # Revaluate with different language encoding
-    $$refSTR{$key} = $value if $key;
+    $value            = encode("iso-8859-1", $value); # Revaluate with different language encoding
+    $$refSTR{$key}    = $value if $key;
   }
   
 }  #--- End loadStr
@@ -151,7 +151,7 @@ sub loadDefaultStr
   $$refSTR{'Results'}       = 'Results';
   $$refSTR{'resInFile'}     = 'Use file';
   $$refSTR{'ViewReport'}    = 'View the report';
-  $$refSTR{'lblNotReady'}   = 'Not Ready ? Click here';
+  $$refSTR{'lblNotReady'}   = 'Not Ready? Click here';
   $$refSTR{'notReady'}      = 'Not ready';
   $$refSTR{'nextStep'}      = 'Next step';
   $$refSTR{'insertList1'}   = 'Insert items in List 1.';
