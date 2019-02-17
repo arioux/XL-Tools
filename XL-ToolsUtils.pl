@@ -7,10 +7,10 @@
 # GitHub            : https://github.com/arioux/XL-Tools
 # Documentation     : http://le-tools.com/XL-ToolsDoc.html
 # Creation          : 2015-12-21
-# Modified          : 2017-07-02
+# Modified          : 2019-02-17
 # Author            : Alain Rioux (admin@le-tools.com)
 #
-# Copyright (C) 2015-2017  Alain Rioux (le-tools.com)
+# Copyright (C) 2015-2019  Alain Rioux (le-tools.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -35,21 +35,26 @@ use warnings;
 use DBI;
 use Net::DNS;
 use base qw/Net::DNS::Resolver::Base/;
+use LWP::UserAgent;
 use Net::CIDR 'cidr2range';
 use Net::IPv6Addr;
 use NetAddr::IP;
+use Net::IP::Lite;
 use Regexp::IPv6 qw($IPv6_re);
-use Geo::IP;
-use Regexp::IPv6 qw($IPv6_re);
+use GeoIP2::Database::Reader;
 use Woothee;
 use Parse::HTTP::UserAgent;
 use Parse::HTTP::UserAgent::Base::IS;
 use Parse::HTTP::UserAgent::Base::Parsers;
 use Parse::HTTP::UserAgent::Base::Dumper;
 use Parse::HTTP::UserAgent::Base::Accessors;
+use JSON qw(decode_json);
 use HTTP::BrowserDetect;
 use HTML::ParseBrowser;
 use Business::CreditCard;
+use Try::Tiny;
+$JSON::PP::true  = 'true';
+$JSON::PP::false = 'false';
 
 #--------------------------#
 sub utilsTabFunc
@@ -59,7 +64,7 @@ sub utilsTabFunc
   my ($refList1, $refList2, $refWinConfig, $refConfig, $CONFIG_FILE, $refWin, $refSTR) = @_;
   my $selFunc = $$refWin->cbUtils->GetCurSel();
   # Possibles value are 0 = 'NSLookup', 1 = 'CIDR to IP Range', 2 = 'IP Range to CIDR', 3 = 'CIDR to IP list',
-  # 4 = 'IP to Arpa', 5 = 'Arpa to IP', 6 = 'Resolve MAC Address', 7 = 'Resolve IPv4 GeoIP', 8 = 'Resolve ISP',
+  # 4 = 'IP to Arpa', 5 = 'Arpa to IP', 6 = 'Resolve MAC Address', 7 = 'Resolve GeoIP', 8 = 'Resolve ISP',
   # 9 = 'Resolve User-agent', 10 = 'Credit Card to issuing company', 11 = 'Address to GPS coordinates',
   # 12 = 'Distance between locations', 13 = 'Custom functions'
   
@@ -105,14 +110,14 @@ sub utilsTabFunc
         # Ex. IPv4: 123.123/16 to 123.123.0.0 - 123.123.255.255
         if ($item =~ /((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){0,3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/[0-9]{1,2})/) {
           my($refIp, $mask) = split(/\//, $item);
-          my($start, $end) = split(/\-/, (Net::CIDR::cidr2range($item))[0]);
+          my ($start, $end) = split(/\-/, (Net::CIDR::cidr2range($item))[0]);
           while ($start !~ /(?:[0-9]{1,3}\.){3}[0-9]{1,3}/) { $start .= '.0';   }
           while ($end   !~ /(?:[0-9]{1,3}\.){3}[0-9]{1,3}/) { $end   .= '.255'; }
           $newItem = "$start - $end" if $start and $end;
         # Ex. IPv6: 2001:db8:1234::/48 to 2001:db8:1234:0000:0000:0000:0000:0000 - 2001:db8:1234:ffff:ffff:ffff:ffff:ffff
         } elsif ($item =~ /($IPv6_re\/[0-9]{1,3})/) {
           my($refIp, $mask) = split(/\//, $item);
-          my($start, $end) = split(/\-/, (Net::CIDR::cidr2range($item))[0]);
+          my ($start, $end) = split(/\-/, (Net::CIDR::cidr2range($item))[0]);
           while ($start =~ /:$/) { chop($start); }
           while ($end   =~ /:$/) { chop($end);   }
           while ($start !~ /(?:[0-9a-fA-F]{1,4}\:){7}[0-9a-fA-F]{1,4}/) { $start .= ':0000'; }
@@ -144,12 +149,14 @@ sub utilsTabFunc
         if ($item =~ /((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)) ?\- ?((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))/) {
           my $ipStart = $1;
           my $ipEnd   = $2;
-          $newItem = Net::CIDR::range2cidr("$1\-$2");
+          my @cidrs   = Net::CIDR::range2cidr("$1\-$2");
+          $newItem    = join(', ', @cidrs);
         # Ex. IPv6: 2001:db8:1234:0000:0000:0000:0000:0000 - 2001:db8:1234:ffff:ffff:ffff:ffff:ffff (spaces or not) to 2001:db8:1234::/48
         } elsif ($item =~ /($IPv6_re) ?\- ?($IPv6_re)/) {
           my $ipStart = $1;
           my $ipEnd   = $2;
-          $newItem = Net::CIDR::range2cidr("$1\-$2");
+          my @cidrs   = Net::CIDR::range2cidr("$1\-$2");
+          $newItem    = join(', ', @cidrs);
         }
         if ($newItem) { push(@items, $newItem); }
         else {
@@ -288,7 +295,7 @@ sub utilsTabFunc
               my $prefix =  $1;
               $prefix    =~ s/[\:\-]//g;
               $prefix    =~ tr/a-f/A-F/;
-              my $rv  = $sth->execute($prefix);
+              my $rv     = $sth->execute($prefix);
               if ($rv >= 0) {
                 my @fields = $sth->fetchrow_array();
                 $newItem = join('',@fields) if scalar(@fields) > 0;
@@ -313,74 +320,86 @@ sub utilsTabFunc
         }
         $sth->finish();
         $dbh->disconnect();
-      } else { Win32::GUI::MessageBox($$refWin, $$refSTR{'errorConnectDB'}, $$refSTR{'error'}, 0x40010); }
-    } else { Win32::GUI::MessageBox($$refWin, 'MACOUI '.$$refSTR{'DBnotFound'}.'...', $$refSTR{'error'}, 0x40010); }
+      } else { Win32::GUI::MessageBox($$refWin, $$refSTR{'errorConnectDB'}, $$refSTR{'Error'}, 0x40010); }
+    } else { Win32::GUI::MessageBox($$refWin, 'MACOUI '.$$refSTR{'DBnotFound'}.'...', $$refSTR{'Error'}, 0x40010); }
   }
-  # 7 = 'Resolve IPv4 GeoIP'
+  # 7 = 'Resolve GeoIP'
   elsif ($selFunc == 7) {
+    my $lang    = $$refWin->cbGeoIPLang->GetString($$refWin->cbGeoIPLang->GetCurSel());
     my $geoIPDB = $$refWinConfig->tfGeoIPDB->Text();
-    my $gi      = Geo::IP->open($geoIPDB, GEOIP_MEMORY_CACHE);
-    # Add headers
-    if ($$refWin->chAddHeaders->Checked()) {
-      my $headers;
-      $headers .= $$refSTR{'country'}     . "\t" if $$refWin->chGeoIPOpt2->Checked();
-      $headers .= $$refSTR{'countryCode'} . "\t" if $$refWin->chGeoIPOpt3->Checked();
-      $headers .= $$refSTR{'region'}      . "\t" if $$refWin->chGeoIPOpt4->Checked();
-      $headers .= $$refSTR{'regionCode'}  . "\t" if $$refWin->chGeoIPOpt5->Checked();
-      $headers .= $$refSTR{'city'}        . "\t" if $$refWin->chGeoIPOpt6->Checked();
-      $headers .= $$refSTR{'postalCode'}  . "\t" if $$refWin->chGeoIPOpt7->Checked();
-      $headers .= $$refSTR{'GPScoord'}    . "\t" if $$refWin->chGeoIPOpt8->Checked();
-      $headers .= $$refSTR{'tzName'}      . "\t" if $$refWin->chGeoIPOpt9->Checked();
-      $headers .= $$refSTR{'tzOffset'}    . "\t" if $$refWin->chGeoIPOpt10->Checked();
-      chop($headers);
-      push(@items, $headers);
-    }
-    foreach my $item (@{$refList1}) {
-      $item =~ s/[\r\n]//g;  # Remove any line break
-      if ($item) {
-        my $newItem;
-        # IPv4 only
-        if ($item =~ /(?:[^0-9]|^)((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))(?:[^0-9\.]|$)/) {
-          if (my $record = $gi->record_by_addr($1)) {
-            if ($$refWin->chGeoIPOpt2->Checked()) { if ($record->country_name) { $newItem .= $record->country_name . "\t" ; } else { $newItem .= "\t"; } }
-            if ($$refWin->chGeoIPOpt3->Checked()) { if ($record->country_code) { $newItem .= $record->country_code . "\t" ; } else { $newItem .= "\t"; } }
-            if ($$refWin->chGeoIPOpt4->Checked()) { if ($record->region_name ) { $newItem .= $record->region_name  . "\t" ; } else { $newItem .= "\t"; } }
-            if ($$refWin->chGeoIPOpt5->Checked()) { if ($record->region      ) { $newItem .= $record->region       . "\t" ; } else { $newItem .= "\t"; } }
-            if ($$refWin->chGeoIPOpt6->Checked()) { if ($record->city        ) { $newItem .= $record->city         . "\t" ; } else { $newItem .= "\t"; } }
-            if ($$refWin->chGeoIPOpt7->Checked()) { if ($record->postal_code ) { $newItem .= $record->postal_code  . "\t" ; } else { $newItem .= "\t"; } }
-            if ($$refWin->chGeoIPOpt8->Checked()) {
-              if ($record->latitude and $record->longitude) { $newItem .= $record->latitude.", ".$record->longitude . "\t" ; }
-              else { $newItem .= "\t"; }
+    if (my $reader = GeoIP2::Database::Reader->new(file => $geoIPDB, locales => [$lang, 'en'])) {
+      # Selected options
+      my $incContinent    = 1 if $$refWin->gridGeoIPOpts->GetCellCheck(0, 0);
+      my $incCountry      = 1 if $$refWin->gridGeoIPOpts->GetCellCheck(1, 0);
+      my $incCountryCode  = 1 if $$refWin->gridGeoIPOpts->GetCellCheck(0, 1);
+      my $incRegion       = 1 if $$refWin->gridGeoIPOpts->GetCellCheck(1, 1);
+      my $incRegionCode   = 1 if $$refWin->gridGeoIPOpts->GetCellCheck(0, 2);
+      my $incCity         = 1 if $$refWin->gridGeoIPOpts->GetCellCheck(1, 2);
+      my $incPostalCode   = 1 if $$refWin->gridGeoIPOpts->GetCellCheck(0, 3);
+      my $incGPScoord     = 1 if $$refWin->gridGeoIPOpts->GetCellCheck(1, 3);
+      my $incTzName       = 1 if $$refWin->gridGeoIPOpts->GetCellCheck(0, 4);
+      my $incTzOffset     = 1 if $$refWin->gridGeoIPOpts->GetCellCheck(1, 4);
+      # Add headers
+      if ($$refWin->chAddHeaders->Checked()) {
+        my $headers;
+        $headers .= $$refSTR{'Continent'}   . "\t" if $incContinent;
+        $headers .= $$refSTR{'Country'}     . "\t" if $incCountry;
+        $headers .= $$refSTR{'countryCode'} . "\t" if $incCountryCode;
+        $headers .= $$refSTR{'Region'}      . "\t" if $incRegion;
+        $headers .= $$refSTR{'regionCode'}  . "\t" if $incRegionCode;
+        $headers .= $$refSTR{'City'}        . "\t" if $incCity;
+        $headers .= $$refSTR{'postalCode'}  . "\t" if $incPostalCode;
+        $headers .= $$refSTR{'GPScoord'}    . "\t" if $incGPScoord;
+        $headers .= $$refSTR{'tzName'}      . "\t" if $incTzName;
+        $headers .= $$refSTR{'tzOffset'}    . "\t" if $incTzOffset;
+        chop($headers);
+        push(@items, $headers);
+      }
+      foreach my $item (@{$refList1}) {
+        $item =~ s/[\r\n]//g;  # Remove any line break
+        if ($item) {
+          my $newItem;
+          if ($item =~ /(?:[^0-9]|^)((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))(?:[^0-9\.]|$)/ or $item =~ /($IPv6_re)/) {
+            my $record;
+            eval { $record = $reader->city(ip => $1); };
+            if ($record) {
+              if ($incContinent   ) { $newItem .= $record->continent()->name()                   if $record->continent()->name();                   $newItem .= "\t"; }
+              if ($incCountry     ) { $newItem .= $record->country()->name()                     if $record->country()->name();                     $newItem .= "\t"; }
+              if ($incCountryCode ) { $newItem .= $record->country()->iso_code()                 if $record->country()->iso_code();                 $newItem .= "\t"; }
+              if ($incRegion      ) { $newItem .= $record->most_specific_subdivision->name()     if $record->most_specific_subdivision->name();     $newItem .= "\t"; }
+              if ($incRegionCode  ) { $newItem .= $record->most_specific_subdivision->iso_code() if $record->most_specific_subdivision->iso_code(); $newItem .= "\t"; }
+              if ($incCity        ) { $newItem .= $record->city()->name()                        if $record->city()->name();                        $newItem .= "\t"; }
+              if ($incPostalCode  ) { $newItem .= $record->postal()->code()                      if $record->postal()->code();                      $newItem .= "\t"; }
+              if ($incGPScoord    ) {
+                $newItem .= $record->location()->latitude().", ".$record->location()->longitude() if $record->location()->latitude() and $record->location()->longitude();
+                $newItem .= "\t";
+              }
+              if ($incTzName      ) { $newItem .= $record->location()->time_zone() if $record->location()->time_zone(); $newItem .= "\t"; }
+              if ($incTzOffset    ) {
+                if ($record->location()->time_zone() and my $tz = DateTime::TimeZone->new(name => $record->location()->time_zone())) {
+                  $newItem .= sprintf("%+05d", $tz->{last_offset}/36) if $tz->{last_offset};
+                }
+                $newItem .= "\t";
+              }
+              chop($newItem);
+              push(@items, encode('cp1252', $newItem));
+            } else {
+              if ($noResultOpt) { push(@items, $$refSTR{'noMatch'}); }
+              else { push(@items, undef); }
             }
-            if ($$refWin->chGeoIPOpt9->Checked()) { if ($record->time_zone  ) { $newItem .= $record->time_zone     . "\t" ; } else { $newItem .= "\t"; } }
-            if ($$refWin->chGeoIPOpt10->Checked()) {
-              if ($record->time_zone and my $tz = DateTime::TimeZone->new(name => $record->time_zone)) {
-                my $TZOffset;
-                if ($tz->{last_offset}) {
-                  $TZOffset = sprintf("%+05d", $tz->{last_offset}/36); 
-                  $newItem .= $TZOffset . "\t";
-                } else { $newItem .= "\t"; }
-              } else { $newItem .= "\t"; }
-            }
-            chop($newItem);
-          }
-          if ($newItem) { push(@items, $newItem); }
-          else {
-            if ($noResultOpt) { push(@items, $$refSTR{'noMatch'}); }
+          } else {
+            if ($noResultOpt) { push(@items, $$refSTR{'invalidInput'}); }
             else { push(@items, undef); }
           }
         } else {
-          if ($noResultOpt) { push(@items, $$refSTR{'invalidInput'}); }
+          if ($noResultOpt) { push(@items, $$refSTR{'noInput'}); }
           else { push(@items, undef); }
         }
-      } else {
-        if ($noResultOpt) { push(@items, $$refSTR{'noInput'}); }
-        else { push(@items, undef); }
+        # Progress
+        $curr++;
+        $$refWin->lblPbCount->Text("$curr / $nbrItems");
+        $$refWin->pb->StepIt();
       }
-      # Progress
-      $curr++;
-      $$refWin->lblPbCount->Text("$curr / $nbrItems");
-      $$refWin->pb->StepIt();
     }
   }
   # 8 = 'Resolve ISP'
@@ -417,26 +436,32 @@ sub utilsTabFunc
           $$refWin->pb->StepIt();
         }
         $dbh->disconnect();
-      } else { Win32::GUI::MessageBox($$refWin, $$refSTR{'errorConnectDB'}, $$refSTR{'error'}, 0x40010); }
-    } else { Win32::GUI::MessageBox($$refWin, 'XL-Whois '.$$refSTR{'DBnotFound'}.'...', $$refSTR{'error'}, 0x40010); }
+      } else { Win32::GUI::MessageBox($$refWin, $$refSTR{'errorConnectDB'}, $$refSTR{'Error'}, 0x40010); }
+    } else { Win32::GUI::MessageBox($$refWin, 'XL-Whois '.$$refSTR{'DBnotFound'}.'...', $$refSTR{'Error'}, 0x40010); }
   }
   # 9 = 'Resolve User-agent'
   elsif ($selFunc == 9) {
+      # Selected options
+      my $incType     = 1 if $$refWin->gridUAOpts->GetCellCheck(0, 0);
+      my $incOS       = 1 if $$refWin->gridUAOpts->GetCellCheck(1, 0);
+      my $incBrowser  = 1 if $$refWin->gridUAOpts->GetCellCheck(0, 1);
+      my $incDevice   = 1 if $$refWin->gridUAOpts->GetCellCheck(1, 1);
+      my $incLang     = 1 if $$refWin->gridUAOpts->GetCellCheck(0, 2);
     # Add headers
     if ($$refWin->chAddHeaders->Checked()) {
       my $headers;
-      $headers .= $$refSTR{'type'}      . "\t" if $$refWin->chUAOpt2->Checked();
-      $headers .= $$refSTR{'uaOS'}      . "\t" if $$refWin->chUAOpt3->Checked();
-      $headers .= $$refSTR{'uaBrowser'} . "\t" if $$refWin->chUAOpt4->Checked();
-      $headers .= $$refSTR{'uaDevice'}  . "\t" if $$refWin->chUAOpt5->Checked();
-      $headers .= $$refSTR{'uaLang'}    . "\t" if $$refWin->chUAOpt6->Checked();
+      $headers .= $$refSTR{'Type'}      . "\t" if $incType;
+      $headers .= $$refSTR{'uaOS'}      . "\t" if $incOS;
+      $headers .= $$refSTR{'uaBrowser'} . "\t" if $incBrowser;
+      $headers .= $$refSTR{'uaDevice'}  . "\t" if $incDevice;
+      $headers .= $$refSTR{'uaLang'}    . "\t" if $incLang;
       chop($headers);
       push(@items, $headers);
     }
     foreach my $item (@{$refList1}) {
       $item =~ s/[\r\n]//g;  # Remove any line break
       if ($item) {
-        my $newItem = &parseUA($item, $refWin);
+        my $newItem = &parseUA($item, $incType, $incOS, $incBrowser, $incDevice, $incLang, $refWin);
         if ($newItem) { push(@items, $newItem); }
         else {
           if ($noResultOpt) { push(@items, $$refSTR{'noMatch'}); }
@@ -498,12 +523,13 @@ sub utilsTabFunc
             $$refWin->lblPbCount->Text("$curr / $nbrItems");
             $$refWin->pb->StepIt();
           }
-        } else { Win32::GUI::MessageBox($$refWin, $$refSTR{'errorConnectDB'}, $$refSTR{'error'}, 0x40010); }
-      } else { Win32::GUI::MessageBox($$refWin, 'IIN '.$$refSTR{'DBnotFound'}.'...', $$refSTR{'error'}, 0x40010); }
+        } else { Win32::GUI::MessageBox($$refWin, $$refSTR{'errorConnectDB'}, $$refSTR{'Error'}, 0x40010); }
+      } else { Win32::GUI::MessageBox($$refWin, 'IIN '.$$refSTR{'DBnotFound'}.'...', $$refSTR{'Error'}, 0x40010); }
     # Send queries to www.binlist.net
     } else {
       # Set headers
-      my $headers = "$$refSTR{'brand'}\t$$refSTR{'subBrand'}\t$$refSTR{'bank'}\t$$refSTR{'cardType'}\t$$refSTR{'cardCategory'}\t$$refSTR{'countryName'}";
+      my $headers = "$$refSTR{'Type'}\t$$refSTR{'Brand'}\t$$refSTR{'Prepaid'}\t$$refSTR{'BankName'}\t$$refSTR{'BankUrl'}\t" .
+                    "$$refSTR{'BankPhone'}\t$$refSTR{'BankCity'}\t$$refSTR{'Country'}";
       push(@items, $headers);
       foreach my $item (@{$refList1}) {
         $item =~ s/[\r\n]//g;  # Remove any line break
@@ -539,8 +565,9 @@ sub utilsTabFunc
   }
   # 11 = 'Address to GPS coordinates'
   elsif ($selFunc == 11) {
-    my $ua = new LWP::UserAgent;
+    my $ua = LWP::UserAgent->new;
     $ua->agent($$refConfig{'USERAGENT'});
+    $ua->timeout($$refConfig{'NSLOOKUP_TIMEOUT'});
     $ua->default_header('Accept-Language' => 'en');
     my $APIKey = $$refWin->tfAPIKey->Text();
     foreach my $item (@{$refList1}) {
@@ -639,7 +666,7 @@ sub utilsTabFunc
         my $dsn = "DBI:SQLite:dbname=$dbFile";
         if (my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 })) {
           my $sth;
-          # Match case ?
+          # Match case?
           if ($$refWin->chCFMatchCase->Checked()) { $sth = $dbh->prepare("SELECT value FROM DATA WHERE key == ?");                }
           else                                    { $sth = $dbh->prepare("SELECT value FROM DATA WHERE key == ? COLLATE NOCASE"); }
           foreach my $item (@{$refList1}) {
@@ -667,8 +694,8 @@ sub utilsTabFunc
           }
           $sth->finish();
           $dbh->disconnect();
-        } else { Win32::GUI::MessageBox($$refWin, $$refSTR{'errorConnectDB'}, $$refSTR{'error'}, 0x40010); }
-      } else { Win32::GUI::MessageBox($$refWin, $$refSTR{'selectedCF'}.' '.$$refSTR{'DBnotFound'}.'...', $$refSTR{'error'}, 0x40010); }
+        } else { Win32::GUI::MessageBox($$refWin, $$refSTR{'errorConnectDB'}, $$refSTR{'Error'}, 0x40010); }
+      } else { Win32::GUI::MessageBox($$refWin, $$refSTR{'selectedCF'}.' '.$$refSTR{'DBnotFound'}.'...', $$refSTR{'Error'}, 0x40010); }
     }
   }
   # Format results
@@ -726,12 +753,12 @@ sub parseUA
 #--------------------------#
 {
   # Local variables
-  my ($uaStr, $refWin) = @_;
+  my ($uaStr, $incType, $incOS, $incBrowser, $incDevice, $incLang, $refWin) = @_;
   my $UAInfos;
   # Parse User-Agent String
   my $refUA = Woothee->parse($uaStr); # Ex.: {'name'=>"Internet Explorer", 'category'=>"pc", 'os'=>"Windows 7", 'version'=>"8.0", 'vendor'=>"Microsoft"}
   # Detect type
-  if ($$refWin->chUAOpt2->Checked()) {
+  if ($incType) {
     # Not detected, use another parser
     if (!$$refUA{'category'} or $$refUA{'category'} =~ /UNKNOWN/) {
       if (my $uaType = HTTP::BrowserDetect->new($uaStr)) {
@@ -748,7 +775,7 @@ sub parseUA
   # pc or smartphone
   else {
     # Detect OS
-    if ($$refWin->chUAOpt3->Checked()) {
+    if ($incOS) {
       my $os;
       # Some particulars
       if    ($uaStr =~ /Windows NT 5.2/i) { $os = 'Windows XP Professional x64'; }
@@ -757,7 +784,7 @@ sub parseUA
       # Unknown, use another parser
       elsif (!$$refUA{'os'} or $$refUA{'os'} =~ /UNKNOWN/) {
         my $uaOS;
-        eval { my $uaOS = Parse::HTTP::UserAgent->new($uaStr); };
+        eval { $uaOS = Parse::HTTP::UserAgent->new($uaStr); };
         $os = $uaOS->os if !$@ and $uaOS and $uaOS->os;
       } else {
         $os  = $$refUA{'os'} if $$refUA{'os'};
@@ -768,7 +795,7 @@ sub parseUA
       $UAInfos .= "\t";
     }
     # Detect browser
-    if ($$refWin->chUAOpt4->Checked()) {
+    if ($incBrowser) {
       my $browser;
       $browser  = $$refUA{'name'} if $$refUA{'name'} and $$refUA{'name'} !~ /UNKNOWN/;
       $browser  = 'Iceweasel'     if $uaStr =~ /Iceweasel/i;
@@ -779,7 +806,7 @@ sub parseUA
       $UAInfos .= "\t";
     }
     # Detect Device
-    if ($$refWin->chUAOpt5->Checked()) {
+    if ($incDevice) {
       my $device;
       my $uaDevice = HTTP::BrowserDetect->new($uaStr);
       $device   = $uaDevice->device_name() if $uaDevice->device_name();
@@ -787,7 +814,7 @@ sub parseUA
       $UAInfos .= "\t";
     }
     # Detect Lang
-    if ($$refWin->chUAOpt6->Checked()) {
+    if ($incLang) {
       my $lang;
       my $uaLang = HTML::ParseBrowser->new($uaStr);
       $lang      = $uaLang->language if $uaLang->language;
@@ -843,36 +870,40 @@ sub checkCC_BinList
   # If number valid, send a query to Binlist.net
   if ($genIssuer and $genIssuer ne 'Not a credit card') {
     my $exactIssuer;
-    my %data;
     if ($cc =~ /^([0-9]{6})/) { # Need only the first 6 digits
-      my $ua = new LWP::UserAgent;
+      my $ua = LWP::UserAgent->new;
       $ua->agent($$refConfig{'USERAGENT'});
+      $ua->timeout($$refConfig{'NSLOOKUP_TIMEOUT'});
       $ua->default_header('Accept-Language' => 'en');
-      my $client = REST::Client->new(useragent => $ua, timeout => $$refConfig{'NSLOOKUP_TIMEOUT'});
-      $client->GET("https://www.binlist.net/json/$1");
-      if ($client->responseCode() eq '200' and $client->responseContent()) {
-        # Ex. response :
-        #{
-        #   "bin":"431940",
-        #   "brand":"VISA",
-        #   "sub_brand":"",
-        #   "country_code":"IE",
-        #   "country_name":"Ireland",
-        #   "bank":"BANK OF IRELAND",
-        #   "card_type":"DEBIT",
-        #   "card_category":"",
-        #   "latitude":"53",
-        #   "longitude":"-8",
-        #   "query_time":"365.845us"
-        #}
-        my @fields = split(/,/, $client->responseContent());
-        foreach (@fields) { if (/\"([^\"]+)\"\:\"([^\"]*)\"/) { $data{$1} = $2; } }
-        if ($data{brand})         { $exactIssuer .= "$data{brand}\t";         } else { $exactIssuer .= "\t"; }
-        if ($data{sub_brand})     { $exactIssuer .= "$data{sub_brand}\t";     } else { $exactIssuer .= "\t"; }
-        if ($data{bank})          { $exactIssuer .= "$data{bank}\t";          } else { $exactIssuer .= "\t"; }
-        if ($data{card_type})     { $exactIssuer .= "$data{card_type}\t";     } else { $exactIssuer .= "\t"; }
-        if ($data{card_category}) { $exactIssuer .= "$data{card_category}\t"; } else { $exactIssuer .= "\t"; }
-        if ($data{country_name})  { $exactIssuer .= "$data{country_name}";    }
+      my $req = HTTP::Request->new(GET  => "https://lookup.binlist.net/$1");
+      if (my $json = $ua->request($req)) {
+        if (my $d_json = decode_json($json->content)) {
+          # Ex. response :
+          #{
+          #  "number": { "length": 16, "luhn": true },
+          #  "scheme": "visa",
+          #  "type": "debit",
+          #  "brand": "Visa/Dankort",
+          #  "prepaid": false,
+          #  "country": { "numeric": "208", "alpha2": "DK", "name": "Denmark", "emoji": "????", "currency": "DKK", "latitude": 56, "longitude": 10 },
+          #  "bank": { "name": "Jyske Bank", "url": "www.jyskebank.dk", "phone": "+4589893300", "city": "Hjørring" }
+          #}
+          $exactIssuer .= $d_json->{type}             if $d_json->{type};
+          $exactIssuer .= "\t";
+          $exactIssuer .= $d_json->{brand}            if $d_json->{brand};
+          $exactIssuer .= "\t";
+          $exactIssuer .= $d_json->{prepaid}          if $d_json->{prepaid};
+          $exactIssuer .= "\t";
+          $exactIssuer .= $d_json->{bank}->{name}     if $d_json->{bank}->{name};
+          $exactIssuer .= "\t";
+          $exactIssuer .= $d_json->{bank}->{url}      if $d_json->{bank}->{url};
+          $exactIssuer .= "\t";
+          $exactIssuer .= $d_json->{bank}->{phone}    if $d_json->{bank}->{phone};
+          $exactIssuer .= "\t";
+          $exactIssuer .= $d_json->{bank}->{city}     if $d_json->{bank}->{city};
+          $exactIssuer .= "\t";
+          $exactIssuer .= $d_json->{country}->{name}  if $d_json->{country}->{name};
+        }
       }
     }
     $issuer = $exactIssuer if $exactIssuer;
@@ -1155,7 +1186,7 @@ sub checkIP_WhoisDB_IPv4
   # Check if IP address fit any range in database
   my $sth = $$refDbh->prepare("SELECT range_s,range_e,isp,country,date FROM WHOIS_DB WHERE $ipInt >= range_s AND $ipInt <= range_e");
   my $rv  = $sth->execute();
-  if ($rv < 0) { Win32::GUI::MessageBox($$refWin, $$refSTR{'errDB'}.$DBI::errstr, $$refSTR{'error'}, 0x40010); }
+  if ($rv < 0) { Win32::GUI::MessageBox($$refWin, $$refSTR{'errDB'}.$DBI::errstr, $$refSTR{'Error'}, 0x40010); }
   else {
     # Select the best answer (smaller range)
     my $refAllRows = $sth->fetchall_arrayref();

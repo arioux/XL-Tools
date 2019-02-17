@@ -7,10 +7,10 @@
 # GitHub          : https://github.com/arioux/XL-Tools
 # Documentation   : http://le-tools.com/XL-ToolsDoc.html
 # Creation        : 2015-12-21
-# Modified        : 2017-07-02
+# Modified        : 2019-02-17
 # Author          : Alain Rioux (admin@le-tools.com)
 #
-# Copyright (C) 2015-2017  Alain Rioux (le-tools.com)
+# Copyright (C) 2015-2019  Alain Rioux (le-tools.com)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -65,32 +65,28 @@ sub loadDefaultStr
   
   # General strings
   $$refSTR{'use'}             = 'Use';
-  $$refSTR{'cancel'}          = 'Cancel';
-  $$refSTR{'about'}           = 'About';
+  $$refSTR{'Cancel'}          = 'Cancel';
+  $$refSTR{'About'}           = 'About';
   $$refSTR{'text'}            = 'Text file';
   $$refSTR{'dbFile'}          = 'Database file';
   $$refSTR{'selectFile'}      = 'Select file';
   $$refSTR{'useFile'}         = 'Use file';
-  $$refSTR{'download'}        = 'Download';
+  $$refSTR{'Download'}        = 'Download';
   $$refSTR{'startingProcess'} = 'Starting process';
   $$refSTR{'runningProcess'}  = 'Running process';
-  $$refSTR{'connecting'}      = 'Connecting to';
-  $$refSTR{'inserting'}       = 'Inserting';
+  $$refSTR{'Connecting'}      = 'Connecting to';
+  $$refSTR{'Downloading'}     = 'Downloading';
+  $$refSTR{'Inserting'}       = 'Inserting';
   $$refSTR{'saveToFile'}      = 'Save to a file';
-  $$refSTR{'saveToFileMsg'}   = 'Not enough space to write results in textfield. Do you wish to save the results in a file ?';
-  $$refSTR{'monday'}          = 'Monday';
-  $$refSTR{'tuesday'}         = 'Tuesday';
-  $$refSTR{'wednesday'}       = 'Wednesday';
-  $$refSTR{'thursday'}        = 'Thursday';
-  $$refSTR{'friday'}          = 'Friday';
-  $$refSTR{'saturday'}        = 'Saturday';
-  $$refSTR{'sunday'}          = 'Sunday';
-  $$refSTR{'type'}            = 'Type';
-  $$refSTR{'country'}         = 'Country';
+  $$refSTR{'saveToFileMsg'}   = 'Not enough space to write results in textfield. Do you wish to save the results in a file?';
+  $$refSTR{'Type'}            = 'Type';
+  $$refSTR{'Language'}        = 'Language';
+  $$refSTR{'Continent'}       = 'Continent';
+  $$refSTR{'Country'}         = 'Country';
   $$refSTR{'countryCode'}     = 'Country code';
-  $$refSTR{'region'}          = 'Region';
+  $$refSTR{'Region'}          = 'Region';
   $$refSTR{'regionCode'}      = 'Region code';
-  $$refSTR{'city'}            = 'City';
+  $$refSTR{'City'}            = 'City';
   $$refSTR{'postalCode'}      = 'Postal code';
   $$refSTR{'GPScoord'}        = 'GPS coordinates';
   $$refSTR{'tzName'}          = 'Timezone name';
@@ -99,22 +95,21 @@ sub loadDefaultStr
   $$refSTR{'uaBrowser'}       = 'Browser';
   $$refSTR{'uaDevice'}        = 'Device';
   $$refSTR{'uaLang'}          = 'Lang';
-  $$refSTR{'brand'}           = 'Brand';
-  $$refSTR{'subBrand'}        = 'Sub Brand';
-  $$refSTR{'bank'}            = 'Bank';
-  $$refSTR{'cardType'}        = 'Card Type';
-  $$refSTR{'cardCategory'}    = 'Card Category';
-  $$refSTR{'countryName'}     = 'Country Name';
+  $$refSTR{'Brand'}           = 'Brand';
+  $$refSTR{'Prepaid'}         = 'Prepaid';
+  $$refSTR{'BankName'}        = 'Bank name';
+  $$refSTR{'BankUrl'}         = 'Bank url';
+  $$refSTR{'BankPhone'}       = 'Bank phone';
+  $$refSTR{'BankCity'}        = 'Bank city';
   $$refSTR{'Save'}            = 'Save';
   # Error
-  $$refSTR{'error'}           = 'Error';
+  $$refSTR{'Error'}           = 'Error';
   $$refSTR{'formatNotFound'}  = 'Format not found';
   $$refSTR{'invalidFile'}     = 'File is invalid';
   $$refSTR{'errorReading'}    = 'Error reading';
   $$refSTR{'errorOpening'}    = 'Error opening';
   $$refSTR{'errorWriting'}    = 'Error writing';
-  $$refSTR{'errorConnecting'} = 'Error connecting';
-  $$refSTR{'warning'}         = 'Warning';
+  $$refSTR{'Warning'}         = 'Warning';
   $$refSTR{'maxSizeReached'}  = 'Maximum number of characters has been reached. Your text may have been truncated.';
   $$refSTR{'processRunning'}  = 'A process is already running. Wait until it stops or restart the program.';
   $$refSTR{'errorMsg'}        = 'Error messsage';
@@ -126,7 +121,7 @@ sub loadDefaultStr
   $$refSTR{'errorDB'}         = 'Error database';
   $$refSTR{'errorConnectDB'}  = 'Error connecting to database';
   $$refSTR{'errorConRemote'}  = 'Error connecting to remote site';
-  $$refSTR{'errorDownload'}   = 'Error downloading the database';
+  $$refSTR{'errorDownload'}   = 'Error downloading';
   $$refSTR{'errorCreatingDB'} = 'Error creating the database';
   $$refSTR{'errorUnzip'}      = 'Error uncompressing file';
   $$refSTR{'selectedCF'}      = 'Selected custom function';
@@ -156,20 +151,18 @@ sub loadDefaultStr
   $$refSTR{'nextStep'}      = 'Next step';
   $$refSTR{'insertList1'}   = 'Insert items in List 1.';
   $$refSTR{'insertLists'}   = 'Insert items in List 1 or in List 2.';
-  $$refSTR{'insertWith'}    = 'Insert a value in With textfield. See documentation about this function.';
-  $$refSTR{'insertColumns'} = 'Insert a value in Columns textfield. See documentation about this function.';
-  $$refSTR{'insertReplace'} = 'Insert value in Replace textfield. See documentation about this function.';
+  $$refSTR{'insertWith'}    = 'Insert a value in With textfield.';
+  $$refSTR{'insertColumns'} = 'Insert a value in Columns textfield.';
+  $$refSTR{'insertReplace'} = 'Insert a value in Replace textfield.';
+  $$refSTR{'seeDoc'}        = 'See documentation.';
   $$refSTR{'insertSameNbr'} = 'You must insert the same number of items in both List 1 and List 2.';
   $$refSTR{'setOutputFormat'} = 'You must select a different output format for this input type.';
-  $$refSTR{'insertMACOUI'}  = 'You must have a valid MACOUI database to use this function. See documentation.';
-  $$refSTR{'insertGeoIP'}   = 'You must have a valid GeoIP database to use this function. See documentation.';
-  $$refSTR{'insertXLWhois'} = 'You must have a valid XL-Whois database to use this function. See documentation.';
-  $$refSTR{'insertIIN'}     = 'You must have a valid IIN database to use this function. See documentation.';
+  $$refSTR{'validDB1'}      = 'You must have a valid';
+  $$refSTR{'validDB2'}      = 'to use this function.';
   $$refSTR{'selectFunc'}    = 'You must select a function.';
   $$refSTR{'Process'}       = 'Process';
   $$refSTR{'StopProcess'}   = 'Stop process';
   $$refSTR{'Configuration'} = 'Open Settings Window';
-  $$refSTR{'btnHelpTip'}    = 'See Documentation';
   # Lists Tab
   $$refSTR{'cbLists1'}      = 'No duplicate';
   $$refSTR{'cbLists2'}      = 'Only duplicates';
@@ -225,12 +218,11 @@ sub loadDefaultStr
   $$refSTR{'cbTime3'}       = 'Add time';
   $$refSTR{'cbTime4'}       = 'Substract time';
   $$refSTR{'lblDTParser'}   = 'Parse context';
-  $$refSTR{'before'}        = 'Before';
-  $$refSTR{'after'}         = 'After';
-  $$refSTR{'input'}         = 'Input';
-  $$refSTR{'openDTDB'}      = 'Open Datetime database';
-  $$refSTR{'datetime'}      = 'Datetime';
-  $$refSTR{'unixtime'}      = 'Unixtime';
+  $$refSTR{'Before'}        = 'Before';
+  $$refSTR{'After'}         = 'After';
+  $$refSTR{'Input'}         = 'Input';
+  $$refSTR{'Open'}          = 'Open';
+  $$refSTR{'Datetime'}      = 'Datetime';
   $$refSTR{'chromeTime'}    = 'ChromeTime';
   $$refSTR{'LDAPTime'}      = 'LDAPTime';
   $$refSTR{'Filetime'}      = 'Filetime';
@@ -238,8 +230,7 @@ sub loadDefaultStr
   $$refSTR{'MacAbsTime'}    = 'Mac Absolute time';
   $$refSTR{'MacHFS'}        = 'Mac HFS+';
   $$refSTR{'btnInputFormatGuessTip'} = 'Use the first item to guess the format';
-  $$refSTR{'unique'}        = 'Unique';
-  $$refSTR{'output'}        = 'Output';
+  $$refSTR{'Output'}        = 'Output';
   $$refSTR{'btnOutputFormatTip'} = 'Set a format for the output';
   $$refSTR{'Local'}         = 'Local';  
   $$refSTR{'UTC'}           = 'UTC';  
@@ -262,7 +253,7 @@ sub loadDefaultStr
   $$refSTR{'cbUtils5'}      = 'IP to Arpa';
   $$refSTR{'cbUtils6'}      = 'Arpa to IP';
   $$refSTR{'cbUtils7'}      = 'Resolve MAC Address';
-  $$refSTR{'cbUtils8'}      = 'Resolve IPv4 GeoIP';
+  $$refSTR{'cbUtils8'}      = 'Resolve GeoIP';
   $$refSTR{'cbUtils9'}      = 'Resolve ISP';
   $$refSTR{'cbUtils10'}     = 'Resolve User-agent';
   $$refSTR{'cbUtils11'}     = 'Credit Card to Issuing Company';
@@ -270,21 +261,8 @@ sub loadDefaultStr
   $$refSTR{'cbUtils14'}     = 'Distance between locations';
   $$refSTR{'cbUtils12'}     = 'Custom functions...';
   $$refSTR{'AllDetails'}    = 'All details';
-  $$refSTR{'GeoIPOpt2'}     = 'Country';
-  $$refSTR{'GeoIPOpt3'}     = 'Country code';
-  $$refSTR{'GeoIPOpt4'}     = 'Region';
-  $$refSTR{'GeoIPOpt5'}     = 'Region code';
-  $$refSTR{'GeoIPOpt6'}     = 'City';
-  $$refSTR{'GeoIPOpt7'}     = 'Postal code';
-  $$refSTR{'GeoIPOpt8'}     = 'GPS coordinates';
-  $$refSTR{'GeoIPOpt9'}     = 'Timezone name';
-  $$refSTR{'GeoIPOpt10'}    = 'Timezone offset';
   $$refSTR{'Addheaders'}    = 'Add headers';
   $$refSTR{'checkOpt'}      = 'You must check at least one detail';
-  $$refSTR{'UAOpt3'}        = 'OS';
-  $$refSTR{'UAOpt4'}        = 'Browser';
-  $$refSTR{'UAOpt5'}        = 'Device';
-  $$refSTR{'UAOpt6'}        = 'Lang';
   $$refSTR{'IINLocalDB'}    = 'Use local IIN DB';
   $$refSTR{'IINLocalDBTip'} = 'Faster, but less accurate.';
   $$refSTR{'BinlistTip'}    = 'Slower, but more accurate, max. 1000 queries per hour.';
@@ -313,7 +291,7 @@ sub loadDefaultStr
   $$refSTR{'funcExists2'}   = 'Function already exists. Replace data';
   $$refSTR{'replConfirmT'}  = 'Confirm replacement';
   # Datetime database Window
-  $$refSTR{'winDTDB'}         = 'Datetime database';
+  $$refSTR{'DTDB'}            = 'Datetime database';
   $$refSTR{'btnDTAdd'}        = 'Add a new datetime format';
   $$refSTR{'btnDTEdit'}       = 'Edit the selected datetime format';
   $$refSTR{'btnDTDel'}        = 'Remove the selected datetime format';
@@ -322,9 +300,6 @@ sub loadDefaultStr
   $$refSTR{'useAs'}           = 'Use as';
   $$refSTR{'comment'}         = 'Comment';  
   $$refSTR{'timezone'}        = 'Timezone';
-  $$refSTR{'localTimezone'}   = 'Local timezone';
-  $$refSTR{'defaultLang'}     = 'Default language';
-  $$refSTR{'outputCharset'}   = 'Output charset';
   $$refSTR{'defaultOutput'}   = 'Default output';
   $$refSTR{'guess'}           = 'Guess';
   $$refSTR{'guessORVar'}      = 'Guess (or variable)';
@@ -362,40 +337,45 @@ sub loadDefaultStr
   $$refSTR{'pattern20'}       = '%Z - Time zone name (UTC)';
   $$refSTR{'pattern21'}       = '%z - Time zone offset (Ex.: -0500)';
   $$refSTR{'matchPattern'}    = 'Match Pattern';
-  $$refSTR{'both'}            = 'Both';
-  $$refSTR{'none'}            = 'None';
-  $$refSTR{'add'}             = 'Add';
-  $$refSTR{'edit'}            = 'Edit';
-  $$refSTR{'parsed'}          = 'Parsed';
+  $$refSTR{'Both'}            = 'Both';
+  $$refSTR{'None'}            = 'None';
+  $$refSTR{'Add'}             = 'Add';
+  $$refSTR{'Edit'}            = 'Edit';
+  $$refSTR{'Parsed'}          = 'Parsed';
   $$refSTR{'otherOffset'}     = 'Other, offset';
   $$refSTR{'otherName'}       = 'Other, name';
   $$refSTR{'provideSample'}   = 'You must provide a sample';
   $$refSTR{'providePattern'}  = 'You must provide a pattern';
   # Config Window
-  $$refSTR{'winConfig'}       = 'Settings';
-  $$refSTR{'general'}         = 'General';
-  $$refSTR{'database'}        = 'Databases';
+  $$refSTR{'Settings'}        = 'Settings';
+  $$refSTR{'General'}         = 'General';
+  $$refSTR{'Databases'}       = 'Databases';
   $$refSTR{'AutoUpdateTip'}   = 'Check for update at startup';
   $$refSTR{'selectDBFile'}    = 'Select the database file';
-  $$refSTR{'downloadDB'}      = 'Download the database';
-  $$refSTR{'firstStart'}      = 'This is your first use of XL-Tools. Do you want to set default configuration ?';
+  $$refSTR{'downloadDB'}      = 'Download or update the database';
+  $$refSTR{'firstStart'}      = 'This is your first use of XL-Tools. Do you want to set default configuration?';
   $$refSTR{'defaultDir'}      = 'Do you want to use default dir';
   $$refSTR{'selectFolder'}    = 'Select a folder';
   $$refSTR{'SetGenOpt'}       = 'Set General Options';
   $$refSTR{'winPb'}           = 'Progress';
   $$refSTR{'winCW'}           = 'Configuration Wizard';
   $$refSTR{'XLWhoisExists'}   = 'Is XL-Whois installed on this system';
-  $$refSTR{'configSet'}       = 'XL-Tool has been configured !';
-  $$refSTR{'configSetPart'}   = 'Aborted ! XL-Tool has been partially configured.';
+  $$refSTR{'configSet'}       = 'XL-Tool has been configured!';
+  $$refSTR{'configSetPart'}   = 'Aborted! XL-Tool has been partially configured.';
   # General tab
   $$refSTR{'Tool'}            = 'Tool';
   $$refSTR{'Export'}          = 'Export';
+  $$refSTR{'OpenUserDir'}     = 'Open user dir';
   $$refSTR{'checkUpdate'}     = 'Check Update';
   $$refSTR{'OptFunctions'}    = 'Functions';
   $$refSTR{'chFullScreen'}    = 'Start Full Screen';
   $$refSTR{'chRememberPos'}   = 'Remember position';
   $$refSTR{'MaxSize'}         = 'Max size (List)';
   $$refSTR{'chars'}           = 'chars';
+  $$refSTR{'chooseFont'}      = 'Choose font';
+  $$refSTR{'localTimezone'}   = 'Local timezone';
+  $$refSTR{'defaultLang'}     = 'Default language';
+  $$refSTR{'outputCharset'}   = 'Output charset';
   $$refSTR{'NsLookupTO1'}     = 'Nslookup timeout';
   $$refSTR{'UserAgent'}       = 'User-Agent';
   $$refSTR{'NoResultOpt'}     = 'When no result';
@@ -406,57 +386,37 @@ sub loadDefaultStr
   # Database tab
   $$refSTR{'noDB'}            = 'No database';
   $$refSTR{'OUIDB'}           = 'OUI (MAC Addresses)';
-  $$refSTR{'importOUIDB'}     = 'Import OUI Database';
-  $$refSTR{'importedOUIDB'}   = 'OUI Database successfully imported !';
-  $$refSTR{'GeoIPDB'}         = 'GeoIP';
-  $$refSTR{'XLWhoisDB'}       = 'XL-Whois (ISP)';
+  $$refSTR{'GeoIP'}           = 'GeoIP';
+  $$refSTR{'GeoIPDB'}         = 'GeoIP database';
+  $$refSTR{'GeoIPNotice'}     = 'This product includes GeoLite2 data created by MaxMind, available from https://www.maxmind.com.';
+  $$refSTR{'XLWhois'}         = 'XL-Whois (ISP)';
+  $$refSTR{'XLWhoisDB'}       = 'XL-Whois database';
   $$refSTR{'IINLocalDB'}      = 'IIN (Credit cards)';
-  $$refSTR{'DTDB'}            = 'Datetime';
-  $$refSTR{'locXLWhoisDB'}    = 'Locate the XL-Whois DB';
-  $$refSTR{'selMACOUIFile'}   = 'Select the MAC OUI Database file';
   $$refSTR{'selPathDB'}       = 'Select the path for the database';
-  $$refSTR{'selGeoIPFile'}    = 'Select the GeoIP Database file';
   $$refSTR{'currDBDate'}      = 'Current DB date';
   $$refSTR{'remoteDBDate'}    = 'DB date on';
   $$refSTR{'updateAvailable'} = 'An update of the database is available, download';
   $$refSTR{'DBUpToDate'}      = 'Your database is up to date';
   $$refSTR{'createDBTable'}   = 'Create database and table';
-  $$refSTR{'uptMACOUI'}       = 'Update MAC OUI Database';
-  $$refSTR{'updatedMACOUI'}   = 'The MACOUI database has been updated';
-  $$refSTR{'checkMACOUIUpt'}  = 'Check update for the MAC OUI Database';
-  $$refSTR{'MACOUINotExist'}  = 'The MAC OUI database (oui.db) does not exist, download';
-  $$refSTR{'downloadMACOUI'}  = 'Downloading MAC OUI Database';
-  $$refSTR{'locateMACOUI'}    = 'Locate MAC OUI Database';
-  $$refSTR{'convertMACOUI'}   = 'Convert MAC OUI Database';
-  $$refSTR{'uptGeoIP'}        = 'Update GeoIP Database';
-  $$refSTR{'updatedGeoIP'}    = 'The GeoIP database has been updated';
-  $$refSTR{'checkGeoIPUpt'}   = 'Check update for the GeoIP Database';
-  $$refSTR{'GeoIPNotExist'}   = 'The GeoIP database (GeoLiteCity.dat) does not exist, download';
-  $$refSTR{'downloadGeoIP'}   = 'Downloading GeoIP Database';
-  $$refSTR{'locateGeoIP'}     = 'Locate GeoIP Database';
-  $$refSTR{'downloadWarning'} = 'It may take a few minutes';
-  $$refSTR{'downloadIINDB'}   = 'Downloading IIN database';
-  $$refSTR{'locateIINDB'}     = 'Locate IIN database';
-  $$refSTR{'updatedIINDB'}    = 'The IIN database has been updated';
-  $$refSTR{'downloadDTDB'}    = 'Downloading Datetime database';
-  $$refSTR{'locateDTDB'}      = 'Locate Datetime database';
-  $$refSTR{'DTDBNotExist'}    = 'The Datetime database (DT.db) does not exist, download';
-  $$refSTR{'updatedDTDB'}     = 'The Datetime database has been updated';
+  $$refSTR{'MACOUIDB'}        = 'MAC OUI Database';
+  $$refSTR{'Locate'}          = 'Locate';
+  $$refSTR{'Convert'}         = 'Convert';
+  $$refSTR{'IINDB'}           = 'IIN database';
+  $$refSTR{'NotExistDownload'} = 'does not exist, download';
+  $$refSTR{'HasBeenUpdated'}  = 'has been updated';
   # Update Window
-  $$refSTR{'winUpdate'}       = 'Update';
+  $$refSTR{'Update'}          = 'Update';
   $$refSTR{'update1'}         = 'You have the latest version installed.';
   $$refSTR{'update2'}         = 'Check for update';
-  $$refSTR{'update3'}         = 'Update';
-  $$refSTR{'update4'}         = 'Version';
   $$refSTR{'update5'}         = 'is available. Download it';
   $$refSTR{'update6'}         = 'is available. Update';
   $$refSTR{'update7'}         = 'Note: Program must be restarted.';
   $$refSTR{'NotNow'}          = 'Not now';
   # About Window
-  $$refSTR{'version'}         = 'Version';
-  $$refSTR{'author'}          = 'Author';
-  $$refSTR{'translatedBy'}    = 'Translated by';
-  $$refSTR{'website'}         = 'Website';
+  $$refSTR{'Version'}         = 'Version';
+  $$refSTR{'Author'}          = 'Author';
+  $$refSTR{'TranslatedBy'}    = 'Translated by';
+  $$refSTR{'Website'}         = 'Website';
   $$refSTR{'translatorName'}  = '-';
 
 }  #--- End loadDefaultStr

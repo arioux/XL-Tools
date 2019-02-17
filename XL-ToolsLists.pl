@@ -49,7 +49,7 @@ sub enumItems
     if (open my $fh, '<', $file) {
       while (<$fh>) { chomp($_); push(@items, $_); }
       close($fh);
-    } else { Win32::GUI::MessageBox($$refWin, "$$refSTR{'errorReading'}: ".$!, $$refSTR{'error'}, 0x40010); }
+    } else { Win32::GUI::MessageBox($$refWin, "$$refSTR{'errorReading'}: ".$!, $$refSTR{'Error'}, 0x40010); }
   } else {
     # Items are in the textfield
     for (my $i = 0; $i < $$refList->GetLineCount(); $i++) {
@@ -108,7 +108,7 @@ sub writeResults
             close($fh);
             $$refWin->tfList3->Text("\"$file\"");
             &tfList3_Change();
-          } else { Win32::GUI::MessageBox($$refWin, "$$refSTR{'errorWriting'}: ".$!, $$refSTR{'error'}, 0x40010); }
+          } else { Win32::GUI::MessageBox($$refWin, "$$refSTR{'errorWriting'}: ".$!, $$refSTR{'Error'}, 0x40010); }
         }
       }
     } else {
