@@ -7,7 +7,7 @@
 # GitHub            : https://github.com/arioux/XL-Tools
 # Documentation     : http://le-tools.com/XL-ToolsDoc.html
 # Creation          : 2015-12-21
-# Modified          : 2019-02-17
+# Modified          : 2019-02-18
 # Author            : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2019  Alain Rioux (le-tools.com)
@@ -52,7 +52,6 @@ use JSON qw(decode_json);
 use HTTP::BrowserDetect;
 use HTML::ParseBrowser;
 use Business::CreditCard;
-use Try::Tiny;
 $JSON::PP::true  = 'true';
 $JSON::PP::false = 'false';
 

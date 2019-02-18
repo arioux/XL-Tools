@@ -10,8 +10,8 @@
 #                 for list of strings like sorting, converting, replacing, date
 #                 and time utilities, etc.
 # Creation      : 2015-12-21
-# Modified      : 2019-02-17
-my $VERSION     = "3.7";
+# Modified      : 2019-02-18
+my $VERSION     = "3.7.1";
 # Author        : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2019  Alain Rioux (le-tools.com)
@@ -4022,7 +4022,7 @@ sub btnProcess_Click
       # Thread die signal handler
       $SIG{__DIE__} = sub {
         return if $_ and $_[0] =~ /Invalid version format/;
-        return if $_ and $_->isa('GeoIP2::Error');
+        return if $_[0] and ($_[0]->isa('GeoIP2::Error::Generic') or $_[0]->isa('GeoIP2::Error::IPAddressNotFound'));
         my $errMsg = (split(/ at /, $_[0]))[0];
         $errMsg    =~ s/[\t\r\n]/ /g;
         $win->lblPbCurr->Text('');
