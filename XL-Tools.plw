@@ -10,8 +10,8 @@
 #                 for list of strings like sorting, converting, replacing, date
 #                 and time utilities, etc.
 # Creation      : 2015-12-21
-# Modified      : 2019-02-18
-my $VERSION     = "3.7.1";
+# Modified      : 2019-04-14
+my $VERSION     = "3.7.2";
 # Author        : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2019  Alain Rioux (le-tools.com)
@@ -2912,8 +2912,8 @@ sub btnDTObjPatternInsert_Click
 {
   # Local variables
   my $patternObjSel = $winDTObj->cbDTObjPattern->GetCurSel();
-  my @patterns = ('%B', '%b', '%D', '%d', '%e', '%F', '%H', '%I', '%M', '%m', '%p', '%R', '%r',
-                  '%S', '%T', '%v', '%w', '%Y', '%y', '%Z', '%z', );
+  my @patterns = ('%B', '%b', '%D', '%d', '%e', '%F', '%H', '%I', '%M', '%m', '%p',
+                  '%P', '%R', '%r', '%S', '%T', '%v', '%w', '%Y', '%y', '%Z', '%z', );
   $winDTObj->tfDTObjPattern->Append($patterns[$patternObjSel]);
   &isDTObjReady(0);
 
@@ -2938,17 +2938,18 @@ sub patternRE
                   '%d' => '\d{2}', # day of the month as a decimal number (01-31)
                   '%e' => '\d{1,2}', # day of the month as a decimal number (1-31); single digits are preceded by a blank.
                   '%F' => '\d{4}\-\d{2}\-\d{2}', # %Y-%m-%d
-                  '%H' => '\d{2}', # hour (24-hour clock) as a decimal number (00-23)
-                  '%I' => '\d{2}', # hour (12-hour clock) as a decimal number (01-12)
-                  '%j' => '\d{3}', # day of the year as a decimal number (001-366)
+                  '%H' => '\d{2}'  , # hour (24-hour clock) as a decimal number (00-23)
+                  '%I' => '\d{1,2}', # hour (12-hour clock) as a decimal number (01-12)
+                  '%j' => '\d{3}'  , # day of the year as a decimal number (001-366)
                   '%k' => '\d{1,2}', # hour (24-hour clock) as a decimal number (0-23); single digits are preceded by a blank.
                   '%l' => '\d{1,2}', # hour (12-hour clock) as a decimal number (1-12); single digits are preceded by a blank.
-                  '%M' => '\d{2}', # minute as a decimal number (00-59)
+                  '%M' => '\d{2}'  , # minute as a decimal number (00-59)
                   '%m' => '\d{1,2}', # month as a decimal number (01-12)
                   '%n' => '\n', # newline
-                  '%p' => '[ap]\.?m\.?', # national representation of either "ante meridiem" (a.m.)  or "post meridiem" (p.m.)  as appropriate.
+                  '%p' => '[AP]\.?M\.?', # national representation of either "ante meridiem" (a.m.)  or "post meridiem" (p.m.)  as appropriate.
+                  '%P' => '[ap]\.?m\.?', # national representation of either "ante meridiem" (a.m.)  or "post meridiem" (p.m.)  as appropriate.
                   '%R' => '\d{2}:\d{2}', # %H:%M
-                  '%r' => '\d{1,2}:\d{2}:\d{2} [ap]\.?m\.?', # %I:%M:%S %p
+                  '%r' => '\d{1,2}:\d{2}:\d{2} [apAP]\.?[mM]\.?', # %I:%M:%S %p
                   '%S' => '\d{2}', # second as a decimal number (00-60)
                   '%s' => '\d{10,13}', # number of seconds since the Epoch
                   '%T' => '\d{2}:\d{2}:\d{2}', # %H:%M:%S
@@ -5463,7 +5464,7 @@ sub firstStart
         $$refWinCW->lblDLGeoIPDBDone->Show();
       } else {
         $$refWinCW->lblDLGeoIPDB->Text("$STR{'Downloading'} $STR{'GeoIPDB'}");
-        ($status, $return) = &downloadDB($refWinCW, 'GeoIP', $STR{'GeoIPDB'}, "$dir\\GeoLite2-City.mmdb", 'Maxmind', \$HOURGLASS,
+        ($status, $return) = &downloadDB($refWinCW, 'GeoIP', $STR{'GeoIPDB'}, $dir, 'Maxmind', \$HOURGLASS,
                                          \$ARROW, \%CONFIG, $CONFIG_FILE, \$winConfig, \$winDTDB, \$winPb, \$win, \%STR);
         if ($status) { $$refWinCW->lblDLGeoIPDBDone->Show(); } # Success
         else { # Error
