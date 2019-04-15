@@ -7,7 +7,7 @@
 # GitHub          : https://github.com/arioux/XL-Tools
 # Documentation   : http://le-tools.com/XL-ToolsDoc.html
 # Creation        : 2015-12-21
-# Modified        : 2019-02-17
+# Modified        : 2019-04-15
 # Author          : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2019  Alain Rioux (le-tools.com)
@@ -212,6 +212,7 @@ sub loadDefaultStr
   $$refSTR{'cbConv9'}       = 'Base64 to ASCII';
   $$refSTR{'cbConv10'}      = 'ASCII to Base64';
   $$refSTR{'cbConv11'}      = 'SHA1 - Base32 to Base16';
+  $$refSTR{'cbConv12'}      = 'SHA1 - Base16 to Base32';
   # Time Tab
   $$refSTR{'cbTime1'}       = 'Anytime to Anytime';
   $$refSTR{'cbTime2'}       = 'Time difference';
@@ -336,6 +337,7 @@ sub loadDefaultStr
   $$refSTR{'pattern19'}       = '%y - Year 2-digits (Ex.: 16)';
   $$refSTR{'pattern20'}       = '%Z - Time zone name (UTC)';
   $$refSTR{'pattern21'}       = '%z - Time zone offset (Ex.: -0500)';
+  $$refSTR{'pattern22'}       = '%P - am or pm';
   $$refSTR{'matchPattern'}    = 'Match Pattern';
   $$refSTR{'Both'}            = 'Both';
   $$refSTR{'None'}            = 'None';

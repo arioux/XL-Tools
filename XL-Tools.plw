@@ -10,8 +10,8 @@
 #                 for list of strings like sorting, converting, replacing, date
 #                 and time utilities, etc.
 # Creation      : 2015-12-21
-# Modified      : 2019-04-14
-my $VERSION     = "3.7.2";
+# Modified      : 2019-04-15
+my $VERSION     = "3.8.0";
 # Author        : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2019  Alain Rioux (le-tools.com)
@@ -371,7 +371,7 @@ $win->cbConv->Add(    $STR{'cbConv1'}  , $STR{'cbConv2'}      ,
                       $STR{'cbConv5'}  , $STR{'cbConv6'}      ,
                       $STR{'cbConv7'}  , $STR{'cbConv8'}      ,
                       $STR{'cbConv9'}  , $STR{'cbConv10'}     ,
-                      $STR{'cbConv11'}                        , );
+                      $STR{'cbConv11'} , $STR{'cbConv12'}     , );
 # Time tab
 $win->AddCombobox(    -name         => 'cbTime'               ,
                       -size         => [220,100]              ,
@@ -1173,7 +1173,7 @@ $winDTObj->AddCombobox(       -name         => 'cbDTObjPattern'        ,
 $winDTObj->cbDTObjPattern->Add($STR{'pattern1'} , $STR{'pattern2'} , $STR{'pattern3'} ,
                                $STR{'pattern4'} , $STR{'pattern5'} , $STR{'pattern6'} ,
                                $STR{'pattern7'} , $STR{'pattern8'} , $STR{'pattern9'} ,
-                               $STR{'pattern10'}, $STR{'pattern11'}, $STR{'pattern12'},
+                               $STR{'pattern10'}, $STR{'pattern11'}, $STR{'pattern22'}, $STR{'pattern12'},
                                $STR{'pattern13'}, $STR{'pattern14'}, $STR{'pattern15'},
                                $STR{'pattern16'}, $STR{'pattern17'}, $STR{'pattern18'},
                                $STR{'pattern19'}, $STR{'pattern20'}, $STR{'pattern21'}, );
@@ -2932,7 +2932,8 @@ sub patternRE
                   #'%a' => '(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)', # abbreviated weekday name
                   '%B' => '\w+', # full month name, since 3.3 (to fit any language)
                   #'%B' => '(?:January|February|March|April|May|June|July|August|September|October|November|December)', # full month name
-                  '%b' => '(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)', # abbreviated month name
+                  '%b' => '\w{3,4}', # abbreviated weekday name, since 3.3 (to fit any language)
+                  #'%b' => '(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)', # abbreviated month name
                   '%C' => '\d{2}', # (year / 100) as decimal number; single digits are preceded by a zero.
                   '%D' => '\d{2}\/\d{2}\/\d{2}', # %m/%d/%y
                   '%d' => '\d{2}', # day of the month as a decimal number (01-31)
@@ -4286,7 +4287,8 @@ sub conversionTabFunc
   my $selFunc     = $win->cbConv->GetCurSel();
   my $noResultOpt = $winConfig->rbNoResultOpt2->Checked();
   # Possibles value are 0 = 'Hex to ASCII', 1 = 'ASCII to Hex', 2 = 'Hex to Base10', 3 = 'Base10 to ASCII', 4 = 'URI Decode',
-  # 5 = 'URI Encode', 6 = 'HTML Decode', 7 = 'HTML Encode', 8 = 'Base64 to ASCII', 9 = 'ASCII to Base64', 10 = 'SHA1 - Base32 to Base16'
+  # 5 = 'URI Encode', 6 = 'HTML Decode', 7 = 'HTML Encode', 8 = 'Base64 to ASCII', 9 = 'ASCII to Base64', 10 = 'SHA1 - Base32 to Base16',
+  # 11 = 'SHA1 - Base16 to Base32'
   my $curr = 0;
   my @items;
   # Progress
@@ -4499,6 +4501,23 @@ sub conversionTabFunc
       $item =~ s/[\r\n]//g;  # Remove any line break
       if ($item and $item =~ /^(\w{32})/) {
         my $newItem = uc(unpack('H*', decode_base32($1)));
+        push(@items, $newItem);
+      } else {
+        if ($noResultOpt) { push(@items, $STR{'noInput'}); }
+        else { push(@items, undef); }
+      }
+      # Progress
+      $curr++;
+      $win->lblPbCount->Text("$curr / $nbrItems");
+      $win->pb->StepIt();
+    }
+  }
+  # 11 = 'SHA1 - Base16 to Base32'
+  elsif ($selFunc == 11) {
+    foreach my $item (@{$refList1}) {
+      $item =~ s/[\r\n]//g;  # Remove any line break
+      if ($item and $item =~ /^(\w{40})/) {
+        my $newItem = uc(encode_base32(pack('H40', $1)));
         push(@items, $newItem);
       } else {
         if ($noResultOpt) { push(@items, $STR{'noInput'}); }
