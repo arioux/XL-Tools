@@ -10,8 +10,8 @@
 #                 for list of strings like sorting, converting, replacing, date
 #                 and time utilities, etc.
 # Creation      : 2015-12-21
-# Modified      : 2019-06-09
-my $VERSION     = "3.8.1";
+# Modified      : 2019-11-10
+my $VERSION     = "3.9.0";
 # Author        : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2019  Alain Rioux (le-tools.com)
@@ -147,14 +147,14 @@ my $accel = new Win32::GUI::AcceleratorTable("Ctrl-A"    => "selectAll",
                                              "Ctrl-Down" => "fontSizeS",
                                              "Ctrl-Up"   => "fontSizeB", );
 # Main Window
-my $win = Win32::GUI::Window->new( -name        => 'winMain'                           ,
-                                   -text        => 'XL-Tools'                          ,
-                                   -background  => [255, 255, 255]                     ,
-                                   -size        => [$winWidth, $winHeight]             ,
-                                   -pos         => [$winPosX , $winPosY]               ,
-                                   -minheight   => $winHeight                          ,
-                                   -minwidth    => $winWidth                           ,
-                                   -accel       => $accel                              , );
+my $win = Win32::GUI::Window->new( -name        => 'winMain'                 ,
+                                   -text        => 'XL-Tools'                ,
+                                   -background  => [255, 255, 255]           ,
+                                   -size        => [$winWidth, $winHeight]   ,
+                                   -pos         => [$winPosX , $winPosY]     ,
+                                   -minheight   => $winHeight                ,
+                                   -minwidth    => $winWidth                 ,
+                                   -accel       => $accel                    , );
 $win->SetIcon($winICO);
 # Fonts
 sub LOGPIXELSX() {88}
@@ -607,7 +607,8 @@ $win->cbUtils->Add(   $STR{'cbUtils1'}  , $STR{'cbUtils2'}    ,
                       $STR{'cbUtils7'}  , $STR{'cbUtils8'}    ,
                       $STR{'cbUtils9'}  , $STR{'cbUtils10'}   ,
                       $STR{'cbUtils11'} , $STR{'cbUtils13'}   ,
-                      $STR{'cbUtils14'} , $STR{'cbUtils12'}   , );
+                      $STR{'cbUtils15'} , $STR{'cbUtils14'}   ,
+                      $STR{'cbUtils12'} , );
 # Resolve MAC Address Options
 $win->AddLabel(       -name       => 'lblCurrMACOUIdbDate'    ,
                       -size       => [220, 22]                ,
@@ -768,24 +769,103 @@ $win->AddRadioButton( -name       => 'rbBinlist'              ,
                       -tip        => $STR{'BinlistTip'}       ,
                       -font       => $font10                  ,
                       -visible    => 0                        , );
-# Address to GPS coordinates
-$win->AddLabel(       -name       => 'lblAPIKey'              ,
-                      -size       => [150, 22]                ,
-                      -pos        => [315, 68]                ,
-                      -background => [255, 255, 255]          ,
-                      -text       => $STR{'lblAPIKey'}.':'    ,
-                      -font       => $font10                  ,
-                      -visible    => 0                        , );
-$win->AddTextfield(   -name       => 'tfAPIKey'               ,
-                      -size       => [300, 24]                ,
-                      -pos        => [470, 65]                ,
-                      -visible    => 0                        , );
-$win->AddButton(      -name       => 'btnSaveAPIKey'          ,
-                      -size       => [ 50, 24]                ,
-                      -pos        => [772, 65]                ,
-                      -text       => $STR{'Save'}             ,
-                      -font       => $font10                  ,
-                      -visible    => 0                        , );
+# Address to GPS options
+$win->AddCheckbox(    -name        => 'chAddr2GPSInc'         ,
+                      -size        => [130, 22]               ,
+                      -pos         => [545, 30]               ,
+                      -text        => $STR{'incAddr'}         ,
+                      -font        => $font10                 ,
+                      -background  => [255, 255, 255]         ,
+                      -checked     => 1                       ,
+                      -visible     => 0                       , );
+# GPS to Address Options
+$win->AddLabel(       -name        => 'lblGPS2AddrZL'         ,
+                      -size        => [ 75, 22]               ,
+                      -pos         => [315, 68]               ,
+                      -background  => [255, 255, 255]         ,
+                      -text        => $STR{'ZoomLevel'}.':'   ,
+                      -font        => $font10                 ,
+                      -visible     => 0                       , );
+$win->AddCombobox(    -name        => 'cbGPS2AddrZL'          ,
+                      -dropdownlist => 1                      ,
+                      -vscroll     => 1                       ,
+                      -size        => [140, 80]               ,
+                      -pos         => [395, 65]               ,
+                      -font        => $font10                 ,
+                      -visible     => 0                       , );
+$win->cbGPS2AddrZL->Add($STR{'ZoomLevel3'} , $STR{'ZoomLevel5'} , $STR{'ZoomLevel8'} , $STR{'ZoomLevel10'},
+                        $STR{'ZoomLevel14'}, $STR{'ZoomLevel16'}, $STR{'ZoomLevel17'}, $STR{'ZoomLevel18'});
+$win->cbGPS2AddrZL->SetCurSel(7);
+$win->AddCombobox(    -name        => 'cbGPS2AddrOutput'      ,
+                      -dropdownlist => 1                      ,
+                      -vscroll     => 1                       ,
+                      -size        => [140, 80]               ,
+                      -pos         => [545, 30]               ,
+                      -font        => $font10                 ,
+                      -visible     => 0                       , );
+$win->cbGPS2AddrOutput->Add($STR{'FullAddress'} , $STR{'AllDetails'} , $STR{'AddressEl'});
+$win->cbGPS2AddrOutput->SetCurSel(0);
+$win->AddGrid(        -name         => 'gridGPS2AddrOpts'     ,
+                      -parent       => $win                   ,
+                      -pos          => [690, 30]              ,
+                      -size         => [300, 65]              ,
+                      -background   => [255, 255, 255]        ,
+                      -columns      => 6                      ,
+                      -rows         => 2                      ,
+                      -fixedrows    => 0                      ,
+                      -fixedcolumns => 0                      ,
+                      -editable     => 1                      ,
+                      -visible      => 0                      , );
+$win->gridGPS2AddrOpts->SetGridLines(0);
+$win->gridGPS2AddrOpts->SetCellText(   0, 0, lc($STR{'house_number'}));
+$win->gridGPS2AddrOpts->SetCellType(   0, 0, GVIT_CHECK );
+$win->gridGPS2AddrOpts->SetCellCheck(  0, 0, 1);
+$win->gridGPS2AddrOpts->SetCellFormat( 0, 0, 4);
+$win->gridGPS2AddrOpts->SetCellText(   1, 0, lc($STR{'road'}));
+$win->gridGPS2AddrOpts->SetCellType(   1, 0, GVIT_CHECK );
+$win->gridGPS2AddrOpts->SetCellCheck(  1, 0, 1);
+$win->gridGPS2AddrOpts->SetCellFormat( 1, 0, 4);
+$win->gridGPS2AddrOpts->SetCellText(   0, 1, lc($STR{'neighbourhood'}));
+$win->gridGPS2AddrOpts->SetCellType(   0, 1, GVIT_CHECK );
+$win->gridGPS2AddrOpts->SetCellCheck(  0, 1, 1);
+$win->gridGPS2AddrOpts->SetCellFormat( 0, 1, 4);
+$win->gridGPS2AddrOpts->SetCellText(   1, 1, lc($STR{'suburb'}));
+$win->gridGPS2AddrOpts->SetCellType(   1, 1, GVIT_CHECK );
+$win->gridGPS2AddrOpts->SetCellCheck(  1, 1, 1);
+$win->gridGPS2AddrOpts->SetCellFormat( 1, 1, 4);
+$win->gridGPS2AddrOpts->SetCellText(   0, 2, lc($STR{'city'}));
+$win->gridGPS2AddrOpts->SetCellType(   0, 2, GVIT_CHECK );
+$win->gridGPS2AddrOpts->SetCellCheck(  0, 2, 1);
+$win->gridGPS2AddrOpts->SetCellFormat( 0, 2, 4);
+$win->gridGPS2AddrOpts->SetCellText(   1, 2, lc($STR{'county'}));
+$win->gridGPS2AddrOpts->SetCellType(   1, 2, GVIT_CHECK );
+$win->gridGPS2AddrOpts->SetCellCheck(  1, 2, 1);
+$win->gridGPS2AddrOpts->SetCellFormat( 1, 2, 4);
+$win->gridGPS2AddrOpts->SetCellText(   0, 3, lc($STR{'region'}));
+$win->gridGPS2AddrOpts->SetCellType(   0, 3, GVIT_CHECK );
+$win->gridGPS2AddrOpts->SetCellCheck(  0, 3, 1);
+$win->gridGPS2AddrOpts->SetCellFormat( 0, 3, 4);
+$win->gridGPS2AddrOpts->SetCellText(   1, 3, lc($STR{'state'}));
+$win->gridGPS2AddrOpts->SetCellType(   1, 3, GVIT_CHECK );
+$win->gridGPS2AddrOpts->SetCellCheck(  1, 3, 1);
+$win->gridGPS2AddrOpts->SetCellFormat( 1, 3, 4);
+$win->gridGPS2AddrOpts->SetCellText(   0, 4, lc($STR{'postcode'}));
+$win->gridGPS2AddrOpts->SetCellType(   0, 4, GVIT_CHECK );
+$win->gridGPS2AddrOpts->SetCellCheck(  0, 4, 1);
+$win->gridGPS2AddrOpts->SetCellFormat( 0, 4, 4);
+$win->gridGPS2AddrOpts->SetCellText(   1, 4, lc($STR{'country'}));
+$win->gridGPS2AddrOpts->SetCellType(   1, 4, GVIT_CHECK );
+$win->gridGPS2AddrOpts->SetCellCheck(  1, 4, 1);
+$win->gridGPS2AddrOpts->SetCellFormat( 1, 4, 4);
+$win->gridGPS2AddrOpts->SetCellText(   0, 5, lc($STR{'country_code'}));
+$win->gridGPS2AddrOpts->SetCellType(   0, 5, GVIT_CHECK );
+$win->gridGPS2AddrOpts->SetCellCheck(  0, 5, 1);
+$win->gridGPS2AddrOpts->SetCellFormat( 0, 5, 4);
+$win->gridGPS2AddrOpts->SetCellText(   1, 5, lc($STR{'boundingbox'}));
+$win->gridGPS2AddrOpts->SetCellType(   1, 5, GVIT_CHECK );
+$win->gridGPS2AddrOpts->SetCellCheck(  1, 5, 1);
+$win->gridGPS2AddrOpts->SetCellFormat( 1, 5, 4);
+$win->gridGPS2AddrOpts->AutoSize();
 # Distance between locations
 $win->AddCheckbox(    -name       => 'chSingleLocation'       ,
                       -size       => [180, 22]                ,
@@ -1333,7 +1413,7 @@ my $winConfig = Win32::GUI::DialogBox->new( -name        => 'winConfig'         
                                             -parent      => $win                    ,
                                             -text        => $STR{'Settings'}        ,
                                             -pos         => [$winPosX, $winPosY]    ,
-                                            -size        => [690, 380]              ,
+                                            -size        => [750, 385]              ,
                                             -background  => [255, 255, 255]         ,
                                             -hasmaximize => 0                       ,
                                             -hasminimize => 0                       ,
@@ -1348,7 +1428,7 @@ $winConfig->AddLabel(     -name         => 'lblLogo'             ,
                           -background   => [255, 255, 255]       , );
 # Tabstrip
 $winConfig->AddTabStrip(            -name         => 'configTab'      ,
-                                    -size         => [545,345]        ,
+                                    -size         => [605,350]        ,
                                     -pos          => [140,  5]        ,
                                     -tabstop      => 1                ,
                                     -font         => $font10          ,
@@ -1417,7 +1497,7 @@ $winConfig->AddCheckbox(    -name         => 'chFullScreen'          ,
                             -font         => $font10                 , );
 $winConfig->AddCheckbox(    -name         => 'chRememberPos'         ,
                             -size         => [195, 20]               ,
-                            -pos          => [440,142]               ,
+                            -pos          => [490,142]               ,
                             -text         => $STR{'chRememberPos'}   ,
                             -background   => [255, 255, 255]         ,
                             -font         => $font10                 , );
@@ -1438,7 +1518,7 @@ $winConfig->AddLabel(       -name         => 'lblMaxSize2'           ,
                             -font         => $font10                 , );
 $winConfig->AddButton(      -name         => 'btnChooseFont'         ,
                             -size         => [125, 24]               ,
-                            -pos          => [440,170]               ,
+                            -pos          => [490,170]               ,
                             -text         => $STR{'chooseFont'}.'...',
                             -font         => $font10                 , );
 $winConfig->AddLabel(       -name         => 'lblLocalTZ'            ,
@@ -1467,13 +1547,13 @@ $winConfig->AddCombobox(    -name         => 'cbDefaultLang'         ,
                             -vscroll      => 1                       , );
 $winConfig->AddLabel(       -name         => 'lblOutputCharset'      ,
                             -size         => [120, 22]               ,
-                            -pos          => [435,233]               ,
+                            -pos          => [490,233]               ,
                             -background   => [255, 255, 255]         ,
                             -text         => $STR{'outputCharset'}.':',
                             -font         => $font10                 , );
 $winConfig->AddCombobox(    -name         => 'cbOutputCharset'       ,
                             -size         => [100,100]               ,
-                            -pos          => [560,230]               ,
+                            -pos          => [615,230]               ,
                             -font         => $font10                 ,
                             -dropdownlist => 1                       ,
                             -vscroll      => 1                       , );
@@ -1503,7 +1583,7 @@ $winConfig->AddLabel(       -name        => 'lblUserAgent'          ,
                             -text        => $STR{'UserAgent'}.':'   ,
                             -font        => $font10                 , );
 $winConfig->AddTextfield(   -name        => 'tfUserAgent'           ,
-                            -size        => [350, 22]               ,
+                            -size        => [430, 22]               ,
                             -pos         => [285,290]               , );
 $winConfig->AddLabel(       -name        => 'lblNoResultOpt'        ,
                             -size        => [130, 22]               ,
@@ -1547,31 +1627,31 @@ $winConfig->AddLabel(       -name        => 'lblMACOUIDBT'          ,
                             -visible     => 0                       , );
 $winConfig->AddCheckbox(    -name        => 'chMACOUIDBAutoUpt'     ,
                             -size        => [220, 20]               ,
-                            -pos         => [415, 38]               ,
+                            -pos         => [495, 38]               ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'AutoUpdateTip'}   ,
                             -font        => $font10                 ,
                             -visible     => 0                       , );
 $winConfig->AddTextfield(   -name        => 'tfMACOUIDB'            ,
-                            -size        => [452, 22]               ,
+                            -size        => [532, 22]               ,
                             -pos         => [150, 68]               ,
                             -visible     => 0                       , );
 $winConfig->AddButton(      -name        => 'btnMACOUIDB'           ,
                             -size        => [ 22, 22]               ,
-                            -pos         => [605, 68]               ,
+                            -pos         => [685, 68]               ,
                             -bitmap      => $fileOpenBmp            ,
                             -tip         => $STR{'selectDBFile'}    ,
                             -visible     => 0                       , );
 $winConfig->AddButton(      -name        => 'btnMACOUIDBUpt'        ,
                             -size        => [ 22, 22]               ,
-                            -pos         => [628, 68]               ,
+                            -pos         => [708, 68]               ,
                             -bitmap      => $downloadBmp            ,
                             -tip         => $STR{'downloadDB'}      ,
                             -visible     => 0                       , );
 # Database tab - GeoIP Database section
 $winConfig->AddLabel(       -name        => 'lblGeoIPDBShadowT'     ,
                             -size        => [250, 22]               ,
-                            -pos         => [151,104]               ,
+                            -pos         => [151, 99]               ,
                             -foreground  => [180, 180, 180]         ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'GeoIP'}.':'       ,
@@ -1579,7 +1659,7 @@ $winConfig->AddLabel(       -name        => 'lblGeoIPDBShadowT'     ,
                             -visible     => 0                       , );
 $winConfig->AddLabel(       -name        => 'lblGeoIPDBT'           ,
                             -size        => [250, 22]               ,
-                            -pos         => [150,103]               ,
+                            -pos         => [150, 98]               ,
                             -addstyle    => 11                      , # Transparent
                             -foreground  => [204,   0,  51]         ,
                             -text        => $STR{'GeoIP'}.':'       ,
@@ -1587,30 +1667,30 @@ $winConfig->AddLabel(       -name        => 'lblGeoIPDBT'           ,
                             -visible     => 0                       , );
 $winConfig->AddCheckbox(    -name        => 'chGeoIPDBAutoUpt'      ,
                             -size        => [220, 20]               ,
-                            -pos         => [415,103]               ,
+                            -pos         => [495, 98]               ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'AutoUpdateTip'}   ,
                             -font        => $font10                 ,
                             -visible     => 0                       , );
 $winConfig->AddTextfield(   -name        => 'tfGeoIPDB'             ,
-                            -size        => [452, 22]               ,
-                            -pos         => [150,133]               ,
+                            -size        => [532, 22]               ,
+                            -pos         => [150,128]               ,
                             -visible     => 0                       , );
 $winConfig->AddButton(      -name        => 'btnGeoIPDB'            ,
                             -size        => [ 22, 22]               ,
-                            -pos         => [605,133]               ,
+                            -pos         => [685,128]               ,
                             -bitmap      => $fileOpenBmp            ,
                             -tip         => $STR{'selectDBFile'}    ,
                             -visible     => 0                       , );
 $winConfig->AddButton(      -name        => 'btnGeoIPDBUpt'         ,
                             -size        => [ 22, 22]               ,
-                            -pos         => [628,133]               ,
+                            -pos         => [708,128]               ,
                             -bitmap      => $downloadBmp            ,
                             -tip         => $STR{'downloadDB'}      ,
                             -visible     => 0                       , );
 $winConfig->AddLabel(       -name        => 'lblGeoIPNotice'        ,
-                            -size        => [500, 35]               ,
-                            -pos         => [150,160]               ,
+                            -size        => [585, 22]               ,
+                            -pos         => [150,155]               ,
                             -background  => [255, 255, 255]         ,
                             -foreground  => [ 80,  80,  80]         ,
                             -text        => $STR{'GeoIPNotice'}     ,
@@ -1618,7 +1698,7 @@ $winConfig->AddLabel(       -name        => 'lblGeoIPNotice'        ,
 # Database tab - Issuer Identification Number (IIN) Database section
 $winConfig->AddLabel(       -name        => 'lblIINDBShadowT'       ,
                             -size        => [250, 22]               ,
-                            -pos         => [151,204]               ,
+                            -pos         => [151,180]               ,
                             -foreground  => [180, 180, 180]         ,
                             -background  => [255, 255, 255]         ,
                             -text        => $STR{'IINLocalDB'}.':'  ,
@@ -1626,28 +1706,78 @@ $winConfig->AddLabel(       -name        => 'lblIINDBShadowT'       ,
                             -visible     => 0                       , );
 $winConfig->AddLabel(       -name        => 'lblIINDBT'             ,
                             -size        => [250, 22]               ,
-                            -pos         => [150,203]               ,
+                            -pos         => [150,179]               ,
                             -addstyle    => 11                      , # Transparent
                             -foreground  => [204,   0,  51]         ,
                             -text        => $STR{'IINLocalDB'}.':'  ,
                             -font        => $fontGB2                ,
                             -visible     => 0                       , );
 $winConfig->AddTextfield(   -name        => 'tfIINDB'               ,
-                            -size        => [452, 22]               ,
-                            -pos         => [150,233]               ,
+                            -size        => [532, 22]               ,
+                            -pos         => [150,210]               ,
                             -visible     => 0                       , );
 $winConfig->AddButton(      -name        => 'btnIINDB'              ,
                             -size        => [ 22, 22]               ,
-                            -pos         => [605,233]               ,
+                            -pos         => [685,210]               ,
                             -bitmap      => $fileOpenBmp            ,
                             -tip         => $STR{'selectDBFile'}    ,
                             -visible     => 0                       , );
 $winConfig->AddButton(      -name        => 'btnIINDBUpt'           ,
                             -size        => [ 22, 22]               ,
-                            -pos         => [628,233]               ,
+                            -pos         => [708,210]               ,
                             -bitmap      => $downloadBmp            ,
                             -tip         => $STR{'downloadDB'}      ,
                             -visible     => 0                       , );
+# Database tab - OpenStreetMap (OSM) Database section
+$winConfig->AddLabel(       -name        => 'lblOSMDBShadowT'       ,
+                            -size        => [250, 22]               ,
+                            -pos         => [151,241]               ,
+                            -foreground  => [180, 180, 180]         ,
+                            -background  => [255, 255, 255]         ,
+                            -text        => $STR{'OSMDB'}.':'       ,
+                            -font        => $fontGB2                ,
+                            -visible     => 0                       , );
+$winConfig->AddLabel(       -name        => 'lblOSMDBT'             ,
+                            -size        => [250, 22]               ,
+                            -pos         => [150,240]               ,
+                            -addstyle    => 11                      , # Transparent
+                            -foreground  => [204,   0,  51]         ,
+                            -text        => $STR{'OSMDB'}.':'       ,
+                            -font        => $fontGB2                ,
+                            -visible     => 0                       , );
+$winConfig->AddTextfield(   -name        => 'tfOSMDB'               ,
+                            -size        => [532, 22]               ,
+                            -pos         => [150,270]               ,
+                            -visible     => 0                       , );
+$winConfig->AddButton(      -name        => 'btnOSMDB'              ,
+                            -size        => [ 22, 22]               ,
+                            -pos         => [685,270]               ,
+                            -bitmap      => $fileOpenBmp            ,
+                            -tip         => $STR{'selectDBFile'}    ,
+                            -visible     => 0                       , );
+$winConfig->AddButton(      -name        => 'btnNewOSMDB'           ,
+                            -size        => [ 22, 22]               ,
+                            -pos         => [708,270]               ,
+                            -bitmap      => $fileNewBmp             ,
+                            -tip         => $STR{'createDBTable'}   ,
+                            -visible     => 0                       , );
+$winConfig->AddLabel(       -name        => 'lblOSMEmail'           ,
+                            -size        => [ 75, 22]               ,
+                            -pos         => [150,303]               ,
+                            -background  => [255, 255, 255]         ,
+                            -text        => $STR{'Email'}.':'       ,
+                            -font        => $font10                 , );
+$winConfig->AddTextfield(   -name        => 'tfOSMEmailDB'          ,
+                            -size        => [300, 22]               ,
+                            -pos         => [230,300]               ,
+                            -visible     => 0                       , );
+$winConfig->AddLabel(       -name        => 'lblOSMNotice'          ,
+                            -size        => [585, 22]               ,
+                            -pos         => [150,328]               ,
+                            -background  => [255, 255, 255]         ,
+                            -foreground  => [ 80,  80,  80]         ,
+                            -text        => $STR{'OSMNotice'}       ,
+                            -font        => $font10                 , );
 # XL-ToolKit Database tab - XL-Whois database section
 $winConfig->AddLabel(       -name        => 'lblXLWHOISDBShadowT'   ,
                             -size        => [250, 22]               ,
@@ -1666,12 +1796,12 @@ $winConfig->AddLabel(       -name        => 'lblXLWHOISDBT'         ,
                             -font        => $fontGB2                ,
                             -visible     => 0                       , );
 $winConfig->AddTextfield(   -name        => 'tfXLWHOISDB'           ,
-                            -size        => [452, 22]               ,
+                            -size        => [532, 22]               ,
                             -pos         => [150, 68]               ,
                             -visible     => 0                       , );
 $winConfig->AddButton(      -name        => 'btnXLWHOISDB'          ,
                             -size        => [ 22, 22]               ,
-                            -pos         => [605, 68]               ,
+                            -pos         => [685, 68]               ,
                             -bitmap      => $fileOpenBmp            ,
                             -tip         => $STR{'selectDBFile'}    ,
                             -visible     => 0                       , );
@@ -1693,18 +1823,18 @@ $winConfig->AddLabel(       -name        => 'lblDTDBT'              ,
                             -font        => $fontGB2                ,
                             -visible     => 0                       , );
 $winConfig->AddTextfield(   -name        => 'tfDTDB'                ,
-                            -size        => [452, 22]               ,
+                            -size        => [532, 22]               ,
                             -pos         => [150,133]               ,
                             -visible     => 0                       , );
 $winConfig->AddButton(      -name        => 'btnDTDB'               ,
                             -size        => [ 22, 22]               ,
-                            -pos         => [605,133]               ,
+                            -pos         => [685,133]               ,
                             -bitmap      => $fileOpenBmp            ,
                             -tip         => $STR{'selectDBFile'}    ,
                             -visible     => 0                       , );
 $winConfig->AddButton(      -name        => 'btnDTDBUpt'            ,
                             -size        => [ 22, 22]               ,
-                            -pos         => [628,133]               ,
+                            -pos         => [708,133]               ,
                             -bitmap      => $downloadBmp            ,
                             -tip         => $STR{'downloadDB'}      ,
                             -visible     => 0                       , );
@@ -1799,6 +1929,15 @@ if (-T $CONFIG_FILE) {
       }
     });
   }
+  # Create OSM database if it doesn't exist
+  if (!$CONFIG{'OSM_DB'} or !-f $CONFIG{'OSM_DB'} or !&validSQLiteDB($CONFIG{'OSM_DB'}, 'GPS2ADDR')) {
+    my $OSMDBFile = "$USERDIR\\OSM.db";
+    my $OSMDir    = "$USERDIR\\osm";
+    if ($OSMDBFile and &createOSMDB($OSMDBFile)) {
+      mkdir($OSMDir) if !-d $OSMDir; # Create subfolder for JSON file
+      $winConfig->tfOSMDB->Text($OSMDBFile);
+    }
+  }
   # Check update for tool and databases?
   if ($CONFIG{'TOOL_AUTO_UPDATE'} or $CONFIG{'MACOUI_DB_AUTO_UPDATE'} or $CONFIG{'GEOIP_DB_AUTO_UPDATE'}) {
     $THR_UPDATE = threads->create(sub { &updateAll($VERSION, $USERDIR, \$HOURGLASS, \$ARROW, \$winConfig,
@@ -1880,6 +2019,10 @@ sub winMain_Resize
   $win->gridGeoIPOpts->AutoSize();
   $win->gridGeoIPOpts->ExpandRowsToFit();
   $win->gridGeoIPOpts->ExpandLastColumn();
+  $win->gridGPS2AddrOpts->Width($win->ScaleWidth()-700);
+  $win->gridGPS2AddrOpts->AutoSize();
+  $win->gridGPS2AddrOpts->ExpandRowsToFit();
+  $win->gridGPS2AddrOpts->ExpandLastColumn();
   $win->gridUAOpts->Width($win->ScaleWidth()-700);
   $win->gridUAOpts->AutoSize();
   $win->gridUAOpts->ExpandRowsToFit();
@@ -2144,11 +2287,6 @@ sub Tab_Click
     $win->cbInputDTFormat->Hide();
     $win->btnOpenDTDB->Hide();
     $win->btnInputFormatGuess->Hide();
-    $win->lblAPIKey->Hide();
-    $win->tfAPIKey->Hide();
-    $win->btnSaveAPIKey->Hide();
-    $win->chSingleLocation->Hide();
-    $win->tfSingleLocation->Hide();
     # Hide Utils tab
     $win->cbUtils->Hide();
     $win->lblCurrMACOUIdbDate->Hide();
@@ -2158,7 +2296,13 @@ sub Tab_Click
     $win->chGeoIPOptAll->Hide();
     $win->chAddHeaders->Hide();
     $win->gridGeoIPOpts->Hide();
-    $win->chAddHeaders->Hide();
+    $win->chAddr2GPSInc->Hide();
+    $win->lblGPS2AddrZL->Hide();
+    $win->cbGPS2AddrZL->Hide();
+    $win->cbGPS2AddrOutput->Hide();
+    $win->gridGPS2AddrOpts->Hide();
+    $win->chSingleLocation->Hide();
+    $win->tfSingleLocation->Hide();
     $win->chUAOptAll->Hide();
     $win->gridUAOpts->Hide();
     $win->rbIINLocalDB->Hide();
@@ -2249,7 +2393,6 @@ sub Tab_Click
     $win->chGeoIPOptAll->Hide();
     $win->chAddHeaders->Hide();
     $win->gridGeoIPOpts->Hide();
-    $win->chAddHeaders->Hide();
     $win->chUAOptAll->Hide();
     $win->gridUAOpts->Hide();
     $win->rbIINLocalDB->Hide();
@@ -2264,9 +2407,11 @@ sub Tab_Click
     $win->tfCFTitle->Hide();
     $win->btnCFSave->Hide();
     $win->btnCFCancel->Hide();
-    $win->lblAPIKey->Hide();
-    $win->tfAPIKey->Hide();
-    $win->btnSaveAPIKey->Hide();
+    $win->chAddr2GPSInc->Hide();
+    $win->lblGPS2AddrZL->Hide();
+    $win->cbGPS2AddrZL->Hide();
+    $win->cbGPS2AddrOutput->Hide();
+    $win->gridGPS2AddrOpts->Hide();
     $win->chSingleLocation->Hide();
     $win->tfSingleLocation->Hide();
   # Show Conversion tab
@@ -2342,7 +2487,6 @@ sub Tab_Click
     $win->chGeoIPOptAll->Hide();
     $win->chAddHeaders->Hide();
     $win->gridGeoIPOpts->Hide();
-    $win->chAddHeaders->Hide();
     $win->chUAOptAll->Hide();
     $win->gridUAOpts->Hide();
     $win->rbIINLocalDB->Hide();
@@ -2357,9 +2501,11 @@ sub Tab_Click
     $win->tfCFTitle->Hide();
     $win->btnCFSave->Hide();
     $win->btnCFCancel->Hide();
-    $win->lblAPIKey->Hide();
-    $win->tfAPIKey->Hide();
-    $win->btnSaveAPIKey->Hide();
+    $win->chAddr2GPSInc->Hide();
+    $win->lblGPS2AddrZL->Hide();
+    $win->cbGPS2AddrZL->Hide();
+    $win->cbGPS2AddrOutput->Hide();
+    $win->gridGPS2AddrOpts->Hide();
     $win->chSingleLocation->Hide();
     $win->tfSingleLocation->Hide();
   # Show Time tab
@@ -2414,7 +2560,6 @@ sub Tab_Click
     $win->chGeoIPOptAll->Hide();
     $win->chAddHeaders->Hide();
     $win->gridGeoIPOpts->Hide();
-    $win->chAddHeaders->Hide();
     $win->chUAOptAll->Hide();
     $win->gridUAOpts->Hide();
     $win->rbIINLocalDB->Hide();
@@ -2429,9 +2574,11 @@ sub Tab_Click
     $win->tfCFTitle->Hide();
     $win->btnCFSave->Hide();
     $win->btnCFCancel->Hide();
-    $win->lblAPIKey->Hide();
-    $win->tfAPIKey->Hide();
-    $win->btnSaveAPIKey->Hide();
+    $win->chAddr2GPSInc->Hide();
+    $win->lblGPS2AddrZL->Hide();
+    $win->cbGPS2AddrZL->Hide();
+    $win->cbGPS2AddrOutput->Hide();
+    $win->gridGPS2AddrOpts->Hide();
     $win->chSingleLocation->Hide();
     $win->tfSingleLocation->Hide();
   # Show Utils tab
@@ -3508,10 +3655,10 @@ sub cbUtils_Change
   # Possibles value are 0 = 'NSLookup', 1 = 'CIDR to IP Range', 2 = 'IP Range to CIDR', 3 = 'CIDR to IP list',
   # 4 = 'IP to Arpa', 5 = 'Arpa to IP', 6 = 'Resolve MAC Address', 7 = 'Resolve GeoIP', 8 = 'Resolve ISP',
   # 9 = 'Resolve User-agent', 10 = 'Credit Card to issuing company', 11 = 'Address to GPS coordinates',
-  # 12 = 'Distance between locations', 13 = 'Custom functions'
+  # 12 = 'GPS to address', 13 = 'Distance between locations', 14 = 'Custom functions'
   
   # Show or Hide List 2
-  if    ($selFunc != 12)                    { &hideList2(); }
+  if    ($selFunc != 13)                    { &hideList2(); }
   elsif ($win->chSingleLocation->Checked()) { &hideList2(); }
   else                                      { &showList2(); }
   # Show Resolve MAC Address options
@@ -3531,8 +3678,9 @@ sub cbUtils_Change
     }
   } else { $win->lblCurrMACOUIdbDate->Hide(); $win->btnMACOUIdbUpdate->Hide(); }
   # Add headers option
-  if   ($selFunc == 7 or $selFunc == 9) { $win->chAddHeaders->Show(); }
-  else                                  { $win->chAddHeaders->Hide(); }
+  if ($selFunc == 7 or $selFunc == 9 or ($selFunc == 12 and $win->cbGPS2AddrOutput->GetCurSel())) {
+    $win->chAddHeaders->Show();
+  } else { $win->chAddHeaders->Hide(); }
   # Show Resolve GeoIP options
   if   ($selFunc == 7) {
     $win->lblGeoIPLang->Show();
@@ -3558,14 +3706,26 @@ sub cbUtils_Change
   # Show Credit Card to Issuing Company options
   if   ($selFunc == 10) { $win->rbIINLocalDB->Show(); $win->rbBinlist->Show(); }
   else                  { $win->rbIINLocalDB->Hide(); $win->rbBinlist->Hide(); }
-  # Show Address to GPS coordinates options
-  if   ($selFunc == 11) { $win->lblAPIKey->Show(); $win->tfAPIKey->Show(); $win->btnSaveAPIKey->Show(); }
-  else                  { $win->lblAPIKey->Hide(); $win->tfAPIKey->Hide(); $win->btnSaveAPIKey->Hide(); }
+  # Show Address to GPS options
+  if   ($selFunc == 11) { $win->chAddr2GPSInc->Show(); }
+  else                  { $win->chAddr2GPSInc->Hide(); }
+  # Show GPS to Address options
+  if   ($selFunc == 12) {
+    $win->lblGPS2AddrZL->Show();
+    $win->cbGPS2AddrZL->Show();
+    $win->cbGPS2AddrOutput->Show();
+    $win->gridGPS2AddrOpts->Show() if $win->cbGPS2AddrOutput->GetCurSel() == 2;
+  } else {
+    $win->lblGPS2AddrZL->Hide();
+    $win->cbGPS2AddrZL->Hide();
+    $win->cbGPS2AddrOutput->Hide();
+    $win->gridGPS2AddrOpts->Hide();
+  }
   # Distance between locations options
-  if   ($selFunc == 12) { $win->chSingleLocation->Show(); $win->tfSingleLocation->Show(); }
+  if   ($selFunc == 13) { $win->chSingleLocation->Show(); $win->tfSingleLocation->Show(); }
   else                  { $win->chSingleLocation->Hide(); $win->tfSingleLocation->Hide(); }
   # Custom Functions options
-  if   ($selFunc == 13) {
+  if   ($selFunc == 14) {
     $win->cbCFLists->Show();
     $win->cbCFLists->Enable();
     $win->btnCFAdd->Show();
@@ -3935,9 +4095,9 @@ sub isProcessReady
     } elsif ($win->Tab->SelectedItem() == 4) {
       my $selFunc = $win->cbUtils->GetCurSel();
       # Possibles value are 0 = 'NSLookup', 1 = 'CIDR to IP Range', 2 = 'IP Range to CIDR', 3 = 'CIDR to IP list',
-      # 4 = 'IP to Arpa', 5 = 'Arpa to IP', 6 = 'Resolve MAC Address', 7 = 'Resolve GeoIP', 8 = 'Resolve ISP',
-      # 9 = 'Resolve User-agent', 10 = 'Credit Card to issuing company', 11 = 'Address to GPS coordinates',
-      # 12 = 'Distance between locations', 13 = 'Custom functions'
+      # 4  = 'IP to Arpa', 5 = 'Arpa to IP', 6 = 'Resolve MAC Address', 7 = 'Resolve GeoIP', 8 = 'Resolve ISP',
+      # 9  = 'Resolve User-agent', 10 = 'Credit Card to issuing company', 11 = 'Address to GPS coordinates',
+      # 12 = 'Address to GPS coordinates', 13 = 'Distance between locations', 14 = 'Custom functions'
       
       # 'Resolve MAC Address' requires MACOUI database
       if    ($selFunc == 6) {
@@ -3969,11 +4129,24 @@ sub isProcessReady
       } elsif ($selFunc == 10 and $win->rbIINLocalDB->Checked()) {
         my $IINFile = $winConfig->tfIINDB->Text();
         $nextStep = "$STR{'validDB1'} $STR{'IINDB'} $STR{'validDB2'} $STR{'seeDoc'}" if !-e $IINFile;
-      # 'Address to GPS coordinate' requires an API Key to Google
-      } elsif ($selFunc == 11) {
-        $nextStep = $STR{'reqAPIKey'} if !$win->tfAPIKey->Text();
+      # 'Address to GPS' and 'GPS to Address' requirements
+      } elsif ($selFunc == 11 or $selFunc == 12) {
+        if ($selFunc == 12) {
+          my $selOutput = $win->cbGPS2AddrOutput->GetString($win->cbGPS2AddrOutput->GetCurSel());
+          my $OSMFile   = $winConfig->tfOSMDB->Text();
+          $nextStep     = "$STR{'validDB1'} $STR{'OSMDB'} $STR{'validDB2'} $STR{'seeDoc'}" if !-e $OSMFile;
+          if ($selOutput and $selOutput eq $STR{'AddressEl'}) {
+            # Browse grid and check if at least one checked option
+            my $check = 0;
+            for (my $i = 0; $i < 6; $i++) {
+              $check = 1 if $win->gridGPS2AddrOpts->GetCellCheck(0, $i) or $win->gridGPS2AddrOpts->GetCellCheck(1, $i);
+            }
+            $nextStep = $STR{'checkOpt'} if !$check;
+          }
+        }
+        $nextStep = $STR{'emailRequired'} if $nbrList1 > 25 and !$CONFIG{'EMAIL'};
       # Distance between locations
-      } elsif ($selFunc == 12) {
+      } elsif ($selFunc == 13) {
         if ($win->chSingleLocation->Checked()) {
           if (!$win->tfSingleLocation->Text()) { $nextStep = $STR{'reqLocation'}; }
         } else { # A list of location in list 1 to compare with list 2, must be the same number of items
@@ -3982,7 +4155,7 @@ sub isProcessReady
           $nextStep = $STR{'insertSameNbr'} if scalar(@{$refList1}) != scalar(@{$refList2});
         }
       # In 'Custom functions', a function must be selected, except if we are adding or modifying a function
-      } elsif ($selFunc == 13 and !$win->cbCFLists->GetCurSel() and !$win->tfCFTitle->IsVisible()) {
+      } elsif ($selFunc == 14 and !$win->cbCFLists->GetCurSel() and !$win->tfCFTitle->IsVisible()) {
         $nextStep = $STR{'selectFunc'};
       }
     }
@@ -4877,13 +5050,6 @@ sub chGeoIPOptAll_Click
 }  #--- End chGeoIPOptAll_Click
 
 #--------------------------#
-sub gridGeoIPOpts_Click     { &isProcessReady(0); }
-sub gridUAOpts_Click        { &isProcessReady(0); }
-sub tfAPIKey_Change         { &isProcessReady(0); }
-sub tfSingleLocation_Change { &isProcessReady(0); }
-#--------------------------#
-
-#--------------------------#
 sub chUAOptAll_Click
 #--------------------------#
 {
@@ -4903,6 +5069,30 @@ sub chUAOptAll_Click
 }  #--- End chUAOptAll_Click
 
 #--------------------------#
+sub cbGPS2AddrOutput_Change
+#--------------------------#
+{
+  # Local variables
+  my $selOutput = $win->cbGPS2AddrOutput->GetString($win->cbGPS2AddrOutput->GetCurSel());
+  if ($selOutput and $selOutput eq $STR{'AddressEl'}) {
+    $win->gridGPS2AddrOpts->Show();
+    $win->chAddHeaders->Show();
+  } else {
+    $win->gridGPS2AddrOpts->Hide();
+    $win->chAddHeaders->Hide();
+  }
+  &isProcessReady(0);
+
+}  #--- End cbGPS2AddrOutput_Change
+
+#--------------------------#
+sub gridGeoIPOpts_Click     { &isProcessReady(0); }
+sub gridGPS2AddrOpts_Click  { &isProcessReady(0); }
+sub gridUAOpts_Click        { &isProcessReady(0); }
+sub tfSingleLocation_Change { &isProcessReady(0); }
+#--------------------------#
+
+#--------------------------#
 sub chSingleLocation_Click
 #--------------------------#
 {
@@ -4913,21 +5103,6 @@ sub chSingleLocation_Click
 }  #--- End chSingleLocation_Click
 
 #--------------------------#
-sub btnSaveAPIKey_Click
-#--------------------------#
-{
-  # Save the API key
-  if (my $APIKey = $win->tfAPIKey->Text()) {
-    $CONFIG{'GOOGLE_API_KEY'} = $APIKey;
-    &saveConfig(\%CONFIG, $CONFIG_FILE);
-  } else {
-    delete($CONFIG{'GOOGLE_API_KEY'});
-    &saveConfig(\%CONFIG, $CONFIG_FILE);
-  }
-
-}  #--- End btnSaveAPIKey_Click
-
-#--------------------------#
 sub btnCFAdd_Click
 #--------------------------#
 {
@@ -4935,7 +5110,6 @@ sub btnCFAdd_Click
   if (my $CFDBFile = Win32::GUI::GetOpenFileName( -owner         => $win                              ,
                                                   -title         => $STR{'selectDBFile'}              ,
                                                   -filter        => [$STR{'dbFile'}.' - .db', '*.db'] ,
-                                                  -defaultfilter => 0                                 ,
                                                   -filemustexist => 1                                 ,
                                                   -explorer      => 1                                 , )) {
     if (-f $CFDBFile and &validCFDB($CFDBFile)) {
@@ -5405,7 +5579,7 @@ sub firstStart
         # Answer is yes, select the XL-Whois database
         if ($answer == 6) {
           $XLWHOISDBFile = Win32::GUI::GetOpenFileName( -title         => $STR{'locXLWhoisDB'}.':',
-                                                        -defaultfilter => 0                       ,
+                                                        -filter        => [$STR{'dbFile'}.' (*.db)', '.db'],
                                                         -filemustexist => 1                       ,
                                                         -file          => 'Whois.db'              ,
                                                         -explorer      => 1                       , );
@@ -5607,6 +5781,14 @@ sub configTab_Click
     $winConfig->tfIINDB->Hide();
     $winConfig->btnIINDB->Hide();
     $winConfig->btnIINDBUpt->Hide();
+    $winConfig->lblOSMDBShadowT->Hide();
+    $winConfig->lblOSMDBT->Hide();
+    $winConfig->tfOSMDB->Hide();
+    $winConfig->btnOSMDB->Hide();
+    $winConfig->btnNewOSMDB->Hide();
+    $winConfig->lblOSMEmail->Hide();
+    $winConfig->tfOSMEmailDB->Hide();
+    $winConfig->lblOSMNotice->Hide();
     # XL-Toolkit databases tab
     $winConfig->lblXLWHOISDBShadowT->Hide();
     $winConfig->lblXLWHOISDBT->Hide();
@@ -5638,6 +5820,14 @@ sub configTab_Click
     $winConfig->tfIINDB->Show();
     $winConfig->btnIINDB->Show();
     $winConfig->btnIINDBUpt->Show();
+    $winConfig->lblOSMDBShadowT->Show();
+    $winConfig->lblOSMDBT->Show();
+    $winConfig->tfOSMDB->Show();
+    $winConfig->btnOSMDB->Show();
+    $winConfig->btnNewOSMDB->Show();
+    $winConfig->lblOSMEmail->Show();
+    $winConfig->tfOSMEmailDB->Show();
+    $winConfig->lblOSMNotice->Show();
     # General tab
     $winConfig->lblToolShadowT->Hide();
     $winConfig->lblToolT->Hide();
@@ -5737,6 +5927,14 @@ sub configTab_Click
     $winConfig->tfIINDB->Hide();
     $winConfig->btnIINDB->Hide();
     $winConfig->btnIINDBUpt->Hide();
+    $winConfig->lblOSMDBShadowT->Hide();
+    $winConfig->lblOSMDBT->Hide();
+    $winConfig->tfOSMDB->Hide();
+    $winConfig->btnOSMDB->Hide();
+    $winConfig->btnNewOSMDB->Hide();
+    $winConfig->lblOSMEmail->Hide();
+    $winConfig->tfOSMEmailDB->Hide();
+    $winConfig->lblOSMNotice->Hide();
   }
 
 }  #--- End configTab_Click
@@ -5993,7 +6191,7 @@ sub btnMACOUIDB_Click
     if (pop(@parts) =~ /\./) { while ($lastDir =~ /[^\\]$/) { chop($lastDir); } }
     $MACOUIDBFile = Win32::GUI::GetOpenFileName(-owner         => $winConfig              ,
                                                 -title         => $STR{'selectDBFile'}.':',
-                                                -defaultfilter => 0                       ,
+                                                -filter        => [$STR{'dbFile'}.' (*.db)', '.db'],
                                                 -filemustexist => 1                       ,
                                                 -directory     => $lastDir                ,
                                                 -file          => 'OUI.db'                ,
@@ -6001,7 +6199,7 @@ sub btnMACOUIDB_Click
   } else {
     $MACOUIDBFile = Win32::GUI::GetOpenFileName(-owner         => $winConfig              ,
                                                 -title         => $STR{'selectDBFile'}.':',
-                                                -defaultfilter => 0                       ,
+                                                -filter        => [$STR{'dbFile'}.' (*.db)', '.db'],
                                                 -filemustexist => 1                       ,
                                                 -file          => 'OUI.db'                ,
                                                 -explorer      => 1                       , );
@@ -6111,7 +6309,7 @@ sub btnGeoIPDB_Click
     if (pop(@parts) =~ /\./) { while ($lastDir =~ /[^\\]$/) { chop($lastDir); } }
     $GeoIPDBFile = Win32::GUI::GetOpenFileName( -owner         => $winConfig                ,
                                                 -title         => $STR{'selectDBFile'}.':'  ,
-                                                -defaultfilter => 0                         ,
+                                                -filter        => [$STR{'dbFile'}.' (*.mmdb)', '.mmdb'],
                                                 -filemustexist => 1                         ,
                                                 -directory     => $lastDir                  ,
                                                 -file          => 'GeoLite2-City.mmdb'      ,
@@ -6119,7 +6317,7 @@ sub btnGeoIPDB_Click
   } else {
     $GeoIPDBFile = Win32::GUI::GetOpenFileName( -owner         => $winConfig                ,
                                                 -title         => $STR{'selectDBFile'}.':'  ,
-                                                -defaultfilter => 0                         ,
+                                                -filter        => [$STR{'dbFile'}.' (*.mmdb)', '.mmdb'],
                                                 -filemustexist => 1                         ,
                                                 -file          => 'GeoLite2-City.mmdb'      ,
                                                 -explorer      => 1                         , );
@@ -6202,7 +6400,7 @@ sub btnXLWHOISDB_Click
     if (pop(@parts) =~ /\./) { while ($lastDir =~ /[^\\]$/) { chop($lastDir); } }
     $XLWHOISDBFile = Win32::GUI::GetOpenFileName( -owner         => $winConfig                 ,
                                                   -title         => $STR{'selectDBFile'}.':'   ,
-                                                  -defaultfilter => 0                          ,
+                                                  -filter        => [$STR{'dbFile'}.' (*.db)', '.db'],
                                                   -filemustexist => 1                          ,
                                                   -directory     => $lastDir                   ,
                                                   -file          => 'Whois.db'                 ,
@@ -6210,7 +6408,7 @@ sub btnXLWHOISDB_Click
   } else {
     $XLWHOISDBFile = Win32::GUI::GetOpenFileName( -owner         => $winConfig                 ,
                                                   -title         => $STR{'selectDBFile'}.':'   ,
-                                                  -defaultfilter => 0                          ,
+                                                  -filter        => [$STR{'dbFile'}.' (*.db)', '.db'],
                                                   -filemustexist => 1                          ,
                                                   -file          => 'Whois.db'                 ,
                                                   -explorer      => 1                          , );
@@ -6255,7 +6453,7 @@ sub btnIINDB_Click
     if (pop(@parts) =~ /\./) { while ($lastDir =~ /[^\\]$/) { chop($lastDir); } }
     $IINDBFile = Win32::GUI::GetOpenFileName( -owner         => $winConfig                 ,
                                               -title         => $STR{'selectDBFile'}.':'   ,
-                                              -defaultfilter => 0                          ,
+                                              -filter        => [$STR{'dbFile'}.' (*.db)', '.db'],
                                               -filemustexist => 1                          ,
                                               -directory     => $lastDir                   ,
                                               -file          => 'IIN.db'                   ,
@@ -6263,7 +6461,7 @@ sub btnIINDB_Click
   } else {
     $IINDBFile = Win32::GUI::GetOpenFileName( -owner         => $winConfig                 ,
                                               -title         => $STR{'selectDBFile'}.':'   ,
-                                              -defaultfilter => 0                          ,
+                                              -filter        => [$STR{'dbFile'}.' (*.db)', '.db'],
                                               -filemustexist => 1                          ,
                                               -file          => 'IIN.db'                   ,
                                               -explorer      => 1                          , );
@@ -6318,6 +6516,139 @@ sub btnIINDBUpt_Click
 }  #--- End btnIINDBUpt_Click
 
 #--------------------------#
+sub tfOSMDB_Change
+#--------------------------#
+{
+  # Local variables
+  my $OSMDBFile = $winConfig->tfOSMDB->Text();
+  # Remember
+  if ($OSMDBFile and -f $OSMDBFile and &validSQLiteDB($OSMDBFile, 'GPS2ADDR')) {
+    $CONFIG{'OSM_DB'} = $OSMDBFile;
+    &saveConfig(\%CONFIG, $CONFIG_FILE);
+  } else {
+    delete($CONFIG{'OSM_DB'});
+    &saveConfig(\%CONFIG, $CONFIG_FILE);
+    if ($OSMDBFile) {
+      $winConfig->tfOSMDB->Text('');
+      Win32::GUI::MessageBox($win, $STR{'invalidFile'}, $STR{'Error'}, 0x40010) if $START == 1;
+    }
+  }
+
+}  #--- End tfOSMDB_Change
+
+#--------------------------#
+sub btnOSMDB_Click
+#--------------------------#
+{
+  # Local variables
+  my $lastDir = $winConfig->tfOSMDB->Text();
+  $lastDir    = $USERDIR if !$lastDir and $USERDIR;
+  my $OSMDBFile;
+  # Show OpenFile dialog window
+  if ($lastDir) {
+    my (@parts) = split(/\\/, $lastDir);
+    if (pop(@parts) =~ /\./) { while ($lastDir =~ /[^\\]$/) { chop($lastDir); } }
+    $OSMDBFile = Win32::GUI::GetOpenFileName( -owner         => $winConfig              ,
+                                              -title         => $STR{'selectDBFile'}.':',
+                                              -filter        => [$STR{'dbFile'}.' (*.db)', '.db'],
+                                              -filemustexist => 1                       ,
+                                              -directory     => $lastDir                ,
+                                              -file          => 'OSM.db'                ,
+                                              -explorer      => 1                       , );
+  } else {
+    $OSMDBFile = Win32::GUI::GetOpenFileName( -owner         => $winConfig              ,
+                                              -title         => $STR{'selectDBFile'}.':',
+                                              -filter        => [$STR{'dbFile'}.' (*.db)', '.db'],
+                                              -filemustexist => 1                       ,
+                                              -file          => 'OSM.db'                ,
+                                              -explorer      => 1                       , );
+  }
+  # Selected file
+  $winConfig->tfOSMDB->Text($OSMDBFile) if $OSMDBFile and -f $OSMDBFile;
+  return(1);
+
+}  #--- End btnOSMDB_Click
+
+#--------------------------#
+sub btnNewOSMDB_Click
+#--------------------------#
+{
+  # Local variables
+  my $lastDir = $winConfig->tfOSMDB->Text();
+  $lastDir    = $USERDIR if !$lastDir and $USERDIR;
+  my $OSMDBFile;
+  # Show SaveFileWindow for database
+  if ($lastDir) {
+    my (@parts) = split(/\\/, $lastDir);
+    if (pop(@parts) =~ /\./) { while ($lastDir =~ /[^\\]$/) { chop($lastDir); } }
+    $OSMDBFile = Win32::GUI::GetSaveFileName( -owner           => $winConfig                       ,
+                                              -title           => $STR{'selPathDB'}.':'            ,
+                                              -file            => 'OSM.db'                         ,
+                                              -filter          => [$STR{'dbFile'}.' (*.db)', '.db'],
+                                              -directory       => $lastDir                         ,
+                                              -overwriteprompt => 1                                , );
+  } else {
+    $OSMDBFile = Win32::GUI::GetSaveFileName( -owner           => $winConfig                       ,
+                                              -title           => $STR{'selPathDB'}.':'            ,
+                                              -file            => 'OSM.db'                         ,
+                                              -filter          => [$STR{'dbFile'}.' (*.db)', '.db'],
+                                              -overwriteprompt => 1                                , );
+    
+  }
+  if ($OSMDBFile and &createOSMDB($OSMDBFile)) {
+    my $dbFolder = $OSMDBFile;
+    while ($dbFolder =~ /[^\\]$/) { chop($dbFolder); }
+    mkdir("$dbFolder\\osm") if !-d "$dbFolder\\osm"; # Create subfolder for JSON file
+    Win32::GUI::MessageBox($winConfig, $STR{'createdDB'}, $STR{'OSMDB'}, 0x40040);
+    $winConfig->tfOSMDB->Text($OSMDBFile);
+  }
+  return(1);
+  
+}  #--- End btnNewOSMDB_Click
+
+#--------------------------#
+sub createOSMDB
+#--------------------------#
+{
+  # Local variables
+  my $OSMDBFile = shift;
+  # Create a new database
+	$OSMDBFile = encode('utf8', $OSMDBFile);
+  my $dsn = "DBI:SQLite:dbname=$OSMDBFile";
+  my $dbh = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 }) or return(0);
+  # Create main table
+  # Bounding box: lat_s, lat_n, lon_w, lon_e
+  # Original query: lat, lon
+  my $stmt = qq(CREATE TABLE IF NOT EXISTS GPS2ADDR
+                (lat        REAL   NOT NULL,
+                 lon        REAL   NOT NULL,
+                 lat_s      REAL   NOT NULL,
+                 lat_n      REAL   NOT NULL,
+                 lon_w      REAL   NOT NULL,
+                 lon_e      REAL   NOT NULL,
+                 zoom_level TEXT   NOT NULL,
+                 jsonFile   TEXT   NOT NULL,
+                 PRIMARY KEY (lat, lon, zoom_level)));
+  my $rv = $dbh->do($stmt);
+  $dbh->disconnect();
+  return(0) if $rv < 0;
+  return(1);
+  
+}  #--- End createOSMDB
+
+#--------------------------#
+sub tfOSMEmailDB_Change
+#--------------------------#
+{
+  # Remember
+  if (my $email = $winConfig->tfOSMEmailDB->Text()) {
+    $CONFIG{'EMAIL'} = $email;
+    &saveConfig(\%CONFIG, $CONFIG_FILE);
+  }
+
+}  #--- End tfUserAgent_Change
+
+#--------------------------#
 sub tfDTDB_Change
 #--------------------------#
 {
@@ -6349,19 +6680,19 @@ sub btnDTDB_Click
   if ($lastDir) {
     my(@parts) = split(/\\/, $lastDir);
     if (pop(@parts) =~ /\./) { while ($lastDir =~ /[^\\]$/) { chop($lastDir); } }
-    $DTDBFile = Win32::GUI::GetOpenFileName( -owner         => $winConfig                 ,
+    $DTDBFile = Win32::GUI::GetOpenFileName(  -owner         => $winConfig                 ,
                                               -title         => $STR{'selectDBFile'}.':'   ,
-                                              -defaultfilter => 0                          ,
+                                              -filter        => [$STR{'dbFile'}.' (*.db)', '.db'],
                                               -filemustexist => 1                          ,
                                               -directory     => $lastDir                   ,
-                                              -file          => 'DT.db'                   ,
+                                              -file          => 'DT.db'                    ,
                                               -explorer      => 1                          , );
   } else {
-    $DTDBFile = Win32::GUI::GetOpenFileName( -owner         => $winConfig                 ,
+    $DTDBFile = Win32::GUI::GetOpenFileName(  -owner         => $winConfig                 ,
                                               -title         => $STR{'selectDBFile'}.':'   ,
-                                              -defaultfilter => 0                          ,
+                                              -filter        => [$STR{'dbFile'}.' (*.db)', '.db'],
                                               -filemustexist => 1                          ,
-                                              -file          => 'DT.db'                   ,
+                                              -file          => 'DT.db'                    ,
                                               -explorer      => 1                          , );
   }
   # Selected file

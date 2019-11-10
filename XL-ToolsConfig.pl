@@ -7,7 +7,7 @@
 # GitHub						: https://github.com/arioux/XL-Tools
 # Documentation			: http://le-tools.com/XL-ToolsDoc.html
 # Creation					: 2015-12-21
-# Modified					: 2019-06-09
+# Modified					: 2019-11-10
 # Author						: Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2019  Alain Rioux (le-tools.com)
@@ -149,8 +149,9 @@ sub loadConfig
 																																			 -f $$refConfig{'XLWHOIS_DB_FILE'};
   # Datetime Database location
   $$refWinConfig->tfDTDB->Text($$refConfig{'DT_DB_FILE'}) if exists($$refConfig{'DT_DB_FILE'}) and -f $$refConfig{'DT_DB_FILE'};
-  # Datetime Database location
-  $$refWin->tfAPIKey->Text($$refConfig{'GOOGLE_API_KEY'}) if exists($$refConfig{'GOOGLE_API_KEY'});
+	# OSM Database location and email
+	$$refWinConfig->tfOSMDB->Text($$refConfig{'OSM_DB'}) if exists($$refConfig{'OSM_DB'}) and -f $$refConfig{'OSM_DB'};
+	$$refWinConfig->tfOSMEmailDB->Text($$refConfig{'EMAIL'}) if exists($$refConfig{'EMAIL'});
   # Custom Functions
   my $j = 1;
   while (exists($$refConfig{'CF'.$j})) {

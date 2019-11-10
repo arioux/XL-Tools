@@ -29,6 +29,8 @@ This product includes GeoLite2 data created by MaxMind, available from https://w
 
 OUI Database comes from the IEEE Standards Association (http://standards.ieee.org). Link for the database is http://standards-oui.ieee.org/oui.txt.
 
+The "Address to GPS" and "GPS to Address" functions was made possible through the Nominatim API (https://nominatim.org/release-docs/develop/api/Overview/) (Data © OpenStreetMap contributors). OpenStreetMap (OSM) data available through these Services is licensed under the Open Database License (https://opendatacommons.org/licenses/odbl/1-0/) as interpreted by the OSMF Guidelines (https://wiki.osmfoundation.org/wiki/Licence/Community_Guidelines). See also https://osm.org/copyright.
+
 
 For icons:
 

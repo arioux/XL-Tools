@@ -7,7 +7,7 @@
 # GitHub            : https://github.com/arioux/XL-Tools
 # Documentation     : http://le-tools.com/XL-ToolsDoc.html
 # Creation          : 2015-12-21
-# Modified          : 2019-02-18
+# Modified          : 2019-11-10
 # Author            : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2019  Alain Rioux (le-tools.com)
@@ -63,12 +63,12 @@ sub utilsTabFunc
   my ($refList1, $refList2, $refWinConfig, $refConfig, $CONFIG_FILE, $refWin, $refSTR) = @_;
   my $selFunc = $$refWin->cbUtils->GetCurSel();
   # Possibles value are 0 = 'NSLookup', 1 = 'CIDR to IP Range', 2 = 'IP Range to CIDR', 3 = 'CIDR to IP list',
-  # 4 = 'IP to Arpa', 5 = 'Arpa to IP', 6 = 'Resolve MAC Address', 7 = 'Resolve GeoIP', 8 = 'Resolve ISP',
-  # 9 = 'Resolve User-agent', 10 = 'Credit Card to issuing company', 11 = 'Address to GPS coordinates',
-  # 12 = 'Distance between locations', 13 = 'Custom functions'
+  # 4  = 'IP to Arpa', 5 = 'Arpa to IP', 6 = 'Resolve MAC Address', 7 = 'Resolve GeoIP', 8 = 'Resolve ISP',
+  # 9  = 'Resolve User-agent', 10 = 'Credit Card to issuing company', 11 = 'Address to GPS coordinates',
+  # 12 = 'GPS to address', 13 = 'Distance between locations', 14 = 'Custom functions'
   
   # Merge lists (except time difference)
-  push(@{$refList1}, @{$refList2}) if $selFunc != 12;
+  push(@{$refList1}, @{$refList2}) if $selFunc != 13;
   my $noResultOpt = $$refWinConfig->rbNoResultOpt2->Checked();
   my $nbrItems    = scalar(@{$refList1});
   my $curr = 0;
@@ -562,24 +562,56 @@ sub utilsTabFunc
       }
     }
   }
-  # 11 = 'Address to GPS coordinates'
+  # 11 = 'Address to GPS'
   elsif ($selFunc == 11) {
+    # Create the agent
     my $ua = LWP::UserAgent->new;
     $ua->agent($$refConfig{'USERAGENT'});
     $ua->timeout($$refConfig{'NSLOOKUP_TIMEOUT'});
     $ua->default_header('Accept-Language' => 'en');
-    my $APIKey = $$refWin->tfAPIKey->Text();
+    # Open OSM database
+    my $osmDBFile = $$refWinConfig->tfOSMDB->Text();
+    my $dsn       = "DBI:SQLite:dbname=$osmDBFile";
+    my $dbh       = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 });
+    my $sthAdd    = $dbh->prepare("INSERT OR REPLACE INTO GPS2ADDR (lat, lon, lat_s, lat_n, lon_w, lon_e, zoom_level, jsonFile) VALUES(?,?,?,?,?,?,?,?)");
     foreach my $item (@{$refList1}) {
       $item =~ s/[\r\n]//g;  # Remove any line break
       if ($item) {
-        $item =~ s/ /+/g; # Replace spaces by + sign
-        my $encItem = uri_escape_utf8($item); # Address must be uri encoded
-        my $req  = new HTTP::Request GET => "https://maps.googleapis.com/maps/api/geocode/json?address=$encItem&key=$APIKey";
+        $item       =~ s/ /+/g; # Replace spaces by + sign
+        #my $encItem = uri_escape_utf8($item); # Address must be uri encoded
+        my $reqURL  = "https://nominatim.openstreetmap.org/search?q=$item&format=json";
+        if ($$refWin->chAddr2GPSInc->Checked()) {
+          $reqURL .= "&addressdetails=1";
+          $reqURL .= "&accept-language=$$refConfig{'DEFAULT_LANG'}";
+        }
+        $reqURL   .= "&email=$$refConfig{'EMAIL'}" if $$refConfig{'EMAIL'};
+        my $req  = new HTTP::Request GET => $reqURL;
         if (my $json = $ua->request($req)) {
-          if (my $d_json = decode_json($json->content)) {
-            if (my $lat = $d_json->{results}->[0]->{geometry}->{location}->{lat} and 
-                my $lng = $d_json->{results}->[0]->{geometry}->{location}->{lng}) {
-              push(@items, "$lat, $lng");
+          if ($json->content =~ /place_id/ and my $d_json = decode_json($json->content)) {
+            my $firstRes = $$d_json[0];
+            if (my $lat = $firstRes->{lat} and my $lon = $firstRes->{lon}) {
+              my $newItem = "$lat, $lon";
+              if ($$refWin->chAddr2GPSInc->Checked()) {
+                $newItem .= ', "' . $firstRes->{display_name} . '"';
+                # Save result in JSON file, # Nominatim Usage Policy: Results must be cached on your side.
+                my $osmDir  = $osmDBFile;
+                my (@parts) = split(/\\/, $osmDir);
+                if (pop(@parts) =~ /\./) { while ($osmDir =~ /[^\\]$/) { chop($osmDir); } }
+                mkdir($osmDir . 'osm') if !-d $osmDir . 'osm'; # Create subfolder for JSON file
+                my $jsonObj  = JSON->new;
+                my $jsonText = $jsonObj->encode($firstRes);
+                my $jsonFile = $osmDir . "osm\\" . $firstRes->{osm_id} . '.json';
+                if (open(my $json, '>:encoding(utf8)', $jsonFile)) {
+                  print $json $jsonText;
+                  close($json);
+                }
+                # Add to OSM database
+                if ($firstRes->{boundingbox} and -f $jsonFile) {
+                  $sthAdd->execute($lat, $lon, $firstRes->{boundingbox}[0], $firstRes->{boundingbox}[1], $firstRes->{boundingbox}[2],
+                                   $firstRes->{boundingbox}[3], 18, $jsonFile);
+                }
+              }
+              push(@items, $newItem);
             } else {
               my $msg = $$refSTR{'noMatch'};
               if (my $status = $d_json->{status}) { $msg = $status; }
@@ -605,8 +637,151 @@ sub utilsTabFunc
       $$refWin->pb->StepIt();
     }
   }
-  # 12 = 'Distance between locations'
+  # 12 = 'GPS to address'
   elsif ($selFunc == 12) {
+    # Selected options
+    my $selOutput        = $$refWin->cbGPS2AddrOutput->GetString($$refWin->cbGPS2AddrOutput->GetCurSel());
+    my $incHouse_number  = 1 if $$refWin->gridGPS2AddrOpts->GetCellCheck(0, 0);
+    my $incRoad          = 1 if $$refWin->gridGPS2AddrOpts->GetCellCheck(1, 0);
+    my $incNeighbourhood = 1 if $$refWin->gridGPS2AddrOpts->GetCellCheck(0, 1);
+    my $incSuburb        = 1 if $$refWin->gridGPS2AddrOpts->GetCellCheck(1, 1);
+    my $incCity          = 1 if $$refWin->gridGPS2AddrOpts->GetCellCheck(0, 2);
+    my $incCounty        = 1 if $$refWin->gridGPS2AddrOpts->GetCellCheck(1, 2);
+    my $incRegion        = 1 if $$refWin->gridGPS2AddrOpts->GetCellCheck(0, 3);
+    my $incState         = 1 if $$refWin->gridGPS2AddrOpts->GetCellCheck(1, 3);
+    my $incPostcode      = 1 if $$refWin->gridGPS2AddrOpts->GetCellCheck(0, 4);
+    my $incCountry       = 1 if $$refWin->gridGPS2AddrOpts->GetCellCheck(1, 4);
+    my $incCountry_code  = 1 if $$refWin->gridGPS2AddrOpts->GetCellCheck(0, 5);
+    my $incBoundingBox   = 1 if $$refWin->gridGPS2AddrOpts->GetCellCheck(1, 5);
+    # Zoom level (values: 0=Country, 1=State, 2=County, 3=City, 4=Suburb, 5=Major streets, 6=Major/Minor streets, 7=Building)
+    my %zoomLevel = (0 => 3, 1 => 5, 2 => 8, 3 => 10, 4 => 14, 5 => 16, 6 => 17, 7 => 18);
+    my $zoom      = $zoomLevel{$$refWin->cbGPS2AddrZL->GetCurSel()};
+    # Add headers
+    if ($selOutput and $selOutput eq $$refSTR{'AddressEl'} and $$refWin->chAddHeaders->Checked()) {
+      my $headers;
+      $headers .= $$refSTR{'house_number'}  . "\t" if $incHouse_number;
+      $headers .= $$refSTR{'road'}          . "\t" if $incRoad;
+      $headers .= $$refSTR{'neighbourhood'} . "\t" if $incNeighbourhood;
+      $headers .= $$refSTR{'suburb'}        . "\t" if $incSuburb;
+      $headers .= $$refSTR{'city'}          . "\t" if $incCity;
+      $headers .= $$refSTR{'county'}        . "\t" if $incCounty;
+      $headers .= $$refSTR{'region'}        . "\t" if $incRegion;
+      $headers .= $$refSTR{'state'}         . "\t" if $incState;
+      $headers .= $$refSTR{'postcode'}      . "\t" if $incPostcode;
+      $headers .= $$refSTR{'country'}       . "\t" if $incCountry;
+      $headers .= $$refSTR{'country_code'}  . "\t" if $incCountry_code;
+      $headers .= $$refSTR{'boundingbox'}   . "\t" if $incBoundingBox;
+      chop($headers);
+      push(@items, $headers);
+    }
+    # Open OSM database
+    my $osmDBFile = $$refWinConfig->tfOSMDB->Text();
+    my $dsn       = "DBI:SQLite:dbname=$osmDBFile";
+    my $dbh       = DBI->connect($dsn, undef, undef, { RaiseError => 1, AutoCommit => 1 });
+    my $sthAdd    = $dbh->prepare("INSERT OR REPLACE INTO GPS2ADDR (lat, lon, lat_s, lat_n, lon_w, lon_e, zoom_level, jsonFile) VALUES(?,?,?,?,?,?,?,?)");
+    # Create agent
+    my $ua = LWP::UserAgent->new;
+    $ua->agent($$refConfig{'USERAGENT'}); # Nominatim Usage Policy: Provide a valid HTTP Referer or User-Agent identifying the application
+    $ua->timeout($$refConfig{'NSLOOKUP_TIMEOUT'});
+    $ua->default_header('Accept-Language' => 'en');
+    foreach my $item (@{$refList1}) {
+      $item =~ s/[\r\n]//g;  # Remove any line break
+      if ($item) {
+        my ($lat, $lon) = split(/, /, $item);
+        # valid latitude must a float between -90 and 90, valid longetitude must be a float between -180 and 180
+        if ($lat and $lat > -90 and $lat < 90 and $lon and $lon > -180 and $lon < 180) {
+          my ($jsonText, $d_json);
+          # Check if address exists for item
+          if ($dbh and (my $jsonFile = $dbh->selectrow_array('SELECT jsonFile FROM GPS2ADDR WHERE lat == ? AND lon == ? AND zoom_level = ?',
+                                                             undef, $lat, $lon, $zoom))) {
+            if (open(my $json, '<encoding(utf8)', $jsonFile)) {
+              $jsonText = <$json>;
+              close($json);
+              my $jsonObj = JSON->new;
+              $d_json  = $jsonObj->decode($jsonText);
+            }
+          # Address doesn't exist, do the request
+          } else {
+            my $reqURL = "https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lon";
+            $reqURL   .= "&zoom=$zoom";
+            $reqURL   .= "&addressdetails=1";
+            $reqURL   .= "&accept-language=$$refConfig{'DEFAULT_LANG'}";
+            $reqURL   .= "&email=$$refConfig{'EMAIL'}" if $$refConfig{'EMAIL'};
+            my $req  = new HTTP::Request GET => $reqURL;
+            if (my $json = $ua->request($req)) {
+              $d_json   = decode_json($json->content);
+              $jsonText = $json->content;
+              # Save result in JSON file, # Nominatim Usage Policy: Results must be cached on your side.
+              my $osmDir  = $osmDBFile;
+              my (@parts) = split(/\\/, $osmDir);
+              if (pop(@parts) =~ /\./) { while ($osmDir =~ /[^\\]$/) { chop($osmDir); } }
+              mkdir($osmDir . 'osm') if !-d $osmDir . 'osm'; # Create subfolder for JSON file
+              my $jsonObj  = JSON->new;
+              my $jsonFile = $osmDir . "osm\\" . $d_json->{osm_id} . '.json';
+              if (open(my $json, '>:encoding(utf8)', $jsonFile)) {
+                print $json $jsonText;
+                close($json);
+              }
+              # Add to OSM database
+              if ($d_json->{boundingbox} and -f $jsonFile) {
+                $sthAdd->execute($lat, $lon, $d_json->{boundingbox}[0], $d_json->{boundingbox}[1], $d_json->{boundingbox}[2],
+                                 $d_json->{boundingbox}[3], $zoom, $jsonFile);
+              }
+            } else {
+              if ($noResultOpt) { push(@items, $$refSTR{'errorConnection'}); }
+              else { push(@items, undef); }
+            }
+          }
+          # Create output
+          if ($d_json and my $fullAddress = $d_json->{display_name}) {
+            my $newItem;
+            if    ($selOutput and $selOutput eq $$refSTR{'FullAddress'}) { $newItem = $fullAddress; }
+            elsif ($selOutput and $selOutput eq $$refSTR{'AllDetails'} ) { $newItem = $jsonText;    }
+            else {
+              if ($incHouse_number ) { $newItem .= $d_json->{address}->{house_number}  if $d_json->{address}->{house_number};  $newItem .= "\t"; }
+              if ($incRoad         ) { $newItem .= $d_json->{address}->{road}          if $d_json->{address}->{road};          $newItem .= "\t"; }
+              if ($incNeighbourhood) { $newItem .= $d_json->{address}->{neighbourhood} if $d_json->{address}->{neighbourhood}; $newItem .= "\t"; }
+              if ($incSuburb       ) { $newItem .= $d_json->{address}->{suburb}        if $d_json->{address}->{suburb};        $newItem .= "\t"; }
+              if ($incCity         ) { $newItem .= $d_json->{address}->{city}          if $d_json->{address}->{city};          $newItem .= "\t"; }
+              if ($incCounty       ) { $newItem .= $d_json->{address}->{county}        if $d_json->{address}->{county};        $newItem .= "\t"; }
+              if ($incRegion       ) { $newItem .= $d_json->{address}->{region}        if $d_json->{address}->{region};        $newItem .= "\t"; }
+              if ($incState        ) { $newItem .= $d_json->{address}->{state}         if $d_json->{address}->{state};         $newItem .= "\t"; }
+              if ($incPostcode     ) { $newItem .= $d_json->{address}->{postcode}      if $d_json->{address}->{postcode};      $newItem .= "\t"; }
+              if ($incCountry      ) { $newItem .= $d_json->{address}->{country}       if $d_json->{address}->{country};       $newItem .= "\t"; }
+              if ($incCountry_code ) { $newItem .= $d_json->{address}->{country_code}  if $d_json->{address}->{country_code};  $newItem .= "\t"; }
+              if ($incBoundingBox  ) {
+                if ($d_json->{address}->{boundingbox}) {
+                  foreach my $coord (@{$d_json->{address}->{boundingbox}}) { $newItem .= "$coord, "; }
+                  chop($newItem);
+                  chop($newItem);
+                }
+                $newItem .= "\t";
+              }
+            }
+            push(@items, $newItem);
+          } else {
+            my $msg = $$refSTR{'noMatch'};
+            if (my $status = $d_json->{status}) { $msg = $status; }
+            if ($noResultOpt) { push(@items, $msg); }
+            else { push(@items, undef); }
+          }
+        } else {
+          if ($noResultOpt) { push(@items, $$refSTR{'invalidInput'}); }
+          else { push(@items, undef); }
+        }
+      } else {
+        if ($noResultOpt) { push(@items, $$refSTR{'noInput'}); }
+        else { push(@items, undef); }
+      }
+      # Progress
+      $curr++;
+      $$refWin->lblPbCount->Text("$curr / $nbrItems");
+      $$refWin->pb->StepIt();
+      sleep(1); # Nominatim Usage Policy: No heavy uses (an absolute maximum of 1 request per second).
+    }
+  }
+  # 13 = 'Distance between locations'
+  elsif ($selFunc == 13) {
     my $loc2;
     # If "Compare to single location" option is checked
     if ($$refWin->chSingleLocation->Checked()) {
@@ -644,8 +819,8 @@ sub utilsTabFunc
       $$refWin->pb->StepIt();
     }
   }
-  # 13 = 'Custom functions'
-  elsif ($selFunc == 13) {
+  # 14 = 'Custom functions'
+  elsif ($selFunc == 14) {
     my $selFuncStr = $$refWin->cbCFLists->GetString($$refWin->cbCFLists->GetCurSel());
     my ($title, $dbFile);
     # Gather path to database

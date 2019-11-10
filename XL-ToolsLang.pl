@@ -7,7 +7,7 @@
 # GitHub          : https://github.com/arioux/XL-Tools
 # Documentation   : http://le-tools.com/XL-ToolsDoc.html
 # Creation        : 2015-12-21
-# Modified        : 2019-04-15
+# Modified        : 2019-11-10
 # Author          : Alain Rioux (admin@le-tools.com)
 #
 # Copyright (C) 2015-2019  Alain Rioux (le-tools.com)
@@ -258,7 +258,8 @@ sub loadDefaultStr
   $$refSTR{'cbUtils9'}      = 'Resolve ISP';
   $$refSTR{'cbUtils10'}     = 'Resolve User-agent';
   $$refSTR{'cbUtils11'}     = 'Credit Card to Issuing Company';
-  $$refSTR{'cbUtils13'}     = 'Address to GPS coordinates';
+  $$refSTR{'cbUtils13'}     = 'Address to GPS';
+  $$refSTR{'cbUtils15'}     = 'GPS to address';
   $$refSTR{'cbUtils14'}     = 'Distance between locations';
   $$refSTR{'cbUtils12'}     = 'Custom functions...';
   $$refSTR{'AllDetails'}    = 'All details';
@@ -268,8 +269,31 @@ sub loadDefaultStr
   $$refSTR{'IINLocalDBTip'} = 'Faster, but less accurate.';
   $$refSTR{'BinlistTip'}    = 'Slower, but more accurate, max. 1000 queries per hour.';
   $$refSTR{'cbCFLists'}     = 'Select a function';
-  $$refSTR{'lblAPIKey'}     = 'Your Google API Key';
-  $$refSTR{'reqAPIKey'}     = 'This function requires a Google API Key.';
+  $$refSTR{'emailRequired'} = 'A valid email is required when you do many requests. See config.';
+  $$refSTR{'incAddr'}       = 'Include full address in result';
+  $$refSTR{'ZoomLevel'}     = 'Zoom level';
+  $$refSTR{'ZoomLevel3'}    = 'Country'; # 3
+  $$refSTR{'ZoomLevel5'}    = 'State'; # 5
+  $$refSTR{'ZoomLevel8'}    = 'County'; # 8
+  $$refSTR{'ZoomLevel10'}   = 'City'; # 10
+  $$refSTR{'ZoomLevel14'}   = 'Suburb'; # 14
+  $$refSTR{'ZoomLevel16'}   = 'Major streets'; # 16
+  $$refSTR{'ZoomLevel17'}   = 'Major/minor streets'; # 17
+  $$refSTR{'ZoomLevel18'}   = 'Building'; # 18
+  $$refSTR{'FullAddress'}   = 'Full address';
+  $$refSTR{'AddressEl'}     = 'Address elements';
+  $$refSTR{'house_number'}  = 'house_number';
+  $$refSTR{'road'}          = 'road';
+  $$refSTR{'neighbourhood'} = 'neighbourhood';
+  $$refSTR{'suburb'}        = 'suburb';
+  $$refSTR{'city'}          = 'city';
+  $$refSTR{'county'}        = 'county';
+  $$refSTR{'region'}        = 'region';
+  $$refSTR{'state'}         = 'state';
+  $$refSTR{'postcode'}      = 'postcode';
+  $$refSTR{'country'}       = 'country';
+  $$refSTR{'country_code'}  = 'country_code';
+  $$refSTR{'boundingbox'}   = 'boundingbox';
   $$refSTR{'chSingleLocation'} = 'Compare to single location';
   $$refSTR{'reqLocation'}   = 'You must enter a location to compare to.';
   $$refSTR{'btnCFAdd'}      = 'Add a custom function database';
@@ -395,6 +419,7 @@ sub loadDefaultStr
   $$refSTR{'XLWhoisDB'}       = 'XL-Whois database';
   $$refSTR{'IINLocalDB'}      = 'IIN (Credit cards)';
   $$refSTR{'selPathDB'}       = 'Select the path for the database';
+  $$refSTR{'createdDB'}       = 'The database has been created';
   $$refSTR{'currDBDate'}      = 'Current DB date';
   $$refSTR{'remoteDBDate'}    = 'DB date on';
   $$refSTR{'updateAvailable'} = 'An update of the database is available, download';
@@ -406,6 +431,9 @@ sub loadDefaultStr
   $$refSTR{'IINDB'}           = 'IIN database';
   $$refSTR{'NotExistDownload'} = 'does not exist, download';
   $$refSTR{'HasBeenUpdated'}  = 'has been updated';
+  $$refSTR{'OSMDB'}           = 'OpenStreetMap database';
+  $$refSTR{'Email'}           = 'Email';
+  $$refSTR{'OSMNotice'}       = 'Data © OpenStreetMap contributors, ODbL 1.0. https://osm.org/copyright';
   # Update Window
   $$refSTR{'Update'}          = 'Update';
   $$refSTR{'update1'}         = 'You have the latest version installed.';
